@@ -119,15 +119,17 @@ describe('Blog Listing API data', () => {
     expect(screen.queryByRole('link', { name: /Chọn laptop phù hợp/ })).toBeNull();
     expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/articles?page=1&pageSize=10');
     resolveRequest(await response(articlePage));
-    expect(await screen.findByRole('link', { name: /Chọn laptop phù hợp/ })).toBeTruthy();
+    expect(await screen.findByText('Chọn laptop phù hợp')).toBeTruthy();
+    expect(document.querySelector('.article-card a')).toBeNull();
   });
 
-  it('renders API article fields and links by the API slug', async () => {
+  it('renders API article fields without sending API slugs to the fixture-backed detail route', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(articlePage)));
     renderBlog();
 
-    const article = await screen.findByRole('link', { name: /Chọn laptop phù hợp/ });
-    expect(article.getAttribute('href')).toBe('/blog/buying-a-laptop');
+    expect(await screen.findByText('Chọn laptop phù hợp')).toBeTruthy();
+    expect(document.querySelector('.article-card')).toBeTruthy();
+    expect(document.querySelector('.article-card a')).toBeNull();
     expect(screen.getByText('Một số kinh nghiệm chọn laptop.')).toBeTruthy();
     expect(document.querySelector('.article-card small')?.textContent).toBe('04/03/2025 · 6 phút đọc');
     expect(screen.queryByText(/2024/)).toBeNull();
@@ -163,7 +165,7 @@ describe('Blog Listing API data', () => {
     renderBlog();
 
     fireEvent.click(await screen.findByRole('button', { name: 'Thử lại' }));
-    expect(await screen.findByRole('link', { name: /Chọn laptop phù hợp/ })).toBeTruthy();
+    expect(await screen.findByText('Chọn laptop phù hợp')).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
