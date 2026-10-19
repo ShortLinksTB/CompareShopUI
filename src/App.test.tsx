@@ -373,6 +373,19 @@ describe('Blog Listing API data', () => {
     expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/articles/unknown-slug');
   });
 
+  it('separates the not-found explanation and return action in a vertical layout', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 404 } as Response));
+    renderAppAt('/blog/unknown-slug');
+
+    const heading = await screen.findByRole('heading', { name: 'Không tìm thấy bài viết' });
+    const state = heading.parentElement;
+    expect(state?.classList.contains('blog-not-found-state')).toBe(true);
+    expect(state?.querySelector('p')?.textContent).toBe('Bài viết này không tồn tại hoặc chưa được xuất bản.');
+    expect(state?.querySelector('a')?.textContent).toBe('Quay lại Blog');
+    expect(stylesheet).toMatch(/\.blog-not-found-state\s*\{[^}]*display:\s*flex;[^}]*flex-direction:\s*column;[^}]*align-items:\s*center;[^}]*gap:\s*16px;/s);
+    expect(stylesheet).toMatch(/\.blog-not-found-state p\s*\{[^}]*max-width:\s*42rem;[^}]*line-height:\s*1\.6;/s);
+  });
+
   it('shows API errors and retries the same slug request', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(response({}, false))
