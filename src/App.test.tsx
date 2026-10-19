@@ -224,6 +224,9 @@ describe('Blog Listing API data', () => {
     expect(window.matchMedia('(prefers-color-scheme: dark)').matches).toBe(theme === 'dark');
     expect(stylesheet).toContain('.blog-shell');
     expect(stylesheet).toContain('.article-sidebar{display:none}');
+    if (theme === 'dark') {
+      expect(stylesheet).toContain('.blog-shell .article-main>.article-lead{color:#d1d5db}');
+    }
   });
 
   it('shows loading state until the Articles API resolves', async () => {
