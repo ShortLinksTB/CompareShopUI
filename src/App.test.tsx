@@ -20,6 +20,19 @@ function renderAppAt(path: string) {
   return renderApp();
 }
 
+function setColorScheme(theme: 'light' | 'dark') {
+  vi.stubGlobal('matchMedia', vi.fn((query: string) => ({
+    matches: query.includes('prefers-color-scheme: dark') && theme === 'dark',
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  }) as unknown as MediaQueryList));
+}
+
 function response(body: unknown, ok = true) {
   return Promise.resolve({ ok, status: ok ? 200 : 500, json: () => Promise.resolve(body) } as Response);
 }
@@ -115,6 +128,40 @@ function detailFetch({ offers = [{ id: 9, price: 1200000, url: null, updatedAt: 
 }
 
 describe('Product Detail API data', () => {
+  it.each(['light', 'dark'] as const)('applies Product Detail shell for direct navigation in %s theme', async theme => {
+    setColorScheme(theme);
+    vi.stubGlobal('fetch', detailFetch());
+
+    renderAppAt('/product/sample-product-01');
+    expect(await screen.findByRole('heading', { name: 'Sample Product 01' })).toBeTruthy();
+    expect(document.querySelector('.product-shell')).toBeTruthy();
+    expect(window.matchMedia('(prefers-color-scheme: dark)').matches).toBe(theme === 'dark');
+    expect(screen.getByText('Ảnh chưa có')).toBeTruthy();
+    expect(screen.getByText('Giá có thể thay đổi theo từng cửa hàng. Hãy kiểm tra lại giá cuối cùng trước khi mua.')).toBeTruthy();
+  });
+
+  it.each(['light', 'dark'] as const)('preserves Product Detail shell after opening a Home product link in %s theme', async theme => {
+    setColorScheme(theme);
+    const product = { id: 5, slug: 'sample-product-01', name: 'Sample Product 01', brand: 'Example', category: { id: 7, slug: 'phones', name: 'Phones' }, offerSummary: { minPrice: 1200000, maxPrice: 1500000, offerCount: 1 } };
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith('/categories')) return response({ items: [{ id: 7, slug: 'phones', name: 'Phones' }] });
+      if (url.includes('/products?categoryId=7')) return response({ items: [product], page: 1, pageSize: 10, totalItems: 1, totalPages: 1 });
+      if (url.includes('/products?page=1&pageSize=10')) return response({ items: [product], page: 1, pageSize: 10, totalItems: 1, totalPages: 1 });
+      if (url.endsWith('/products/sample-product-01')) return response(detail);
+      if (url.endsWith('/products/1/offers')) return response({ items: [] });
+      if (url.includes('/products/1/price-history')) return response({ items: [] });
+      return response({ items: [] });
+    }));
+
+    renderAppAt('/');
+    expect(document.querySelector('.home-shell')).toBeTruthy();
+    fireEvent.click(await screen.findByRole('link', { name: 'Sample Product 01' }));
+    expect(await screen.findByRole('heading', { name: 'Sample Product 01' })).toBeTruthy();
+    expect(document.querySelector('.product-shell')).toBeTruthy();
+    expect(window.matchMedia('(prefers-color-scheme: dark)').matches).toBe(theme === 'dark');
+  });
+
   it('opens the API product selected from the Home product link', async () => {
     const product = { id: 5, slug: 'sample-product-01', name: 'Sample Product 01', brand: 'Example', category: { id: 7, slug: 'phones', name: 'Phones' }, offerSummary: { minPrice: 1200000, maxPrice: 1500000, offerCount: 1 } };
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
