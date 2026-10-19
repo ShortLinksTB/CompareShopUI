@@ -35,11 +35,26 @@ function setColorScheme(theme: 'light' | 'dark') {
   }) as unknown as MediaQueryList));
 }
 
+function contrastRatio(foreground: string, background: string) {
+  const luminance = (color: string) => {
+    const rgb = color.match(/[\d.]+/g)?.map(Number);
+    const channels = rgb?.length === 3 ? rgb : color.match(/[a-f\d]{2}/gi)?.map(channel => parseInt(channel, 16));
+    const linear = (channels ?? []).map(channel => {
+      const normalized = channel > 1 ? channel / 255 : channel;
+      return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+  };
+  const first = luminance(foreground);
+  const second = luminance(background);
+  return (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05);
+}
+
 function response(body: unknown, ok = true) {
   return Promise.resolve({ ok, status: ok ? 200 : 500, json: () => Promise.resolve(body) } as Response);
 }
 
-afterEach(() => { cleanup(); localStorage.clear(); window.history.replaceState({}, '', '/'); vi.unstubAllGlobals(); });
+afterEach(() => { cleanup(); localStorage.clear(); window.history.replaceState({}, '', '/'); Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 }); Object.defineProperty(window, 'innerHeight', { configurable: true, value: 768 }); vi.unstubAllGlobals(); });
 
 describe('Home API data', () => {
   it('loads categories and products from the catalog endpoints and renders API fields', async () => {
@@ -226,6 +241,36 @@ describe('Blog Listing API data', () => {
     expect(stylesheet).toContain('.article-sidebar{display:none}');
     if (theme === 'dark') {
       expect(stylesheet).toContain('.blog-shell .article-main>.article-lead{color:#d1d5db}');
+    }
+  });
+
+  it('renders the article lead with WCAG AA contrast at 390×844 in dark mode', async () => {
+    setColorScheme('dark');
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 844 });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(articleDetail)));
+    renderAppAt('/blog/buying-a-laptop');
+
+    const lead = await screen.findByText('Kinh nghiệm chọn laptop từ dữ liệu thực tế.');
+    expect([window.innerWidth, window.innerHeight]).toEqual([390, 844]);
+    expect(lead.classList.contains('article-lead')).toBe(true);
+    expect(lead.closest('.blog-shell')).toBeTruthy();
+
+    const darkStyles = stylesheet.slice(stylesheet.lastIndexOf('@media(prefers-color-scheme:dark)'));
+    const foreground = darkStyles.match(/\.blog-shell \.article-main>\.article-lead\{color:(#[a-f\d]{6})\}/i)?.[1];
+    const background = stylesheet.match(/\.blog-shell\{[^}]*background:(#[a-f\d]{6})/i)?.[1];
+    expect(foreground).toBeTruthy();
+    expect(background).toBeTruthy();
+
+    const simulatedMediaStyle = document.createElement('style');
+    simulatedMediaStyle.textContent = `.blog-shell .article-main>.article-lead{color:${foreground}}`;
+    document.head.append(simulatedMediaStyle);
+    try {
+      const renderedForeground = window.getComputedStyle(lead).color;
+      expect(renderedForeground).toBe('rgb(209, 213, 219)');
+      expect(contrastRatio(renderedForeground, background!)).toBeGreaterThanOrEqual(4.5);
+    } finally {
+      simulatedMediaStyle.remove();
     }
   });
 
