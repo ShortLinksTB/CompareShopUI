@@ -19,7 +19,7 @@ function response(body: unknown, ok = true) {
   return Promise.resolve({ ok, status: ok ? 200 : 500, json: () => Promise.resolve(body) } as Response);
 }
 
-afterEach(() => { cleanup(); localStorage.clear(); vi.unstubAllGlobals(); });
+afterEach(() => { cleanup(); localStorage.clear(); window.history.replaceState({}, '', '/'); vi.unstubAllGlobals(); });
 
 describe('Home API data', () => {
   it('loads categories and products from the catalog endpoints and renders API fields', async () => {
@@ -85,4 +85,75 @@ it('renders the storefront and opens the saved products page', async () => {
   fireEvent.click(screen.getAllByRole('link', { name: /Yêu thích/ })[0]);
   expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Sản phẩm yêu thích');
   expect(screen.getByText('Chưa có sản phẩm yêu thích')).toBeTruthy();
+});
+
+const articlePage = {
+  items: [{
+    slug: 'buying-a-laptop',
+    title: 'Chọn laptop phù hợp',
+    excerpt: 'Một số kinh nghiệm chọn laptop.',
+    coverImageUrl: 'https://cdn.example.test/laptop.jpg',
+    authorName: 'GiaTot Editorial',
+    readingMinutes: 6,
+    publishedAtUtc: '2025-03-04T00:00:00Z',
+  }],
+  page: 1,
+  pageSize: 10,
+  totalItems: 1,
+  totalPages: 1,
+};
+
+function renderBlog() {
+  window.history.pushState({}, '', '/blog');
+  return renderApp();
+}
+
+describe('Blog Listing API data', () => {
+  it('shows loading state until the Articles API resolves', async () => {
+    let resolveRequest!: (value: Response) => void;
+    const fetchMock = vi.fn(() => new Promise<Response>(resolve => { resolveRequest = resolve; }));
+    vi.stubGlobal('fetch', fetchMock);
+    renderBlog();
+
+    expect(screen.getByRole('status').textContent).toBe('Đang tải bài viết...');
+    expect(screen.queryByRole('link', { name: /Chọn laptop phù hợp/ })).toBeNull();
+    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/articles?page=1&pageSize=10');
+    resolveRequest(await response(articlePage));
+    expect(await screen.findByRole('link', { name: /Chọn laptop phù hợp/ })).toBeTruthy();
+  });
+
+  it('renders API article fields and links by the API slug', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(articlePage)));
+    renderBlog();
+
+    const article = await screen.findByRole('link', { name: /Chọn laptop phù hợp/ });
+    expect(article.getAttribute('href')).toBe('/blog/buying-a-laptop');
+    expect(screen.getByText('Một số kinh nghiệm chọn laptop.')).toBeTruthy();
+    expect(document.querySelector('.article-card small')?.textContent).toBe('04/03/2025 · 6 phút đọc');
+    expect(screen.queryByText(/2024/)).toBeNull();
+    fireEvent.error(screen.getByRole('img', { name: 'Chọn laptop phù hợp' }));
+    expect(screen.getByText('Chưa có hình ảnh')).toBeTruthy();
+  });
+
+  it('renders the empty state without static sample cards for an empty page', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(response({ ...articlePage, items: [], totalItems: 0, totalPages: 0 }));
+    vi.stubGlobal('fetch', fetchMock);
+    renderBlog();
+
+    expect(await screen.findByText('Chưa có bài viết')).toBeTruthy();
+    expect(document.querySelector('.article-card')).toBeNull();
+    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/articles?page=1&pageSize=10');
+  });
+
+  it('shows an error and retries the Articles API request', async () => {
+    const fetchMock = vi.fn()
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce(response(articlePage));
+    vi.stubGlobal('fetch', fetchMock);
+    renderBlog();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Thử lại' }));
+    expect(await screen.findByRole('link', { name: /Chọn laptop phù hợp/ })).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 });
