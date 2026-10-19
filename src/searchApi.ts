@@ -55,8 +55,14 @@ export async function getProducts(options: {
 
 export async function getSearchSuggestions(query: string, limit = 5): Promise<string[]> {
   const params = new URLSearchParams({ q: query, limit: String(limit) });
-  const result = await get<{ items: string[] }>(`/search/suggestions?${params}`);
+  const result = await get<{ items: unknown[] }>(`/search/suggestions?${params}`);
   if (!result || !Array.isArray(result.items)) throw new Error('Invalid suggestions response');
-  return result.items;
+  // The API returns product objects for matching products; older responses may
+  // still contain plain strings. Keep the header UI's display model consistent.
+  return result.items.flatMap(item => {
+    if (typeof item === 'string') return [item];
+    if (item && typeof item === 'object' && 'name' in item && typeof item.name === 'string') return [item.name];
+    return [];
+  });
 }
 
