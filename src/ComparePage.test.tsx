@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
+/// <reference types="vite/client" />
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ComparePage } from './ComparePage';
+import stylesheet from './styles.css?inline';
 
 const product = (slug: string, name: string) => ({
   id: slug.length, slug, name, brand: null, description: null,
@@ -41,7 +43,12 @@ describe('Compare page', () => {
     vi.stubGlobal('fetch', fetchMock);
     renderPage();
     expect(await screen.findByText('Chưa có sản phẩm để so sánh')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Khám phá sản phẩm' }).classList.contains('compare-empty-state__cta')).toBe(true);
     expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products?page=1&pageSize=20');
+  });
+
+  it('keeps the empty-state CTA in its own block below the description', () => {
+    expect(stylesheet).toMatch(/\.compare-empty-state__cta\s*\{\s*display:\s*block;\s*width:\s*fit-content;\s*margin:\s*16px auto 0;\s*\}/);
   });
 
   it('handles malformed saved data without crashing', async () => {
