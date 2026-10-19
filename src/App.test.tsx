@@ -145,6 +145,16 @@ describe('Blog Listing API data', () => {
     expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/articles?page=1&pageSize=10');
   });
 
+  it('uses a neutral image fallback when an API article has no cover', async () => {
+    const articleWithoutCover = { ...articlePage, items: [{ ...articlePage.items[0], coverImageUrl: null }] };
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(articleWithoutCover)));
+    renderBlog();
+
+    expect(await screen.findByRole('img', { name: 'Chọn laptop phù hợp' })).toBeTruthy();
+    expect(screen.getByText('Chưa có hình ảnh')).toBeTruthy();
+    expect(document.querySelector('.article-card img')).toBeNull();
+  });
+
   it('shows an error and retries the Articles API request', async () => {
     const fetchMock = vi.fn()
       .mockRejectedValueOnce(new Error('offline'))
