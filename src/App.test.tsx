@@ -105,6 +105,22 @@ it('renders the storefront and opens the saved products page', async () => {
   expect(screen.getByText('Chưa có sản phẩm yêu thích')).toBeTruthy();
 });
 
+it('renders product-object suggestions without crashing the search route', async () => {
+  const fetchMock = vi.fn((input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url.endsWith('/categories')) return response({ items: [] });
+    if (url.includes('/search/suggestions')) return response({ items: [{ id: 3, slug: 'sample-product-03', name: 'Sample Product 03' }, { id: 4, name: 42 }, null] });
+    return response({ items: [], page: 1, pageSize: 12, totalItems: 0, totalPages: 0 });
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  const { container } = renderAppAt('/search');
+
+  fireEvent.change(screen.getByRole('textbox', { name: 'Tìm sản phẩm, thương hiệu...' }), { target: { value: 'Sample Product 03' } });
+  expect(await screen.findByRole('option', { name: 'Sample Product 03' })).toBeTruthy();
+  expect(screen.getByRole('heading', { name: 'Tất cả sản phẩm' })).toBeTruthy();
+  expect(container.textContent).toContain('Tất cả sản phẩm');
+});
+
 const articlePage = {
   items: [{
     slug: 'buying-a-laptop',
