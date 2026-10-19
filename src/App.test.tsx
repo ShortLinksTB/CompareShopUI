@@ -5,6 +5,7 @@ import { BrowserRouter, Link, MemoryRouter, Route, Routes } from 'react-router-d
 import { App } from './App';
 import { LanguageProvider } from './i18n';
 import { ProductDetailPage } from './ProductDetailPage';
+import stylesheet from './styles.css?inline';
 
 const categories = { items: [{ id: 1, slug: 'phones', name: 'Phones' }] };
 const products = {
@@ -140,7 +141,10 @@ describe('Wishlist API data', () => {
     renderAppAt('/wishlist');
 
     expect(await screen.findByRole('heading', { name: 'Đăng nhập để xem sản phẩm đã lưu' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Đăng nhập' }).getAttribute('href')).toBe('/login');
+    const login = screen.getByRole('link', { name: 'Đăng nhập' });
+    expect(login.getAttribute('href')).toBe('/login');
+    expect(login.classList.contains('wishlist-login-prompt__cta')).toBe(true);
+    expect(stylesheet).toMatch(/\.wishlist-login-prompt__cta\s*\{\s*display:\s*block;\s*width:\s*fit-content;\s*margin:\s*16px auto 0;\s*\}/);
   });
 
   it('shows an error and retries the wishlist request', async () => {
