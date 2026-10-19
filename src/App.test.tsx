@@ -188,6 +188,67 @@ describe('Blog Listing API data', () => {
   });
 });
 
+const catalogPage = {
+  items: [{ id: 17, slug: 'api-phone', name: 'API Phone', brand: 'Real Brand', category: { id: 42, slug: 'phones', name: 'Phones' }, offerSummary: { minPrice: 1200000, maxPrice: 1600000, offerCount: 3 } }],
+  page: 1, pageSize: 12, totalItems: 1, totalPages: 1,
+};
+
+describe('Search and Category API data', () => {
+  it('resolves a category slug to its numeric ID before requesting its products', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith('/categories')) return response({ items: [{ id: 42, slug: 'phones', name: 'Phones' }] });
+      return response(catalogPage);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderAppAt('/category/phones');
+
+    expect(await screen.findByRole('link', { name: 'API Phone' })).toBeTruthy();
+    expect(fetchMock).toHaveBeenNthCalledWith(1, 'https://api-compareshop-dev.giamha.online/api/v1/categories');
+    expect(fetchMock).toHaveBeenNthCalledWith(2, 'https://api-compareshop-dev.giamha.online/api/v1/products?page=1&pageSize=12&categoryId=42');
+    expect(screen.getByText('Real Brand')).toBeTruthy();
+    expect(screen.queryByText(/★/)).toBeNull();
+  });
+
+  it('searches by query and sends price filters and page to the catalog API', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => String(input).endsWith('/categories') ? response({ items: [] }) : response(catalogPage));
+    vi.stubGlobal('fetch', fetchMock);
+    renderAppAt('/search?q=phone');
+
+    expect(await screen.findByRole('link', { name: 'API Phone' })).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products?page=1&pageSize=12&search=phone');
+    fireEvent.click(screen.getByLabelText('Dưới 10 triệu'));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products?page=1&pageSize=12&search=phone&maxPrice=10000000'));
+  });
+
+  it('keeps unknown category slugs empty without querying products', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(response({ items: [{ id: 42, slug: 'phones', name: 'Phones' }] }));
+    vi.stubGlobal('fetch', fetchMock);
+    renderAppAt('/category/not-a-category');
+
+    expect(await screen.findByText('Không tìm thấy danh mục')).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows retry after a catalog error and requests API suggestions from header search', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith('/categories')) return response({ items: [] });
+      if (url.includes('/search/suggestions')) return response({ items: ['phone suggestion'] });
+      return response({}, false);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderAppAt('/search');
+    fireEvent.change(screen.getByRole('textbox', { name: 'Tìm sản phẩm, thương hiệu...' }), { target: { value: 'phone' } });
+    expect(await screen.findByRole('option', { name: 'phone suggestion' })).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/search/suggestions?q=phone&limit=5');
+    expect(await screen.findByRole('alert')).toBeTruthy();
+    fetchMock.mockImplementation((input: RequestInfo | URL) => String(input).endsWith('/categories') ? response({ items: [] }) : response(catalogPage));
+    fireEvent.click(screen.getByRole('button', { name: 'Thử lại' }));
+    expect(await screen.findByRole('link', { name: 'API Phone' })).toBeTruthy();
+  });
+});
+
 const detail = {
   id: 1,
   slug: 'sample-product-01',
