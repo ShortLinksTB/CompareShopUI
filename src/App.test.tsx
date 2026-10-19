@@ -144,8 +144,10 @@ describe('Wishlist API data', () => {
     const loginCta = screen.getByRole('link', { name: 'Đăng nhập' });
     expect(loginCta.getAttribute('href')).toBe('/login');
     expect(loginCta.classList.contains('wishlist-unauthenticated__cta')).toBe(true);
-    expect(loginCta.previousElementSibling?.textContent).toBe('Danh sách yêu thích chỉ hiển thị cho tài khoản đã xác thực.');
-    expect(stylesheet).toMatch(/\.wishlist-unauthenticated__cta\s*\{\s*display:\s*block;\s*width:\s*fit-content;\s*margin:\s*20px auto 0;\s*\}/);
+    const promptFlow = loginCta.parentElement;
+    expect(promptFlow?.classList.contains('wishlist-unauthenticated__actions')).toBe(true);
+    expect(promptFlow?.firstElementChild?.textContent).toBe('Danh sách yêu thích chỉ hiển thị cho tài khoản đã xác thực.');
+    expect(stylesheet).toMatch(/\.wishlist-unauthenticated__actions\s*\{\s*display:\s*flex;\s*flex-direction:\s*column;\s*align-items:\s*center;\s*gap:\s*24px;\s*\}/);
   });
 
   it('shows an error and retries the wishlist request', async () => {

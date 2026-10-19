@@ -228,10 +228,19 @@
   width: fit-content;
   margin: 16px auto 0;
 }
+.wishlist-unauthenticated__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+.wishlist-unauthenticated__actions > p {
+  margin: 0;
+}
 .wishlist-unauthenticated__cta {
-  display: block;
+  display: inline-flex;
   width: fit-content;
-  margin: 20px auto 0;
+  margin: 0;
 }
 @media(max-width:639px){.compare-empty-state__cta{margin-top:32px}}
 @media(max-width:639px){.compare-row{grid-template-columns:115px repeat(4,minmax(150px,1fr));min-width:715px}.compare-row>div{padding:12px;font-size:12px}.compare-image-placeholder{width:80px;height:76px}}
