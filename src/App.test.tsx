@@ -97,13 +97,61 @@ it('renders the storefront and opens the saved products page', async () => {
   vi.stubGlobal('fetch', vi.fn()
     .mockResolvedValueOnce(response(categories))
     .mockResolvedValueOnce(response(products))
-    .mockResolvedValueOnce(response({ items: [], page: 1, pageSize: 1, totalItems: 42, totalPages: 42 })));
+    .mockResolvedValueOnce(response({ items: [], page: 1, pageSize: 1, totalItems: 42, totalPages: 42 }))
+    .mockResolvedValueOnce(response({ items: [] })));
   renderApp();
 
   expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('So sánh giá');
   fireEvent.click(screen.getAllByRole('link', { name: /Yêu thích/ })[0]);
   expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Sản phẩm yêu thích');
-  expect(screen.getByText('Chưa có sản phẩm yêu thích')).toBeTruthy();
+  expect(await screen.findByText('Chưa có sản phẩm yêu thích')).toBeTruthy();
+});
+
+describe('Wishlist API data', () => {
+  it('keeps the page loading until the authenticated wishlist request resolves', async () => {
+    let resolveRequest!: (value: Response) => void;
+    const fetchMock = vi.fn(() => new Promise<Response>(resolve => { resolveRequest = resolve; }));
+    vi.stubGlobal('fetch', fetchMock);
+    renderAppAt('/wishlist');
+
+    expect(screen.getByRole('status').textContent).toBe('Đang tải sản phẩm yêu thích...');
+    expect(screen.queryByText('Chưa có sản phẩm yêu thích')).toBeNull();
+    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/wishlist');
+    resolveRequest(await response({ items: [{ productId: 12, slug: 'real-phone', name: 'Real Phone', createdAtUtc: '2026-10-19T00:00:00Z' }] }));
+    expect(await screen.findByRole('link', { name: 'Real Phone' })).toBeTruthy();
+    expect(screen.getByText('Giá hiện tại chưa có dữ liệu')).toBeTruthy();
+    expect(screen.queryByText(/200\.000/)).toBeNull();
+  });
+
+  it('removes an item through the API and renders the empty state after success', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(response({ items: [{ productId: 12, slug: 'real-phone', name: 'Real Phone', createdAtUtc: '2026-10-19T00:00:00Z' }] }))
+      .mockResolvedValueOnce(response(null));
+    vi.stubGlobal('fetch', fetchMock);
+    renderAppAt('/wishlist');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Xóa Real Phone' }));
+    expect(await screen.findByText('Chưa có sản phẩm yêu thích')).toBeTruthy();
+    expect(fetchMock).toHaveBeenLastCalledWith('https://api-compareshop-dev.giamha.online/api/v1/wishlist/12', { method: 'DELETE' });
+  });
+
+  it('shows the unauthenticated state for an unauthorized response', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 401 } as Response));
+    renderAppAt('/wishlist');
+
+    expect(await screen.findByRole('heading', { name: 'Đăng nhập để xem sản phẩm đã lưu' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Đăng nhập' }).getAttribute('href')).toBe('/login');
+  });
+
+  it('shows an error and retries the wishlist request', async () => {
+    const fetchMock = vi.fn().mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce(response({ items: [] }));
+    vi.stubGlobal('fetch', fetchMock);
+    renderAppAt('/wishlist');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Thử lại' }));
+    expect(await screen.findByText('Chưa có sản phẩm yêu thích')).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 });
 
 it('renders product-object suggestions without crashing the search route', async () => {
@@ -211,6 +259,64 @@ const catalogPage = {
 };
 
 describe('Search and Category API data', () => {
+  it('adds a product to the authenticated wishlist through the API heart action', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith('/categories')) return response({ items: [{ id: 42, slug: 'phones', name: 'Phones' }] });
+      if (url.endsWith('/wishlist') && !init) return response({ items: [] });
+      if (url.endsWith('/wishlist') && init?.method === 'POST') return response(null);
+      if (url.endsWith('/wishlist/17') && init?.method === 'DELETE') return response(null);
+      return response(catalogPage);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderAppAt('/category/phones');
+
+    const addButton = await screen.findByRole('button', { name: 'Thêm vào yêu thích' });
+    await waitFor(() => expect(addButton.hasAttribute('disabled')).toBe(false));
+    fireEvent.click(addButton);
+    expect(await screen.findByRole('button', { name: 'Bỏ khỏi yêu thích' })).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/wishlist', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ productId: 17, operation: 'add' }),
+    });
+    fireEvent.click(await screen.findByRole('button', { name: 'Bỏ khỏi yêu thích' }));
+    expect(await screen.findByRole('button', { name: 'Thêm vào yêu thích' })).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/wishlist/17', { method: 'DELETE' });
+    expect(localStorage.getItem('wishlist-products')).toBeNull();
+  });
+
+  it('rolls back the optimistic heart state when a wishlist update fails', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith('/categories')) return response({ items: [{ id: 42, slug: 'phones', name: 'Phones' }] });
+      if (url.endsWith('/wishlist') && !init) return response({ items: [] });
+      if (url.endsWith('/wishlist') && init?.method === 'POST') return Promise.reject(new Error('offline'));
+      return response(catalogPage);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderAppAt('/category/phones');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Thêm vào yêu thích' }));
+    expect(await screen.findByRole('alert')).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Thêm vào yêu thích' })).toBeTruthy();
+  });
+
+  it('prompts unauthenticated users to log in when saving a product is unauthorized', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith('/categories')) return response({ items: [{ id: 42, slug: 'phones', name: 'Phones' }] });
+      if (url.endsWith('/wishlist') && !init) return response({ items: [] });
+      if (url.endsWith('/wishlist') && init?.method === 'POST') return Promise.resolve({ ok: false, status: 401 } as Response);
+      return response(catalogPage);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderAppAt('/category/phones');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Thêm vào yêu thích' }));
+    expect((await screen.findByRole('alert')).textContent).toContain('Đăng nhập để lưu sản phẩm yêu thích.');
+    expect(screen.getByRole('link', { name: 'Đăng nhập' }).getAttribute('href')).toBe('/login');
+    expect(await screen.findByRole('button', { name: 'Thêm vào yêu thích' })).toBeTruthy();
+  });
+
   it('resolves a category slug to its numeric ID before requesting its products', async () => {
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
@@ -221,8 +327,8 @@ describe('Search and Category API data', () => {
     renderAppAt('/category/phones');
 
     expect(await screen.findByRole('link', { name: 'API Phone' })).toBeTruthy();
-    expect(fetchMock).toHaveBeenNthCalledWith(1, 'https://api-compareshop-dev.giamha.online/api/v1/categories');
-    expect(fetchMock).toHaveBeenNthCalledWith(2, 'https://api-compareshop-dev.giamha.online/api/v1/products?page=1&pageSize=12&categoryId=42');
+    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/categories');
+    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products?page=1&pageSize=12&categoryId=42');
     expect(screen.getByText('Real Brand')).toBeTruthy();
     expect(screen.queryByText(/★/)).toBeNull();
   });
@@ -244,7 +350,7 @@ describe('Search and Category API data', () => {
     renderAppAt('/category/not-a-category');
 
     expect(await screen.findByText('Không tìm thấy danh mục')).toBeTruthy();
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls.map(([url]) => String(url))).not.toContain('https://api-compareshop-dev.giamha.online/api/v1/products?page=1&pageSize=12');
   });
 
   it('shows retry after a catalog error and requests API suggestions from header search', async () => {
