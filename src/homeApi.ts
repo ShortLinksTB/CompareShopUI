@@ -4,6 +4,7 @@ export interface HomeCategory {
   id: number;
   slug: string;
   name: string;
+  productCount: number;
 }
 
 export interface HomeProduct {
@@ -30,9 +31,14 @@ async function get<T>(path: string): Promise<T> {
 }
 
 export async function getHomeData() {
-  const [categoryResponse, productResponse] = await Promise.all([
-    get<{ items: HomeCategory[] }>('/categories'),
+  const categoryResponse = await get<{ items: Omit<HomeCategory, 'productCount'>[] }>('/categories');
+  const [productResponse, ...categoryCounts] = await Promise.all([
     get<PageDto<HomeProduct>>('/products?page=1&pageSize=10'),
+    ...categoryResponse.items.map(category => get<PageDto<HomeProduct>>(`/products?categoryId=${category.id}&page=1&pageSize=1`)),
   ]);
-  return { categories: categoryResponse.items, products: productResponse.items };
+  const categories = categoryResponse.items.map((category, index) => ({
+    ...category,
+    productCount: categoryCounts[index].totalItems,
+  }));
+  return { categories, products: productResponse.items };
 }
