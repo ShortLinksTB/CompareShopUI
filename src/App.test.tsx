@@ -303,6 +303,23 @@ describe('Search and Category API data', () => {
     expect(await screen.findByRole('button', { name: 'Thêm vào yêu thích' })).toBeTruthy();
   });
 
+  it('prompts unauthenticated users to log in when saving a product is unauthorized', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith('/categories')) return response({ items: [{ id: 42, slug: 'phones', name: 'Phones' }] });
+      if (url.endsWith('/wishlist') && !init) return response({ items: [] });
+      if (url.endsWith('/wishlist') && init?.method === 'POST') return Promise.resolve({ ok: false, status: 401 } as Response);
+      return response(catalogPage);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderAppAt('/category/phones');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Thêm vào yêu thích' }));
+    expect((await screen.findByRole('alert')).textContent).toContain('Đăng nhập để lưu sản phẩm yêu thích.');
+    expect(screen.getByRole('link', { name: 'Đăng nhập' }).getAttribute('href')).toBe('/login');
+    expect(await screen.findByRole('button', { name: 'Thêm vào yêu thích' })).toBeTruthy();
+  });
+
   it('resolves a category slug to its numeric ID before requesting its products', async () => {
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);

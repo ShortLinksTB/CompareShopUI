@@ -33,30 +33,32 @@ export function SearchPage() {
   const [wishlistIds, setWishlistIds] = useState<number[]>([]);
   const [wishlistLoading, setWishlistLoading] = useState(true);
   const [wishlistBusyIds, setWishlistBusyIds] = useState<number[]>([]);
-  const [wishlistError, setWishlistError] = useState(false);
+  const [wishlistError, setWishlistError] = useState<'unauthenticated' | 'request' | null>(null);
 
   useEffect(() => {
     let active = true;
     fetch(WISHLIST_API).then(async response => {
+      if (response.status === 401 || response.status === 403) throw new Error('unauthenticated');
       if (!response.ok) throw new Error('wishlist request failed');
       const result = await response.json() as { items?: Array<{ productId?: number }> };
       if (active) setWishlistIds(Array.isArray(result.items) ? result.items.flatMap(item => Number.isInteger(item.productId) ? [item.productId as number] : []) : []);
-    }).catch(() => { if (active) setWishlistIds([]); }).finally(() => { if (active) setWishlistLoading(false); });
+    }).catch(reason => { if (active) { setWishlistIds([]); if (reason instanceof Error && reason.message === 'unauthenticated') setWishlistError('unauthenticated'); } }).finally(() => { if (active) setWishlistLoading(false); });
     return () => { active = false; };
   }, []);
 
   const toggleWishlist = async (productId: number) => {
     if (wishlistLoading || wishlistBusyIds.includes(productId)) return;
     const adding = !wishlistIds.includes(productId);
-    setWishlistError(false);
+    setWishlistError(null);
     setWishlistBusyIds(ids => [...ids, productId]);
     setWishlistIds(ids => adding ? [...ids, productId] : ids.filter(id => id !== productId));
     try {
       const response = await fetch(WISHLIST_API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ productId, operation: adding ? 'add' : 'remove' }) });
+      if (response.status === 401 || response.status === 403) throw new Error('unauthenticated');
       if (!response.ok) throw new Error('wishlist update failed');
-    } catch {
+    } catch (reason) {
       setWishlistIds(ids => adding ? ids.filter(id => id !== productId) : [...ids, productId]);
-      setWishlistError(true);
+      setWishlistError(reason instanceof Error && reason.message === 'unauthenticated' ? 'unauthenticated' : 'request');
     } finally {
       setWishlistBusyIds(ids => ids.filter(id => id !== productId));
     }
@@ -112,7 +114,7 @@ export function SearchPage() {
     <div className="page-title"><div><span className="eyebrow">{selectedCategory?.name || 'Tìm kiếm'}</span><h1>{query ? `Kết quả cho “${query}”` : selectedCategory?.name || 'Tất cả sản phẩm'}</h1><p className="muted">{data?.totalItems || 0} sản phẩm phù hợp</p></div></div>
     <div className="category-pills"><Link className={!selectedCategory ? 'active' : ''} to={query ? `/search?q=${encodeURIComponent(query)}` : '/search'}>Tất cả</Link>{categories.map(category => <Link className={selectedCategory?.id === category.id ? 'active' : ''} key={category.id} to={`/category/${category.slug}${query ? `?q=${encodeURIComponent(query)}` : ''}`}>{category.name}</Link>)}</div>
     <div className="catalog-layout"><PriceFilters {...filterProps} /><div className="catalog-results"><div className="results-toolbar"><span>{data?.totalItems || 0} sản phẩm · Trang {page}/{totalPages}</span><button className="filter-mobile-button" onClick={() => setMobileFiltersOpen(true)}>☷ Bộ lọc</button><span className="view-toggle">▦ ▦</span></div>
-      {wishlistError && <p className="suggestion-error" role="alert">Không thể cập nhật sản phẩm yêu thích. Vui lòng thử lại.</p>}
+      {wishlistError === 'unauthenticated' ? <p className="suggestion-error" role="alert">Đăng nhập để lưu sản phẩm yêu thích. <Link to="/login">Đăng nhập</Link></p> : wishlistError === 'request' && <p className="suggestion-error" role="alert">Không thể cập nhật sản phẩm yêu thích. Vui lòng thử lại.</p>}
       {loading ? <p className="detail-state" role="status">Đang tải sản phẩm...</p> : error || categoryError ? <div className="empty-state" role="alert"><h3>Không thể tải dữ liệu tìm kiếm</h3><p>Vui lòng thử lại.</p><button className="button button-primary" onClick={retry}>Thử lại</button></div> : data?.items.length ? <div className="product-grid">{data.items.map(product => <ProductCard key={product.id} product={product} liked={wishlistIds.includes(product.id)} busy={wishlistLoading || wishlistBusyIds.includes(product.id)} onToggle={toggleWishlist} />)}</div> : <div className="empty-state"><span>⌕</span><h3>{slug && !selectedCategory ? 'Không tìm thấy danh mục' : 'Không tìm thấy sản phẩm'}</h3><p>Thử thay đổi từ khóa hoặc bộ lọc của bạn.</p></div>}
       {data && !loading && !error && totalPages > 1 && <nav className="pagination" aria-label="Phân trang sản phẩm"><button disabled={page === 1} onClick={() => setPage(page - 1)} aria-label="Trang trước">←</button>{Array.from({ length: totalPages }, (_, index) => index + 1).map(item => <button className={item === page ? 'active' : ''} key={item} onClick={() => setPage(item)} aria-current={item === page ? 'page' : undefined}>{item}</button>)}<button disabled={page === totalPages} onClick={() => setPage(page + 1)} aria-label="Trang sau">→</button></nav>}
     </div></div>
