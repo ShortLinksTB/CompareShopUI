@@ -279,7 +279,28 @@ describe('Search and Category API data', () => {
     expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/wishlist', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ productId: 17, operation: 'add' }),
     });
+    fireEvent.click(await screen.findByRole('button', { name: 'Bỏ khỏi yêu thích' }));
+    expect(await screen.findByRole('button', { name: 'Thêm vào yêu thích' })).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/wishlist', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ productId: 17, operation: 'remove' }),
+    });
     expect(localStorage.getItem('wishlist-products')).toBeNull();
+  });
+
+  it('rolls back the optimistic heart state when a wishlist update fails', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith('/categories')) return response({ items: [{ id: 42, slug: 'phones', name: 'Phones' }] });
+      if (url.endsWith('/wishlist') && !init) return response({ items: [] });
+      if (url.endsWith('/wishlist') && init?.method === 'POST') return Promise.reject(new Error('offline'));
+      return response(catalogPage);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderAppAt('/category/phones');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Thêm vào yêu thích' }));
+    expect(await screen.findByRole('alert')).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Thêm vào yêu thích' })).toBeTruthy();
   });
 
   it('resolves a category slug to its numeric ID before requesting its products', async () => {
