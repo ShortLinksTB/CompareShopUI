@@ -44,7 +44,7 @@ export function BlogDetailPage() {
 
   if (loading || loadedSlug !== slug) return <p className="detail-state" role="status">Đang tải bài viết...</p>;
   if (error) return <div className="empty-state" role="alert"><h1>Không thể tải bài viết</h1><p>Vui lòng thử lại sau.</p><button className="button button-primary" onClick={() => setAttempt(value => value + 1)}>Thử lại</button></div>;
-  if (!article) return <div className="empty-state" role="status"><h1>Không tìm thấy bài viết</h1><p>Bài viết này không tồn tại hoặc chưa được xuất bản.</p><Link className="button button-primary" to="/blog">Quay lại Blog</Link></div>;
+  if (!article) return <div className="empty-state blog-not-found-state" role="status"><h1>Không tìm thấy bài viết</h1><p>Bài viết này không tồn tại hoặc chưa được xuất bản.</p><Link className="button button-primary" to="/blog">Quay lại Blog</Link></div>;
 
   const publishedDate = formatPublishedDate(article.publishedAtUtc);
   const hasRelatedProducts = Array.isArray(article.relatedProductIds) && article.relatedProductIds.length > 0;
