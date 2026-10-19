@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { getProductDetail, productApiBaseUrl, type DetailOffer, type PriceHistoryPoint, type ProductDetail, type RelatedProduct } from './productApi';
 
@@ -50,10 +50,18 @@ export function ProductDetailPage() {
   const [data, setData] = useState<DetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const requestId = useRef(0);
   const load = () => {
+    const currentRequestId = ++requestId.current;
     setLoading(true);
     setError(false);
-    getProductDetail(slug).then(setData).catch(() => { setData(null); setError(true); }).finally(() => setLoading(false));
+    getProductDetail(slug).then(result => {
+      if (currentRequestId === requestId.current) setData(result);
+    }).catch(() => {
+      if (currentRequestId === requestId.current) { setData(null); setError(true); }
+    }).finally(() => {
+      if (currentRequestId === requestId.current) setLoading(false);
+    });
   };
   useEffect(() => { load(); }, [slug]);
 

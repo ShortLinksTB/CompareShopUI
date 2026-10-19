@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
+import { BrowserRouter, Link, MemoryRouter, Route, Routes } from 'react-router-dom';
 import { App } from './App';
 import { LanguageProvider } from './i18n';
+import { ProductDetailPage } from './ProductDetailPage';
 
 const categories = { items: [{ id: 1, slug: 'phones', name: 'Phones' }] };
 const products = {
@@ -395,5 +396,25 @@ describe('Product Detail API data', () => {
     vi.stubGlobal('fetch', detailFetch({ offers: [], history: [] }));
     fireEvent.click(retry);
     expect(await screen.findByText('Chưa có cửa hàng niêm yết giá')).toBeTruthy();
+  });
+
+  it('ignores a late response after navigating to a different product slug', async () => {
+    let resolveFirst: ((value: Response) => void) | undefined;
+    const otherProduct = { ...detail, id: 2, slug: 'other-product', name: 'Other Product' };
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith('/products/sample-product-01')) return new Promise<Response>(resolve => { resolveFirst = resolve; });
+      if (url.endsWith('/products/other-product')) return response(otherProduct);
+      if (url.endsWith('/products/2/offers') || url.includes('/products/2/price-history')) return response({ items: [] });
+      if (url.includes('/products?categoryId=7')) return response({ items: [] });
+      return response({}, false);
+    }));
+    render(<LanguageProvider><MemoryRouter initialEntries={['/product/sample-product-01']}><Link to="/product/other-product">Open other product</Link><Routes><Route path="/product/:slug" element={<ProductDetailPage />} /></Routes></MemoryRouter></LanguageProvider>);
+
+    fireEvent.click(screen.getByRole('link', { name: 'Open other product' }));
+    expect(await screen.findByRole('heading', { name: 'Other Product' })).toBeTruthy();
+    resolveFirst?.(await response(detail));
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Other Product' })).toBeTruthy());
+    expect(screen.queryByRole('heading', { name: 'Sample Product 01' })).toBeNull();
   });
 });
