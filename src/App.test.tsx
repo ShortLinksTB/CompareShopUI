@@ -25,18 +25,24 @@ describe('Home API data', () => {
   it('loads categories and products from the catalog endpoints and renders API fields', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(response(categories))
-      .mockResolvedValueOnce(response(products));
+      .mockResolvedValueOnce(response(products))
+      .mockResolvedValueOnce(response({ items: [], page: 1, pageSize: 1, totalItems: 42, totalPages: 42 }));
     vi.stubGlobal('fetch', fetchMock);
     renderApp();
 
     expect(screen.getAllByRole('status').length).toBeGreaterThan(0);
     expect((await screen.findAllByRole('link', { name: 'Phones' })).some(link => link.getAttribute('href') === '/category/phones')).toBe(true);
     expect(await screen.findByRole('link', { name: 'Sample Phone' })).toBeTruthy();
+    expect(screen.getByText('42 sản phẩm')).toBeTruthy();
     expect(screen.getByText(/Từ 1\.200\.000/)).toBeTruthy();
     expect(screen.getByText('2 cửa hàng đang bán')).toBeTruthy();
+    expect(screen.getByText('Chưa có hình ảnh')).toBeTruthy();
+    expect(screen.getByRole('img', { name: 'Chưa có hình ảnh' })).toBeTruthy();
+    expect(screen.queryByText('Apple')).toBeNull();
     expect(screen.queryByText(/★/)).toBeNull();
     expect(fetchMock).toHaveBeenNthCalledWith(1, 'https://api-compareshop-dev.giamha.online/api/v1/categories');
     expect(fetchMock).toHaveBeenNthCalledWith(2, 'https://api-compareshop-dev.giamha.online/api/v1/products?page=1&pageSize=10');
+    expect(fetchMock).toHaveBeenNthCalledWith(3, 'https://api-compareshop-dev.giamha.online/api/v1/products?categoryId=1&page=1&pageSize=1');
   });
 
   it('shows empty states when both API collections are empty', async () => {
@@ -52,9 +58,9 @@ describe('Home API data', () => {
   it('shows an error and retries both requests', async () => {
     const fetchMock = vi.fn()
       .mockRejectedValueOnce(new Error('offline'))
-      .mockResolvedValueOnce(response(products))
       .mockResolvedValueOnce(response(categories))
-      .mockResolvedValueOnce(response(products));
+      .mockResolvedValueOnce(response(products))
+      .mockResolvedValueOnce(response({ items: [], page: 1, pageSize: 1, totalItems: 42, totalPages: 42 }));
     vi.stubGlobal('fetch', fetchMock);
     renderApp();
 
@@ -71,7 +77,8 @@ describe('Home API data', () => {
 it('renders the storefront and opens the saved products page', async () => {
   vi.stubGlobal('fetch', vi.fn()
     .mockResolvedValueOnce(response(categories))
-    .mockResolvedValueOnce(response(products)));
+    .mockResolvedValueOnce(response(products))
+    .mockResolvedValueOnce(response({ items: [], page: 1, pageSize: 1, totalItems: 42, totalPages: 42 })));
   renderApp();
 
   expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('So sánh giá');
