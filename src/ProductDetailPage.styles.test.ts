@@ -1,7 +1,7 @@
-import { readFileSync } from 'node:fs';
+/// <reference types="vite/client" />
 import { describe, expect, it } from 'vitest';
 
-const stylesheet = readFileSync(new URL('./styles.css', import.meta.url), 'utf8');
+import stylesheet from './styles.css?inline';
 
 describe('Product Detail presentation CSS', () => {
   it('uses a light GiaTot wordmark color in the dark theme', () => {
