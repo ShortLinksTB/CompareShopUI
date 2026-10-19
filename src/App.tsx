@@ -70,7 +70,7 @@ function WishlistPage() {
     setRemoving(item.productId);
     setError(null);
     try {
-      const response = await fetch(WISHLIST_API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ productId: item.productId, operation: 'remove' }) });
+      const response = await fetch(`${WISHLIST_API}/${item.productId}`, { method: 'DELETE' });
       if (response.status === 401 || response.status === 403) { setError('unauthenticated'); return; }
       if (!response.ok) throw new Error('request');
       setItems(current => current.filter(saved => saved.productId !== item.productId));

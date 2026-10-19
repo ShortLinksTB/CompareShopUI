@@ -53,7 +53,9 @@ export function SearchPage() {
     setWishlistBusyIds(ids => [...ids, productId]);
     setWishlistIds(ids => adding ? [...ids, productId] : ids.filter(id => id !== productId));
     try {
-      const response = await fetch(WISHLIST_API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ productId, operation: adding ? 'add' : 'remove' }) });
+      const response = await fetch(adding ? WISHLIST_API : `${WISHLIST_API}/${productId}`, adding
+        ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ productId, operation: 'add' }) }
+        : { method: 'DELETE' });
       if (response.status === 401 || response.status === 403) throw new Error('unauthenticated');
       if (!response.ok) throw new Error('wishlist update failed');
     } catch (reason) {
