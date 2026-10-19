@@ -15,6 +15,24 @@ function renderApp() {
   return render(<LanguageProvider><BrowserRouter><App /></BrowserRouter></LanguageProvider>);
 }
 
+function renderAppAt(path: string) {
+  window.history.pushState({}, '', path);
+  return renderApp();
+}
+
+function setColorScheme(theme: 'light' | 'dark') {
+  vi.stubGlobal('matchMedia', vi.fn((query: string) => ({
+    matches: query.includes('prefers-color-scheme: dark') && theme === 'dark',
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  }) as unknown as MediaQueryList));
+}
+
 function response(body: unknown, ok = true) {
   return Promise.resolve({ ok, status: ok ? 200 : 500, json: () => Promise.resolve(body) } as Response);
 }
@@ -167,5 +185,138 @@ describe('Blog Listing API data', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Thử lại' }));
     expect(await screen.findByText('Chọn laptop phù hợp')).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+const detail = {
+  id: 1,
+  slug: 'sample-product-01',
+  name: 'Sample Product 01',
+  brand: 'Example',
+  description: 'A product from the catalog API.',
+  category: { id: 7, slug: 'phones', name: 'Phones' },
+  offerSummary: { minPrice: 1200000, maxPrice: 1500000, offerCount: 1 },
+  specificationGroups: [{ name: 'Main', items: [{ name: 'Storage', value: '128 GB' }] }],
+};
+
+function detailFetch({ offers = [{ id: 9, price: 1200000, url: null, updatedAt: '2026-10-19T08:00:00Z', shopId: 2, shopSlug: 'shop-two', shopName: 'Shop Two' }], history = [{ date: '2026-09-01T00:00:00Z', minPrice: 1300000, shopId: 2 }], related = [] } = {}) {
+  return vi.fn((input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url.endsWith('/products/sample-product-01')) return response(detail);
+    if (url.endsWith('/products/1/offers')) return response({ items: offers });
+    if (url.includes('/products/1/price-history')) return response({ items: history });
+    if (url.includes('/products?categoryId=7')) return response({ items: related });
+    return response({}, false);
+  });
+}
+
+describe('Product Detail API data', () => {
+  it.each(['light', 'dark'] as const)('applies Product Detail shell for direct navigation in %s theme', async theme => {
+    setColorScheme(theme);
+    vi.stubGlobal('fetch', detailFetch());
+
+    renderAppAt('/product/sample-product-01');
+    expect(await screen.findByRole('heading', { name: 'Sample Product 01' })).toBeTruthy();
+    expect(document.querySelector('.product-shell')).toBeTruthy();
+    expect(window.matchMedia('(prefers-color-scheme: dark)').matches).toBe(theme === 'dark');
+    expect(screen.getByText('Ảnh chưa có')).toBeTruthy();
+    expect(screen.getByText('Giá có thể thay đổi theo từng cửa hàng. Hãy kiểm tra lại giá cuối cùng trước khi mua.')).toBeTruthy();
+  });
+
+  it.each(['light', 'dark'] as const)('preserves Product Detail shell after opening a Home product link in %s theme', async theme => {
+    setColorScheme(theme);
+    const product = { id: 5, slug: 'sample-product-01', name: 'Sample Product 01', brand: 'Example', category: { id: 7, slug: 'phones', name: 'Phones' }, offerSummary: { minPrice: 1200000, maxPrice: 1500000, offerCount: 1 } };
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith('/categories')) return response({ items: [{ id: 7, slug: 'phones', name: 'Phones' }] });
+      if (url.includes('/products?categoryId=7')) return response({ items: [product], page: 1, pageSize: 10, totalItems: 1, totalPages: 1 });
+      if (url.includes('/products?page=1&pageSize=10')) return response({ items: [product], page: 1, pageSize: 10, totalItems: 1, totalPages: 1 });
+      if (url.endsWith('/products/sample-product-01')) return response(detail);
+      if (url.endsWith('/products/1/offers')) return response({ items: [] });
+      if (url.includes('/products/1/price-history')) return response({ items: [] });
+      return response({ items: [] });
+    }));
+
+    renderAppAt('/');
+    expect(document.querySelector('.home-shell')).toBeTruthy();
+    fireEvent.click(await screen.findByRole('link', { name: 'Sample Product 01' }));
+    expect(await screen.findByRole('heading', { name: 'Sample Product 01' })).toBeTruthy();
+    expect(document.querySelector('.product-shell')).toBeTruthy();
+    expect(window.matchMedia('(prefers-color-scheme: dark)').matches).toBe(theme === 'dark');
+  });
+
+  it('opens the API product selected from the Home product link', async () => {
+    const product = { id: 5, slug: 'sample-product-01', name: 'Sample Product 01', brand: 'Example', category: { id: 7, slug: 'phones', name: 'Phones' }, offerSummary: { minPrice: 1200000, maxPrice: 1500000, offerCount: 1 } };
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith('/categories')) return response({ items: [{ id: 7, slug: 'phones', name: 'Phones' }] });
+      if (url.includes('/products?categoryId=7')) return response({ items: [product], page: 1, pageSize: 10, totalItems: 1, totalPages: 1 });
+      if (url.includes('/products?page=1&pageSize=10')) return response({ items: [product], page: 1, pageSize: 10, totalItems: 1, totalPages: 1 });
+      if (url.endsWith('/products/sample-product-01')) return response(detail);
+      if (url.endsWith('/products/1/offers')) return response({ items: [] });
+      if (url.includes('/products/1/price-history')) return response({ items: [] });
+      return response({ items: [] });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderAppAt('/');
+
+    fireEvent.click(await screen.findByRole('link', { name: 'Sample Product 01' }));
+    expect(await screen.findByRole('heading', { name: 'Sample Product 01' })).toBeTruthy();
+    expect(window.location.pathname).toBe('/product/sample-product-01');
+  });
+
+  it('loads a valid slug directly and requests detail, offers, history, and related products', async () => {
+    const fetchMock = detailFetch();
+    vi.stubGlobal('fetch', fetchMock);
+    renderAppAt('/product/sample-product-01');
+
+    expect(await screen.findByRole('heading', { name: 'Sample Product 01' })).toBeTruthy();
+    expect(screen.getAllByText(/1\.200\.000/).length).toBeGreaterThan(0);
+    expect(screen.getByText('Shop Two')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Xem ngay ↗' }).getAttribute('href')).toBe('https://api-compareshop-dev.giamha.online/api/v1/go/9');
+    expect(screen.getByText('Storage')).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products/sample-product-01');
+    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products/1/offers');
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/products/1/price-history?from='))).toBe(true);
+    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products?categoryId=7&page=1&pageSize=5');
+    expect(screen.getByRole('img', { name: 'Biểu đồ lịch sử giá' })).toBeTruthy();
+  });
+
+  it('shows empty offers and price history from empty API responses', async () => {
+    vi.stubGlobal('fetch', detailFetch({ offers: [], history: [] }));
+    renderAppAt('/product/sample-product-01');
+
+    expect(await screen.findByText('Chưa có cửa hàng niêm yết giá')).toBeTruthy();
+    expect(screen.getByText('Chưa có dữ liệu lịch sử giá.')).toBeTruthy();
+    expect(screen.queryByRole('img', { name: 'Biểu đồ lịch sử giá' })).toBeNull();
+  });
+
+  it('keeps a loading state, reports request errors, and retries', async () => {
+    let resolveDetail: ((value: Response) => void) | undefined;
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      if (String(input).endsWith('/products/sample-product-01') && !resolveDetail) {
+        return new Promise<Response>(resolve => { resolveDetail = resolve; });
+      }
+      if (String(input).endsWith('/products/sample-product-01')) return response(detail);
+      if (String(input).endsWith('/products/1/offers')) return response({ items: [] });
+      if (String(input).includes('/products/1/price-history')) return response({ items: [] });
+      return response({ items: [] });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderAppAt('/product/sample-product-01');
+    expect(screen.getByRole('status').textContent).toContain('Đang tải');
+    void response(detail).then(result => resolveDetail?.(result));
+    expect(await screen.findByText('Chưa có cửa hàng niêm yết giá')).toBeTruthy();
+
+    const failingFetch = vi.fn().mockRejectedValue(new Error('offline'));
+    vi.stubGlobal('fetch', failingFetch);
+    window.history.pushState({}, '', '/product/sample-product-01');
+    cleanup();
+    renderAppAt('/product/sample-product-01');
+    const retry = await screen.findByRole('button', { name: 'Thử lại' });
+    expect(screen.getByRole('alert').textContent).toContain('Không thể tải');
+    vi.stubGlobal('fetch', detailFetch({ offers: [], history: [] }));
+    fireEvent.click(retry);
+    expect(await screen.findByText('Chưa có cửa hàng niêm yết giá')).toBeTruthy();
   });
 });
