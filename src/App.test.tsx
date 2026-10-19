@@ -142,9 +142,15 @@ describe('Wishlist API data', () => {
 
     expect(await screen.findByRole('heading', { name: 'Đăng nhập để xem sản phẩm đã lưu' })).toBeTruthy();
     const loginCta = screen.getByRole('link', { name: 'Đăng nhập' });
+    const prompt = loginCta.parentElement;
     expect(loginCta.getAttribute('href')).toBe('/login');
     expect(loginCta.classList.contains('wishlist-unauthenticated__cta')).toBe(true);
     expect(loginCta.previousElementSibling?.textContent).toBe('Danh sách yêu thích chỉ hiển thị cho tài khoản đã xác thực.');
+    expect(prompt?.classList.contains('wishlist-unauthenticated')).toBe(true);
+    expect(prompt?.children[2]).toBe(loginCta.previousElementSibling);
+    expect(prompt?.children[3]).toBe(loginCta);
+    expect(stylesheet).toMatch(/\.wishlist-unauthenticated\s*\{\s*display:\s*flex;\s*flex-direction:\s*column;\s*align-items:\s*center;\s*\}/);
+    expect(stylesheet).toMatch(/\.wishlist-unauthenticated p\s*\{\s*max-width:\s*100%;\s*line-height:\s*1\.5;\s*text-align:\s*center;\s*\}/);
     expect(stylesheet).toMatch(/\.wishlist-unauthenticated__cta\s*\{\s*display:\s*block;\s*width:\s*fit-content;\s*margin:\s*20px auto 0;\s*\}/);
   });
 
