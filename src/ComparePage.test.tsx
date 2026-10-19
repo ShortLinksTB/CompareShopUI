@@ -51,6 +51,10 @@ describe('Compare page', () => {
     expect(stylesheet).toMatch(/\.compare-empty-state__cta\s*\{\s*display:\s*block;\s*width:\s*fit-content;\s*margin:\s*16px auto 0;\s*\}/);
   });
 
+  it('adds extra separation to the Compare empty-state CTA on mobile', () => {
+    expect(stylesheet).toMatch(/@media\s*\(max-width:\s*639px\)\s*\{\.compare-empty-state__cta\s*\{margin-top:\s*32px\}\}/);
+  });
+
   it('handles malformed saved data without crashing', async () => {
     localStorage.setItem('compare-products', '{invalid');
     vi.stubGlobal('fetch', vi.fn());
