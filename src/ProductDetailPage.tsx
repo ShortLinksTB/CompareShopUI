@@ -66,6 +66,6 @@ export function ProductDetailPage() {
   useEffect(() => { load(); }, [slug]);
 
   if (loading) return <p className="detail-state" role="status">Đang tải thông tin sản phẩm...</p>;
-  if (error || !data) return <div className="empty-state" role="alert"><h2>{error ? 'Không thể tải thông tin sản phẩm' : 'Không tìm thấy sản phẩm'}</h2><p>Vui lòng thử lại sau.</p><button className="button button-primary" onClick={load}>Thử lại</button><Link to="/search">Quay lại tìm kiếm</Link></div>;
+  if (error || !data) return <div className="empty-state product-error-state" role="alert"><h2>{error ? 'Không thể tải thông tin sản phẩm' : 'Không tìm thấy sản phẩm'}</h2><p>Vui lòng thử lại sau.</p><button className="button button-primary" onClick={load}>Thử lại</button><Link to="/search">Quay lại tìm kiếm</Link></div>;
   return <ProductDetailContent data={data} />;
 }
