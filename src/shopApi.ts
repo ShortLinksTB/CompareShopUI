@@ -6,6 +6,9 @@ export interface Shop {
   name: string;
   logoUrl?: string | null;
   websiteUrl?: string | null;
+  rating?: number | null;
+  reviewCount?: number | null;
+  status?: string | null;
 }
 
 export interface ShopProduct {

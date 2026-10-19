@@ -2,7 +2,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { App } from './App';
+import { LanguageProvider } from './i18n';
 import { ShopPage } from './ShopPage';
+import './styles.css';
 
 const api = 'https://api-compareshop-dev.giamha.online/api/v1';
 const shop = { id: 24, slug: 'sample-shop', name: 'Sample Shop', logoUrl: null, websiteUrl: null };
@@ -17,6 +20,23 @@ function renderShop() {
   return render(<MemoryRouter initialEntries={['/shops/sample-shop']}><Routes><Route path="/shops/:slug" element={<ShopPage />} /></Routes></MemoryRouter>);
 }
 
+function renderShopRoute() {
+  return render(<LanguageProvider><MemoryRouter initialEntries={['/shops/sample-shop']}><App /></MemoryRouter></LanguageProvider>);
+}
+
+function setColorScheme(theme: 'light' | 'dark') {
+  vi.stubGlobal('matchMedia', vi.fn((query: string) => ({
+    matches: query.includes('prefers-color-scheme: dark') && theme === 'dark',
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  }) as unknown as MediaQueryList));
+}
+
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe('Partner Shop API data', () => {
@@ -29,11 +49,44 @@ describe('Partner Shop API data', () => {
     renderShop();
     expect(screen.getByRole('status').textContent).toContain('Đang tải');
     expect(await screen.findByRole('heading', { name: 'Sample Shop' })).toBeTruthy();
+    expect(screen.getByText('Chưa có đánh giá')).toBeTruthy();
+    expect(screen.getByText('(Số lượt đánh giá chưa có)')).toBeTruthy();
+    expect(screen.getByText(/Cửa hàng đối tác · Trạng thái chưa được cung cấp/)).toBeTruthy();
+    expect((screen.getByRole('button', { name: 'Xem website ↗' }) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByRole('link', { name: 'Sample Product' }).getAttribute('href')).toBe('/product/sample-product');
     expect(screen.getByText((_content, element) => element?.className === 'price' && element.textContent?.includes('1.200.000') === true)).toBeTruthy();
-    expect(screen.queryByText(/★|đánh giá|1\.2K/)).toBeNull();
+    expect(screen.queryByText(/1\.3M/)).toBeNull();
     expect(fetchMock).toHaveBeenNthCalledWith(1, `${api}/shops/sample-shop`);
     expect(fetchMock).toHaveBeenNthCalledWith(2, `${api}/products?shopId=24&page=1&pageSize=12`);
+  });
+
+  it('preserves API rating, status, and the active website action when those fields exist', async () => {
+    const shopWithDetails = { ...shop, rating: 4.8, reviewCount: 1200, status: 'active', websiteUrl: 'https://shop.example' };
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => String(input).endsWith('/shops/sample-shop')
+      ? response(shopWithDetails)
+      : response({ items: [], page: 1, pageSize: 12, totalItems: 0, totalPages: 0 })));
+    renderShop();
+
+    expect(await screen.findByText('★ 4.8')).toBeTruthy();
+    expect(screen.getByText('(1.200 đánh giá)')).toBeTruthy();
+    expect(screen.getByText(/Cửa hàng đối tác · Đang hoạt động/)).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Xem website ↗' }).getAttribute('href')).toBe('https://shop.example');
+  });
+
+  it.each(['light', 'dark'] as const)('keeps the Shop route in its matching page shell under %s color preference', async theme => {
+    setColorScheme(theme);
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => String(input).endsWith('/shops/sample-shop')
+      ? response(shop)
+      : response({ items: [], page: 1, pageSize: 12, totalItems: 0, totalPages: 0 })));
+    renderShopRoute();
+
+    expect(await screen.findByRole('heading', { name: 'Sample Shop' })).toBeTruthy();
+    const shell = document.querySelector('.shop-shell');
+    expect(shell).toBeTruthy();
+    expect(shell?.querySelector('.site-header')).toBeTruthy();
+    expect(shell?.querySelector('.shop-hero')?.children).toHaveLength(3);
+    expect(shell?.classList.contains('shop-shell')).toBe(true);
+    expect(window.matchMedia('(prefers-color-scheme: dark)').matches).toBe(theme === 'dark');
   });
 
   it('uses neutral fallbacks for absent logo and price, and renders the empty catalog state', async () => {
