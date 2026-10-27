@@ -5,6 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { App } from './App';
 import { LanguageProvider } from './i18n';
 import { ShopPage } from './ShopPage';
+import stylesheet from './styles.css?inline';
 import './styles.css';
 
 const api = 'https://api-compareshop-dev.giamha.online/api/v1';
@@ -73,7 +74,7 @@ describe('Partner Shop API data', () => {
     expect(screen.getByRole('link', { name: 'Xem website ↗' }).getAttribute('href')).toBe('https://shop.example');
   });
 
-  it.each(['light', 'dark'] as const)('keeps the Shop route fixed light under a %s color preference', async theme => {
+  it.each(['light', 'dark'] as const)('keeps the Shop route fixed light under %s OS preference', async theme => {
     setColorScheme(theme);
     vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => String(input).endsWith('/shops/sample-shop')
       ? response(shop)
@@ -81,12 +82,13 @@ describe('Partner Shop API data', () => {
     renderShopRoute();
 
     expect(await screen.findByRole('heading', { name: 'Sample Shop' })).toBeTruthy();
-    const shell = document.querySelector('.light-shell');
+    const shell = document.querySelector('.shop-shell');
     expect(shell).toBeTruthy();
     expect(shell?.querySelector('.site-header')).toBeTruthy();
     expect(shell?.querySelector('.shop-hero')?.children).toHaveLength(3);
-    expect(shell?.classList.contains('light-shell')).toBe(true);
-    expect(window.matchMedia('(prefers-color-scheme: dark)').matches).toBe(theme === 'dark');
+    expect(shell?.classList.contains('shop-shell')).toBe(true);
+    expect(stylesheet).toMatch(/\.light-shell, \.product-shell, \.shop-shell, \.blog-shell\s*\{\s*color-scheme:\s*light;/);
+    expect(stylesheet).not.toContain('prefers-color-scheme');
   });
 
   it('uses neutral fallbacks for absent logo and price, and renders the empty catalog state', async () => {
