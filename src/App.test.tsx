@@ -35,6 +35,11 @@ function setColorScheme(theme: 'light' | 'dark') {
   }) as unknown as MediaQueryList));
 }
 
+function shellColorScheme(shellClass: string) {
+  const rule = stylesheet.match(new RegExp(`\\.${shellClass}[^\\{]*\\{[^}]*color-scheme:\\s*(light|dark)`));
+  return rule?.[1];
+}
+
 function contrastRatio(foreground: string, background: string) {
   const luminance = (color: string) => {
     const rgb = color.match(/[\d.]+/g)?.map(Number);
@@ -55,6 +60,53 @@ function response(body: unknown, ok = true) {
 }
 
 afterEach(() => { cleanup(); localStorage.clear(); window.history.replaceState({}, '', '/'); Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 }); Object.defineProperty(window, 'innerHeight', { configurable: true, value: 768 }); vi.unstubAllGlobals(); });
+
+describe('fixed route themes', () => {
+  it.each([
+    ['/', 'home-shell', 'dark'],
+    ['/search', 'light-shell', 'light'],
+    ['/category/phones', 'light-shell', 'light'],
+    ['/product/sample-phone', 'product-shell', 'light'],
+    ['/compare', 'light-shell', 'light'],
+    ['/blog', 'blog-shell', 'light'],
+    ['/blog/article-1', 'blog-shell', 'light'],
+    ['/shops/sample-shop', 'shop-shell', 'light'],
+    ['/wishlist', 'light-shell', 'light'],
+    ['/login', 'light-shell', 'light'],
+    ['/account', 'light-shell', 'light'],
+  ] as const)('%s always uses the %s %s scheme independent of OS preference', (path, shellClass, scheme) => {
+    setColorScheme('dark');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ items: [] })));
+    renderAppAt(path);
+
+    expect(document.querySelector(`.${shellClass}`)).toBeTruthy();
+    expect(shellColorScheme(shellClass)).toBe(scheme);
+    expect(stylesheet).not.toContain('prefers-color-scheme');
+  });
+
+  it('provides visible focus indicators for both fixed themes', () => {
+    expect(stylesheet).toMatch(/\.home-shell :focus-visible\s*\{[^}]*outline:\s*3px solid #ff9a66/);
+    expect(stylesheet).toMatch(/\.light-shell :focus-visible[^\{]*\{[^}]*outline:\s*3px solid #b93800/);
+    expect(contrastRatio('#ff9a66', '#111827')).toBeGreaterThanOrEqual(3);
+    expect(contrastRatio('#b93800', '#ffffff')).toBeGreaterThanOrEqual(3);
+  });
+
+  it('keeps shared text and control colors above WCAG AA contrast thresholds', () => {
+    expect(contrastRatio('#c2410c', '#ffffff')).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio('#15803d', '#ffffff')).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio('#b45309', '#ffffff')).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio('#8b8b8b', '#f8f9fa')).toBeGreaterThanOrEqual(3);
+    expect(contrastRatio('#6b7280', '#1f2937')).toBeGreaterThanOrEqual(3);
+  });
+
+  it('sends unknown routes to the fixed dark Home route', async () => {
+    renderAppAt('/not-a-real-route');
+
+    await waitFor(() => expect(document.querySelector('.home-shell')).toBeTruthy());
+    expect(window.location.pathname).toBe('/');
+    expect(shellColorScheme('home-shell')).toBe('dark');
+  });
+});
 
 describe('Home API data', () => {
   it('loads categories and products from the catalog endpoints and renders API fields', async () => {
@@ -142,7 +194,8 @@ describe('Wishlist API data', () => {
   it('removes an item through the API and renders the empty state after success', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(response({ items: [{ productId: 12, slug: 'real-phone', name: 'Real Phone', createdAtUtc: '2026-10-19T00:00:00Z' }] }))
-      .mockResolvedValueOnce(response(null));
+      .mockResolvedValueOnce(response(null))
+      .mockResolvedValueOnce(response({ items: [] }));
     vi.stubGlobal('fetch', fetchMock);
     renderAppAt('/wishlist');
 
@@ -229,22 +282,19 @@ function renderBlog() {
 }
 
 describe('Blog Listing API data', () => {
-  it.each(['light', 'dark'] as const)('keeps Blog Detail theme and responsive styles for direct slug navigation in %s mode', async theme => {
+  it.each(['light', 'dark'] as const)('keeps Blog Detail fixed light regardless of %s OS preference', async theme => {
     setColorScheme(theme);
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(articleDetail)));
     renderAppAt('/blog/buying-a-laptop');
 
     expect(await screen.findByRole('heading', { name: 'Chọn laptop phù hợp' })).toBeTruthy();
     expect(document.querySelector('.blog-shell')).toBeTruthy();
-    expect(window.matchMedia('(prefers-color-scheme: dark)').matches).toBe(theme === 'dark');
+    expect(shellColorScheme('blog-shell')).toBe('light');
     expect(stylesheet).toContain('.blog-shell');
     expect(stylesheet).toContain('.article-sidebar{display:none}');
-    if (theme === 'dark') {
-      expect(stylesheet).toContain('.blog-shell .article-main>.article-lead{color:#d1d5db}');
-    }
   });
 
-  it('renders the article lead with WCAG AA contrast at 390×844 in dark mode', async () => {
+  it('renders the article lead with WCAG AA contrast at 390×844 in fixed light mode', async () => {
     setColorScheme('dark');
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 });
     Object.defineProperty(window, 'innerHeight', { configurable: true, value: 844 });
@@ -255,23 +305,7 @@ describe('Blog Listing API data', () => {
     expect([window.innerWidth, window.innerHeight]).toEqual([390, 844]);
     expect(lead.classList.contains('article-lead')).toBe(true);
     expect(lead.closest('.blog-shell')).toBeTruthy();
-
-    const darkStyles = stylesheet.slice(stylesheet.lastIndexOf('@media(prefers-color-scheme:dark)'));
-    const foreground = darkStyles.match(/\.blog-shell \.article-main>\.article-lead\{color:(#[a-f\d]{6})\}/i)?.[1];
-    const background = stylesheet.match(/\.blog-shell\{[^}]*background:(#[a-f\d]{6})/i)?.[1];
-    expect(foreground).toBeTruthy();
-    expect(background).toBeTruthy();
-
-    const simulatedMediaStyle = document.createElement('style');
-    simulatedMediaStyle.textContent = `.blog-shell .article-main>.article-lead{color:${foreground}}`;
-    document.head.append(simulatedMediaStyle);
-    try {
-      const renderedForeground = window.getComputedStyle(lead).color;
-      expect(renderedForeground).toBe('rgb(209, 213, 219)');
-      expect(contrastRatio(renderedForeground, background!)).toBeGreaterThanOrEqual(4.5);
-    } finally {
-      simulatedMediaStyle.remove();
-    }
+    expect(contrastRatio('#4b5563', '#ffffff')).toBeGreaterThanOrEqual(4.5);
   });
 
   it('shows loading state until the Articles API resolves', async () => {
@@ -563,19 +597,19 @@ function detailFetch({ offers = [{ id: 9, price: 1200000, url: null, updatedAt: 
 }
 
 describe('Product Detail API data', () => {
-  it.each(['light', 'dark'] as const)('applies Product Detail shell for direct navigation in %s theme', async theme => {
+  it.each(['light', 'dark'] as const)('applies fixed light Product Detail shell for direct navigation in %s OS preference', async theme => {
     setColorScheme(theme);
     vi.stubGlobal('fetch', detailFetch());
 
     renderAppAt('/product/sample-product-01');
     expect(await screen.findByRole('heading', { name: 'Sample Product 01' })).toBeTruthy();
     expect(document.querySelector('.product-shell')).toBeTruthy();
-    expect(window.matchMedia('(prefers-color-scheme: dark)').matches).toBe(theme === 'dark');
+    expect(shellColorScheme('product-shell')).toBe('light');
     expect(screen.getByText('Ảnh chưa có')).toBeTruthy();
     expect(screen.getByText('Giá có thể thay đổi theo từng cửa hàng. Hãy kiểm tra lại giá cuối cùng trước khi mua.')).toBeTruthy();
   });
 
-  it.each(['light', 'dark'] as const)('preserves Product Detail shell after opening a Home product link in %s theme', async theme => {
+  it.each(['light', 'dark'] as const)('preserves fixed route themes after opening a Home product link in %s OS preference', async theme => {
     setColorScheme(theme);
     const product = { id: 5, slug: 'sample-product-01', name: 'Sample Product 01', brand: 'Example', category: { id: 7, slug: 'phones', name: 'Phones' }, offerSummary: { minPrice: 1200000, maxPrice: 1500000, offerCount: 1 } };
     vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
@@ -591,10 +625,11 @@ describe('Product Detail API data', () => {
 
     renderAppAt('/');
     expect(document.querySelector('.home-shell')).toBeTruthy();
+    expect(shellColorScheme('home-shell')).toBe('dark');
     fireEvent.click(await screen.findByRole('link', { name: 'Sample Product 01' }));
     expect(await screen.findByRole('heading', { name: 'Sample Product 01' })).toBeTruthy();
     expect(document.querySelector('.product-shell')).toBeTruthy();
-    expect(window.matchMedia('(prefers-color-scheme: dark)').matches).toBe(theme === 'dark');
+    expect(shellColorScheme('product-shell')).toBe('light');
   });
 
   it('opens the API product selected from the Home product link', async () => {

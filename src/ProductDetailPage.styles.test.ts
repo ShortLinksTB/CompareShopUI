@@ -4,8 +4,10 @@ import { describe, expect, it } from 'vitest';
 import stylesheet from './styles.css?inline';
 
 describe('Product Detail presentation CSS', () => {
-  it('uses a light GiaTot wordmark color in the dark theme', () => {
-    expect(stylesheet).toMatch(/\.product-shell \.brand\s*\{\s*color:\s*#f3f4f6;\s*\}/);
+  it('keeps Product Detail in the fixed light native control scheme', () => {
+    expect(stylesheet).toMatch(/\.light-shell, \.product-shell, \.shop-shell, \.blog-shell\s*\{\s*color-scheme:\s*light;/);
+    expect(stylesheet).not.toContain('.product-shell {');
+    expect(stylesheet).not.toContain('prefers-color-scheme');
   });
 
   it('keeps the product error actions in a centered column with a 12px gap', () => {
