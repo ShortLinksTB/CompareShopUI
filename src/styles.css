@@ -29,7 +29,7 @@
  .language-switcher{border:1px solid var(--border);border-radius:7px;background:#fff;color:var(--primary);padding:5px 7px;font-size:10px;font-weight:800;cursor:pointer}.language-switcher:hover{border-color:var(--primary);background:var(--primary-soft)}@media(max-width:639px){.language-switcher{display:none}}
  .language-switcher{appearance:none;border:1px solid var(--border);border-radius:7px;background:#fff;color:var(--primary);padding:5px 7px;font-size:10px;font-weight:800;cursor:pointer}.language-switcher:hover{border-color:var(--primary);background:var(--primary-soft)}
 
-@media (prefers-color-scheme: dark) {
+
   .home-shell {
     min-height: 100vh;
     color-scheme: dark;
@@ -99,90 +99,14 @@
     color: #f3f4f6;
   }
 
-  .product-shell {
-    min-height: 100vh;
-    color-scheme: dark;
-    color: #e5e7eb;
-    background: #111827;
-    --surface: #1f2937;
-    --border: #374151;
-    --muted: #a3acb9;
-    --primary-soft: #3b291f;
-  }
+  .home-shell .partners > div:first-of-type { color: #d1d5db; }
+  .home-shell .trust-grid b { color: #f3f4f6; }
+  .home-shell .site-footer a,
+  .home-shell .site-footer p { color: #cbd5e1; }
+  .home-shell .popular-searches a { background: #374151; color: #e5e7eb; }
 
-  .product-shell .site-header,
-  .product-shell .bottom-nav,
-  .product-shell .header-search,
-  .product-shell .header-search button,
-  .product-shell .language-switcher,
-  .product-shell .detail-gallery,
-  .product-shell .product-image-placeholder,
-  .product-shell .offer-list,
-  .product-shell .offer-row,
-  .product-shell .info-card,
-  .product-shell .price-history,
-  .product-shell .product-card,
-  .product-shell .mobile-sticky-cta {
-    background-color: var(--surface);
-    color: inherit;
-    border-color: var(--border);
-  }
 
-  .product-shell .header-search input,
-  .product-shell .breadcrumbs strong,
-  .product-shell .empty-state h3,
-  .product-shell .brand {
-    color: #f3f4f6;
-  }
 
-  .product-shell .info-card p {
-    color: #d1d5db;
-  }
-
-  .product-shell .gallery-count {
-    color: #f9fafb;
-    background: #374151;
-  }
-
-  .shop-shell {
-    min-height: 100vh;
-    color-scheme: dark;
-    color: #e5e7eb;
-    background: #111827;
-    --surface: #1f2937;
-    --border: #374151;
-    --muted: #a3acb9;
-    --primary-soft: #3b291f;
-  }
-
-  .shop-shell .site-header,
-  .shop-shell .bottom-nav,
-  .shop-shell .header-search,
-  .shop-shell .header-search button,
-  .shop-shell .language-switcher,
-  .shop-shell .shop-logo,
-  .shop-shell .product-card,
-  .shop-shell .product-image,
-  .shop-shell .category-pills button {
-    background-color: var(--surface);
-    color: inherit;
-    border-color: var(--border);
-  }
-
-  .shop-shell .brand,
-  .shop-shell .header-search input,
-  .shop-shell .empty-state h3 {
-    color: #f3f4f6;
-  }
-
-  .shop-shell .shop-hero .rating {
-    color: #fbbf24;
-  }
-
-  .shop-shell .shop-hero .rating span {
-    color: var(--muted);
-  }
-}
 .article-card .article-image{width:190px;height:145px;object-fit:cover;border-radius:8px}@media(max-width:639px){.article-card .article-image{width:110px;height:110px}}
 
 .product-image-placeholder{display:grid;place-items:center;background:var(--surface);color:var(--muted);font-size:11px}.detail-gallery>.detail-image-placeholder{width:100%;height:100%;margin:0;border-radius:14px}.gallery-thumbs>.product-image-placeholder{width:48px;height:58px;border:1px solid var(--border);border-radius:7px;font-size:8px}.gallery-thumbs>.product-image-placeholder:first-child{border-color:var(--primary)}.detail-state{padding:60px 0;color:var(--muted);text-align:center}@media(max-width:639px){.gallery-thumbs>.product-image-placeholder{width:42px;height:42px}.detail-gallery>.detail-image-placeholder{height:82%;margin-bottom:35px}}
@@ -220,6 +144,9 @@
   }
 }
 
+.light-shell{min-height:100vh;color-scheme:light}.home-shell{min-height:100vh;color-scheme:dark}
+:focus-visible{outline:3px solid #2563eb;outline-offset:2px}
+.home-shell :focus-visible{outline-color:#93c5fd}
 .header-search-wrap{position:relative;flex:1;max-width:390px}.search-suggestions{position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:60;display:grid;padding:6px;border:1px solid var(--border);border-radius:10px;background:var(--surface);box-shadow:0 12px 28px rgba(0,0,0,.14)}.search-suggestions button{padding:10px 12px;border:0;border-radius:6px;background:transparent;color:inherit;text-align:left;cursor:pointer}.search-suggestions button:hover,.search-suggestions button:focus{background:var(--primary-soft);color:var(--primary)}.suggestion-error{position:absolute;z-index:60;top:calc(100% + 6px);left:0;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--muted);font-size:11px}.category-pills a{white-space:nowrap;border:1px solid var(--border);border-radius:999px;background:var(--surface);padding:9px 13px;color:var(--muted);font-size:12px}.category-pills a.active,.category-pills a:hover{border-color:var(--primary);background:var(--primary-soft);color:var(--primary)}
 .shop-logo img{width:100%;height:100%;object-fit:contain;border-radius:inherit}
 .compare-image-placeholder{display:grid;place-items:center;width:100px;height:95px;border-radius:8px;background:var(--surface);color:var(--muted);font-size:11px}.compare-row:not(.compare-head)>div:not(:first-child){overflow-wrap:anywhere}
@@ -262,4 +189,3 @@
 @media(max-width:639px){.compare-empty-state__cta{margin-top:32px}}
 @media(max-width:639px){.compare-row{grid-template-columns:115px repeat(4,minmax(150px,1fr));min-width:715px}.compare-row>div{padding:12px;font-size:12px}.compare-image-placeholder{width:80px;height:76px}}
 .article-card{color:inherit;text-decoration:none}.article-content h2,.article-content h3{line-height:1.4;margin:28px 0 10px}.article-content p,.article-sidebar p{color:#4b5563;font-size:15px;line-height:1.75;white-space:pre-wrap}.article-sidebar li{margin:5px 0}.article-sidebar li a{color:inherit}.author-avatar-image{width:36px;height:36px;border-radius:50%;object-fit:cover}
-@media(prefers-color-scheme:dark){.blog-shell{min-height:100vh;color-scheme:dark;color:#e5e7eb;background:#111827;--surface:#1f2937;--border:#374151;--muted:#a3acb9;--primary-soft:#3b291f}.blog-shell .site-header,.blog-shell .bottom-nav,.blog-shell .header-search,.blog-shell .header-search button,.blog-shell .language-switcher,.blog-shell .article-card,.blog-shell .info-card{background-color:var(--surface);color:inherit;border-color:var(--border)}.blog-shell .brand,.blog-shell .header-search input,.blog-shell .breadcrumbs strong,.blog-shell .empty-state h1,.blog-shell .empty-state h3{color:#f3f4f6}.blog-shell .article-content p,.blog-shell .article-sidebar p{color:#d1d5db}.blog-shell .article-main>.article-lead{color:#d1d5db}.blog-shell .article-sidebar ol{color:#fdba74}.blog-shell .safe-image-fallback{background:var(--surface);color:var(--muted)}}

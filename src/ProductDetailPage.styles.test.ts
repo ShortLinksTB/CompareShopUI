@@ -4,8 +4,9 @@ import { describe, expect, it } from 'vitest';
 import stylesheet from './styles.css?inline';
 
 describe('Product Detail presentation CSS', () => {
-  it('uses a light GiaTot wordmark color in the dark theme', () => {
-    expect(stylesheet).toMatch(/\.product-shell \.brand\s*\{\s*color:\s*#f3f4f6;\s*\}/);
+  it('uses the fixed light color scheme independently of OS preference', () => {
+    expect(stylesheet).toMatch(/\.light-shell\{[^}]*color-scheme:light/);
+    expect(stylesheet).not.toMatch(/prefers-color-scheme/);
   });
 
   it('keeps the product error actions in a centered column with a 12px gap', () => {

@@ -73,7 +73,7 @@ describe('Partner Shop API data', () => {
     expect(screen.getByRole('link', { name: 'Xem website ↗' }).getAttribute('href')).toBe('https://shop.example');
   });
 
-  it.each(['light', 'dark'] as const)('keeps the Shop route in its matching page shell under %s color preference', async theme => {
+  it.each(['light', 'dark'] as const)('keeps the Shop route fixed light under a %s color preference', async theme => {
     setColorScheme(theme);
     vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => String(input).endsWith('/shops/sample-shop')
       ? response(shop)
@@ -81,11 +81,11 @@ describe('Partner Shop API data', () => {
     renderShopRoute();
 
     expect(await screen.findByRole('heading', { name: 'Sample Shop' })).toBeTruthy();
-    const shell = document.querySelector('.shop-shell');
+    const shell = document.querySelector('.light-shell');
     expect(shell).toBeTruthy();
     expect(shell?.querySelector('.site-header')).toBeTruthy();
     expect(shell?.querySelector('.shop-hero')?.children).toHaveLength(3);
-    expect(shell?.classList.contains('shop-shell')).toBe(true);
+    expect(shell?.classList.contains('light-shell')).toBe(true);
     expect(window.matchMedia('(prefers-color-scheme: dark)').matches).toBe(theme === 'dark');
   });
 

@@ -54,6 +54,38 @@ function response(body: unknown, ok = true) {
   return Promise.resolve({ ok, status: ok ? 200 : 500, json: () => Promise.resolve(body) } as Response);
 }
 
+describe('fixed route themes', () => {
+  it.each(['light', 'dark'] as const)('keeps Home dark under a %s OS preference', theme => {
+    setColorScheme(theme);
+    renderAppAt('/');
+
+    expect(document.querySelector('.home-shell')).toBeTruthy();
+    expect(stylesheet).toMatch(/\.home-shell\{[^}]*color-scheme:\s*dark/);
+    expect(stylesheet).toMatch(/\.light-shell\{[^}]*color-scheme:\s*light/);
+    expect(stylesheet).not.toMatch(/prefers-color-scheme/);
+  });
+
+  it.each([
+    '/search', '/category/phones', '/product/sample-phone', '/compare', '/blog',
+    '/blog/article-1', '/shops/sample-shop', '/wishlist', '/login', '/account',
+  ])('uses fixed light theme for %s', path => {
+    setColorScheme('dark');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ items: [] })));
+    renderAppAt(path);
+
+    expect(document.querySelector('.light-shell')).toBeTruthy();
+  });
+
+  it('uses the Home theme for wildcard redirects', async () => {
+    setColorScheme('light');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ items: [] })));
+    renderAppAt('/unmatched-route');
+
+    await waitFor(() => expect(window.location.pathname).toBe('/'));
+    expect(document.querySelector('.home-shell')).toBeTruthy();
+  });
+});
+
 afterEach(() => { cleanup(); localStorage.clear(); window.history.replaceState({}, '', '/'); Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 }); Object.defineProperty(window, 'innerHeight', { configurable: true, value: 768 }); vi.unstubAllGlobals(); });
 
 describe('Home API data', () => {
@@ -235,16 +267,13 @@ describe('Blog Listing API data', () => {
     renderAppAt('/blog/buying-a-laptop');
 
     expect(await screen.findByRole('heading', { name: 'Chọn laptop phù hợp' })).toBeTruthy();
-    expect(document.querySelector('.blog-shell')).toBeTruthy();
+    expect(document.querySelector('.light-shell')).toBeTruthy();
     expect(window.matchMedia('(prefers-color-scheme: dark)').matches).toBe(theme === 'dark');
-    expect(stylesheet).toContain('.blog-shell');
+    expect(stylesheet).not.toMatch(/prefers-color-scheme/);
     expect(stylesheet).toContain('.article-sidebar{display:none}');
-    if (theme === 'dark') {
-      expect(stylesheet).toContain('.blog-shell .article-main>.article-lead{color:#d1d5db}');
-    }
   });
 
-  it('renders the article lead with WCAG AA contrast at 390×844 in dark mode', async () => {
+  it('keeps the article lead readable in fixed light mode at 390×844 with a dark OS preference', async () => {
     setColorScheme('dark');
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 });
     Object.defineProperty(window, 'innerHeight', { configurable: true, value: 844 });
@@ -254,24 +283,12 @@ describe('Blog Listing API data', () => {
     const lead = await screen.findByText('Kinh nghiệm chọn laptop từ dữ liệu thực tế.');
     expect([window.innerWidth, window.innerHeight]).toEqual([390, 844]);
     expect(lead.classList.contains('article-lead')).toBe(true);
-    expect(lead.closest('.blog-shell')).toBeTruthy();
-
-    const darkStyles = stylesheet.slice(stylesheet.lastIndexOf('@media(prefers-color-scheme:dark)'));
-    const foreground = darkStyles.match(/\.blog-shell \.article-main>\.article-lead\{color:(#[a-f\d]{6})\}/i)?.[1];
-    const background = stylesheet.match(/\.blog-shell\{[^}]*background:(#[a-f\d]{6})/i)?.[1];
+    expect(lead.closest('.light-shell')).toBeTruthy();
+    expect(stylesheet).not.toMatch(/prefers-color-scheme/);
+    const foreground = stylesheet.match(/\.article-content p,\.article-sidebar p\{color:(#[a-f\d]{6})/i)?.[1];
+    const background = '#ffffff';
     expect(foreground).toBeTruthy();
-    expect(background).toBeTruthy();
-
-    const simulatedMediaStyle = document.createElement('style');
-    simulatedMediaStyle.textContent = `.blog-shell .article-main>.article-lead{color:${foreground}}`;
-    document.head.append(simulatedMediaStyle);
-    try {
-      const renderedForeground = window.getComputedStyle(lead).color;
-      expect(renderedForeground).toBe('rgb(209, 213, 219)');
-      expect(contrastRatio(renderedForeground, background!)).toBeGreaterThanOrEqual(4.5);
-    } finally {
-      simulatedMediaStyle.remove();
-    }
+    expect(contrastRatio(foreground!, background)).toBeGreaterThanOrEqual(4.5);
   });
 
   it('shows loading state until the Articles API resolves', async () => {
@@ -569,7 +586,7 @@ describe('Product Detail API data', () => {
 
     renderAppAt('/product/sample-product-01');
     expect(await screen.findByRole('heading', { name: 'Sample Product 01' })).toBeTruthy();
-    expect(document.querySelector('.product-shell')).toBeTruthy();
+    expect(document.querySelector('.light-shell')).toBeTruthy();
     expect(window.matchMedia('(prefers-color-scheme: dark)').matches).toBe(theme === 'dark');
     expect(screen.getByText('Ảnh chưa có')).toBeTruthy();
     expect(screen.getByText('Giá có thể thay đổi theo từng cửa hàng. Hãy kiểm tra lại giá cuối cùng trước khi mua.')).toBeTruthy();
@@ -593,7 +610,7 @@ describe('Product Detail API data', () => {
     expect(document.querySelector('.home-shell')).toBeTruthy();
     fireEvent.click(await screen.findByRole('link', { name: 'Sample Product 01' }));
     expect(await screen.findByRole('heading', { name: 'Sample Product 01' })).toBeTruthy();
-    expect(document.querySelector('.product-shell')).toBeTruthy();
+    expect(document.querySelector('.light-shell')).toBeTruthy();
     expect(window.matchMedia('(prefers-color-scheme: dark)').matches).toBe(theme === 'dark');
   });
 
