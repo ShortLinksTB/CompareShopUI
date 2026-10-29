@@ -31,6 +31,19 @@
 
 .light-shell, .product-shell, .shop-shell, .blog-shell { color-scheme: light; }
 .light-shell, .product-shell, .shop-shell, .blog-shell { min-height: 100vh; }
+/* Keep catalog links in normal flow alongside the native action buttons. */
+@media (max-width: 639px) {
+  .catalog-results .card-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .catalog-results .card-actions .button {
+    display: block;
+    margin-top: 0;
+    text-align: center;
+  }
+}
 .home-shell :focus-visible { outline: 3px solid #ff9a66; outline-offset: 2px; }
 .light-shell :focus-visible, .product-shell :focus-visible, .shop-shell :focus-visible, .blog-shell :focus-visible { outline: 3px solid #b93800; outline-offset: 2px; }
 
