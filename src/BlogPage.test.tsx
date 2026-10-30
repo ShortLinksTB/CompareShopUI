@@ -54,6 +54,18 @@ it('updates selection as soon as a pointer presses a category', async () => {
   expect(fetchMock).toHaveBeenCalledTimes(1);
 });
 
+it('selects a category during pointer capture even when an ancestor stops bubbling', () => {
+  const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ items: [], totalItems: 0 }) });
+  vi.stubGlobal('fetch', fetchMock);
+  render(<div onPointerDown={event => event.stopPropagation()}><MemoryRouter><BlogPage /></MemoryRouter></div>);
+  const category = screen.getByRole('button', { name: 'Kinh nghiệm mua sắm' });
+
+  fireEvent.pointerDown(category);
+
+  expectSelected('Kinh nghiệm mua sắm');
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+});
+
 it('preserves a selection made while the article request is pending', async () => {
   const user = userEvent.setup();
   let resolve!: (value: Response) => void;
