@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from 'vitest';
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { BlogPage } from './BlogPage';
@@ -39,6 +39,18 @@ it.each(['pointer', 'Enter', 'Space'] as const)('updates selection via %s after 
   expectSelected('Xu hướng thị trường');
   await user.click(screen.getByRole('button', { name: 'Tất cả' }));
   expectSelected('Tất cả');
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+});
+
+it('updates selection as soon as a pointer presses a category', async () => {
+  const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ items: [], totalItems: 0 }) });
+  vi.stubGlobal('fetch', fetchMock);
+  render(<MemoryRouter><BlogPage /></MemoryRouter>);
+  const category = screen.getByRole('button', { name: 'Kinh nghiệm mua sắm' });
+
+  fireEvent.pointerDown(category);
+
+  expectSelected('Kinh nghiệm mua sắm');
   expect(fetchMock).toHaveBeenCalledTimes(1);
 });
 
