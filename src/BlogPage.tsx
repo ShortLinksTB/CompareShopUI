@@ -36,7 +36,10 @@ export function BlogPage() {
 
   return <>
     <div className="page-title"><div><span className="eyebrow">Kiến thức mua sắm</span><h1>Tin tức &amp; kinh nghiệm</h1><p className="muted">Chia sẻ kinh nghiệm, đánh giá sản phẩm và mẹo mua sắm thông minh.</p></div></div>
-    <div className="category-pills">{categories.map(category => <button type="button" key={category} className={selectedCategory === category ? 'active' : undefined} aria-pressed={selectedCategory === category} onClick={() => setSelectedCategory(category)}>{category}</button>)}</div>
+    <div className="category-pills">{categories.map(category => {
+      const selectCategory = () => setSelectedCategory(category);
+      return <button type="button" key={category} className={selectedCategory === category ? 'active' : undefined} aria-pressed={selectedCategory === category} onPointerDown={selectCategory} onClick={selectCategory}>{category}</button>;
+    })}</div>
     {loading ? <p className="blog-loading" role="status">Đang tải bài viết...</p> : error ? <div className="empty-state" role="alert"><h3>Không thể tải bài viết</h3><p>Vui lòng thử lại sau.</p><button className="button button-primary" onClick={() => setAttempt(value => value + 1)}>Thử lại</button></div> : articles.length ? <div className="blog-grid">{articles.map(article => <Link className="article-card" to={`/blog/${encodeURIComponent(article.slug)}`} key={article.slug}>{article.coverImageUrl ? <SafeImage className="article-image" src={article.coverImageUrl} alt={article.title} fallbackLabel="Chưa có hình ảnh" /> : <div className="article-image safe-image-fallback" role="img" aria-label={article.title}><span>Chưa có hình ảnh</span></div>}<div><span className="article-category">Bài viết</span><h3>{article.title}</h3><p>{article.excerpt}</p><small>{formatPublishedDate(article.publishedAtUtc)} · {article.readingMinutes} phút đọc</small></div></Link>)}</div> : <div className="empty-state"><span>▤</span><h3>Chưa có bài viết</h3><p>Các bài viết mới sẽ xuất hiện tại đây.</p></div>}
   </>;
 }
