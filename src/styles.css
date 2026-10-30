@@ -117,6 +117,12 @@
   opacity: 1;
 }
 
+.home-shell .header-search input::placeholder,
+.home-shell .newsletter input::placeholder {
+  color: #b8b8b8;
+  opacity: 1;
+}
+
 .home-shell .partners > div:first-of-type { color: #d1d5db; }
 .home-shell .trust-grid b { color: #f3f4f6; }
 .home-shell .site-footer a,
