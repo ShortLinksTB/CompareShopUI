@@ -37,6 +37,16 @@ const contrast = (a, b) => (Math.max(luminance(a), luminance(b)) + .05) / (Math.
       for (const adjacent of ['rgb(17, 24, 39)', 'rgb(31, 41, 55)', chip.fill]) assert.ok(contrast(chip.border, adjacent) >= 3);
       assert.equal(await page.locator('.home-shell').evaluate(el => getComputedStyle(el).colorScheme), 'dark');
       const input = page.locator('.hero-search input');
+      const placeholderColors = await input.evaluate(el => {
+        const foreground = getComputedStyle(el, '::placeholder').color;
+        const background = getComputedStyle(el).backgroundColor;
+        return { foreground, background };
+      });
+      const placeholder = { ...placeholderColors, ratio: contrast(placeholderColors.foreground, placeholderColors.background) };
+      assert.equal(placeholder.foreground, 'rgb(184, 184, 184)');
+      assert.equal(placeholder.background, 'rgb(59, 59, 59)');
+      assert.ok(placeholder.ratio >= 4.5, `Home search placeholder contrast ${placeholder.ratio}:1 is below WCAG AA`);
+      console.log(`Home hero placeholder: foreground ${placeholder.foreground}, background ${placeholder.background}, contrast ${placeholder.ratio.toFixed(2)}:1`);
       for (let i = 0; i < 30 && !(await input.evaluate(el => el === document.activeElement)); i++) await page.keyboard.press('Tab');
       assert.ok(await input.evaluate(el => el === document.activeElement && el.matches(':focus-visible')));
       for (const selector of ['input', 'button']) {
