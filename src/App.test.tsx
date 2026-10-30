@@ -91,6 +91,23 @@ describe('fixed route themes', () => {
     expect(contrastRatio('#b93800', '#ffffff')).toBeGreaterThanOrEqual(3);
   });
 
+  it('keeps Account member metadata and verified badge above AA on their light surfaces', () => {
+    const style = document.createElement('style');
+    style.textContent = stylesheet;
+    document.head.appendChild(style);
+    try {
+      renderAppAt('/account');
+      const member = screen.getByText('Thành viên từ tháng 09/2024');
+      const badge = screen.getByText('✓ Đã xác thực');
+      expect(contrastRatio(getComputedStyle(member).color, '#ffffff')).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(getComputedStyle(member).color, '#fff8f3')).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(getComputedStyle(badge).color, getComputedStyle(badge).backgroundColor)).toBeGreaterThanOrEqual(4.5);
+      expect(member.closest('.light-shell')).not.toBeNull();
+    } finally {
+      style.remove();
+    }
+  });
+
   it('keeps shared text and control colors above WCAG AA contrast thresholds', () => {
     expect(contrastRatio('#c2410c', '#ffffff')).toBeGreaterThanOrEqual(4.5);
     expect(contrastRatio('#15803d', '#ffffff')).toBeGreaterThanOrEqual(4.5);

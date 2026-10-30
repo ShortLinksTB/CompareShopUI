@@ -9,6 +9,7 @@
     "lint": "tsc -b --pretty false",
     "test": "vitest run",
     "preview": "vite preview",
+    "test:home-accessibility": "node scripts/home-accessibility.cjs",
     "test:category-presentation": "node scripts/check-category-presentation.mjs"
   },
   "dependencies": {
@@ -19,6 +20,7 @@
   "devDependencies": {
     "@testing-library/jest-dom": "^6.8.0",
     "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.8",
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",
     "@vitejs/plugin-react": "^5.0.4",
