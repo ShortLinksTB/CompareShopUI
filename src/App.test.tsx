@@ -72,7 +72,7 @@ afterEach(cleanupTestEnvironment);
 
 describe('fixed route themes', () => {
   it.each([
-    ['/', 'home-shell', 'dark'],
+    ['/', 'home-shell', 'light'],
     ['/search', 'light-shell', 'light'],
     ['/category/phones', 'light-shell', 'light'],
     ['/product/sample-phone', 'product-shell', 'light'],
@@ -97,9 +97,8 @@ describe('fixed route themes', () => {
   });
 
   it('provides visible focus indicators for both fixed themes', () => {
-    expect(stylesheet).toMatch(/\.home-shell :focus-visible\s*\{[^}]*outline:\s*3px solid #ff9a66/);
+    expect(stylesheet).toMatch(/\.home-shell :focus-visible\s*\{[^}]*outline:\s*3px solid #b93800/);
     expect(stylesheet).toMatch(/\.light-shell :focus-visible[^\{]*\{[^}]*outline:\s*3px solid #b93800/);
-    expect(contrastRatio('#ff9a66', '#111827')).toBeGreaterThanOrEqual(3);
     expect(contrastRatio('#b93800', '#ffffff')).toBeGreaterThanOrEqual(3);
   });
 
@@ -134,7 +133,7 @@ describe('fixed route themes', () => {
 
     await waitFor(() => expect(document.querySelector('.home-shell')).toBeTruthy());
     expect(window.location.pathname).toBe('/');
-    expect(shellColorScheme('home-shell')).toBe('dark');
+    expect(shellColorScheme('home-shell')).toBe('light');
     expect(await screen.findByText('Chưa có sản phẩm nổi bật')).toBeTruthy();
   });
 });
@@ -658,7 +657,7 @@ describe('Product Detail API data', () => {
 
     renderAppAt('/');
     expect(document.querySelector('.home-shell')).toBeTruthy();
-    expect(shellColorScheme('home-shell')).toBe('dark');
+    expect(shellColorScheme('home-shell')).toBe('light');
     fireEvent.click(await screen.findByRole('link', { name: 'Sample Product 01' }));
     expect(await screen.findByRole('heading', { name: 'Sample Product 01' })).toBeTruthy();
     expect(document.querySelector('.product-shell')).toBeTruthy();

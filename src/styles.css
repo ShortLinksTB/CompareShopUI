@@ -30,108 +30,24 @@
  .language-switcher{appearance:none;border:1px solid var(--border);border-radius:7px;background:#fff;color:var(--primary);padding:5px 7px;font-size:10px;font-weight:800;cursor:pointer}.language-switcher:hover{border-color:var(--primary);background:var(--primary-soft)}
 
 .light-shell, .product-shell, .shop-shell, .blog-shell { color-scheme: light; }
-.light-shell, .product-shell, .shop-shell, .blog-shell { min-height: 100vh; }
-.home-shell :focus-visible { outline: 3px solid #ff9a66; outline-offset: 2px; }
+.light-shell, .product-shell, .shop-shell, .blog-shell, .home-shell { min-height: 100vh; }
+.home-shell { color-scheme: light; }
+.home-shell :focus-visible { outline: 3px solid #b93800; outline-offset: 2px; }
 .light-shell :focus-visible, .product-shell :focus-visible, .shop-shell :focus-visible, .blog-shell :focus-visible { outline: 3px solid #b93800; outline-offset: 2px; }
-
-.home-shell {
-  min-height: 100vh;
-  color-scheme: dark;
-  color: #e5e7eb;
-  background: #111827;
-  --surface: #1f2937;
-  --border: #6b7280;
-  --muted: #a3acb9;
-  --primary: #ff9a66;
-  --primary-hover: #ffb089;
-  --primary-soft: #3b291f;
-  --success: #4ade80;
-  --warning: #fbbf24;
-  --shadow: 0 2px 10px rgba(0, 0, 0, .25);
-}
-
-.home-shell .site-header,
-.home-shell .bottom-nav,
-.home-shell .hero-search,
-.home-shell .category-card,
-.home-shell .product-card,
-.home-shell .product-image,
-.home-shell .hero-product-stack,
-.home-shell .hero-price-tag,
-.home-shell .float-card,
-.home-shell .partner-card,
-.home-shell .trust-grid > div,
-.home-shell .site-footer,
-.home-shell .footer-newsletter,
-.home-shell .newsletter input,
-.home-shell .header-search,
-.home-shell .header-search button,
-.home-shell .language-switcher {
-  background-color: var(--surface);
-  color: inherit;
-  border-color: var(--border);
-}
-
-.home-shell .hero {
-  background: linear-gradient(115deg, #111827, #1f2937);
-}
-
-.home-shell .hero-orbit {
-  border-color: #70422d;
-  background: radial-gradient(circle at 50% 50%, #34251f 0 45%, transparent 46%);
-}
-
-.home-shell .hero-orbit:after {
-  border-color: #70422d;
-}
-
-.home-shell .hero-product-stack,
-.home-shell .float-card {
-  box-shadow: 0 12px 32px rgba(0, 0, 0, .32);
-}
-
-.home-shell .promo-banner,
-.home-shell .partners {
-  background: #1f2937;
-  border-color: var(--border);
-}
-
-.home-shell .brand,
-.home-shell .empty-state h3 {
-  color: #f3f4f6;
-}
-
-.home-shell .brand-mark,
-.home-shell .button-primary,
-.home-shell .hero-search button,
-.home-shell .promo-bag { color: #111827; }
-
-.home-shell .header-search input,
-.home-shell .hero-search input,
-.home-shell .newsletter input {
-  color: #f3f4f6;
-}
-
-.home-shell .hero-search input::placeholder {
-  color: #b8b8b8;
-  opacity: 1;
-}
-
-.home-shell .header-search input::placeholder,
-.home-shell .newsletter input::placeholder {
-  color: #b8b8b8;
-  opacity: 1;
-}
-
-.home-shell .partners > div:first-of-type { color: #d1d5db; }
-.home-shell .trust-grid b { color: #f3f4f6; }
-.home-shell .site-footer a,
-.home-shell .site-footer p { color: #cbd5e1; }
-.home-shell .popular-searches a { background: #374151; color: #e5e7eb; border: 1px solid #f9fafb; }
 
 /* Keep the keyboard indicator inside the rounded form's clipping boundary. */
 .home-shell .hero-search :focus-visible { outline-offset: -3px; }
-.home-shell .hero-search button:focus-visible { outline-color: #111827; }
+
+.home-shell .float-card { border-color: var(--border); }
+.home-shell .trust-grid > div { border-color: var(--border); }
+.home-shell .newsletter input { border-color: var(--border); }
+.home-shell .footer-bottom { color: var(--muted); }
+.home-shell .partner-mark.orange { background: #c2410c; }
+.home-shell .partner-mark.purple { background: #6d28d9; }
+.home-shell .partner-mark.blue { background: #0369a1; }
+.home-shell .partner-mark.slate { background: #475569; }
+.home-shell .partner-mark.red { background: #b91c1c; }
+.home-shell .partner-mark.green { background: #15803d; }
 
 
 .article-card .article-image{width:190px;height:145px;object-fit:cover;border-radius:8px}@media(max-width:639px){.article-card .article-image{width:110px;height:110px}}
