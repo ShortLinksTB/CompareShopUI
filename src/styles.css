@@ -202,3 +202,16 @@
 @media(max-width:639px){.compare-empty-state__cta{margin-top:32px}}
 @media(max-width:639px){.compare-row{grid-template-columns:115px repeat(4,minmax(150px,1fr));min-width:715px}.compare-row>div{padding:12px;font-size:12px}.compare-image-placeholder{width:80px;height:76px}}
 .article-card{color:inherit;text-decoration:none}.article-content h2,.article-content h3{line-height:1.4;margin:28px 0 10px}.article-content p,.article-sidebar p{color:#4b5563;font-size:15px;line-height:1.75;white-space:pre-wrap}.article-sidebar li{margin:5px 0}.article-sidebar li a{color:inherit}.author-avatar-image{width:36px;height:36px;border-radius:50%;object-fit:cover}
+
+/* Keep catalog links and buttons in separate boxes on narrow cards. */
+@media (max-width: 639px) {
+  .catalog-results .card-actions {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .catalog-results .card-actions .button {
+    margin-top: 0;
+    text-align: center;
+  }
+}

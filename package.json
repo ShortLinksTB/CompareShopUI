@@ -8,8 +8,9 @@
     "build": "tsc -b && vite build",
     "lint": "tsc -b --pretty false",
     "test": "vitest run",
+    "preview": "vite preview",
     "test:home-accessibility": "node scripts/home-accessibility.cjs",
-    "preview": "vite preview"
+    "test:category-presentation": "node scripts/check-category-presentation.mjs"
   },
   "dependencies": {
     "react": "^19.1.1",
