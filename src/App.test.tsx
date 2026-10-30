@@ -59,7 +59,38 @@ function response(body: unknown, ok = true) {
   return Promise.resolve({ ok, status: ok ? 200 : 500, json: () => Promise.resolve(body) } as Response);
 }
 
-afterEach(() => { cleanup(); localStorage.clear(); window.history.replaceState({}, '', '/'); Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 }); Object.defineProperty(window, 'innerHeight', { configurable: true, value: 768 }); vi.unstubAllGlobals(); });
+function flushPendingAsyncWork() {
+  return new Promise<void>(resolve => window.setTimeout(resolve, 0));
+}
+
+async function cleanupTestEnvironment() {
+  cleanup();
+  // Let already-resolved fetch mocks finish their chained requests before the next test replaces fetch.
+  await flushPendingAsyncWork();
+  localStorage.clear();
+  window.history.replaceState({}, '', '/');
+  Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 });
+  Object.defineProperty(window, 'innerHeight', { configurable: true, value: 768 });
+  vi.unstubAllGlobals();
+}
+
+afterEach(cleanupTestEnvironment);
+
+it('settles chained Home API requests after unmount before fetch is replaced', async () => {
+  const fetchMock = vi.fn()
+    .mockResolvedValueOnce(response(categories))
+    .mockResolvedValueOnce(response(products))
+    .mockResolvedValueOnce(response({ items: [], page: 1, pageSize: 1, totalItems: 42, totalPages: 42 }));
+  vi.stubGlobal('fetch', fetchMock);
+  renderAppAt('/');
+  await cleanupTestEnvironment();
+
+  expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+    'https://api-compareshop-dev.giamha.online/api/v1/categories',
+    'https://api-compareshop-dev.giamha.online/api/v1/products?page=1&pageSize=10',
+    'https://api-compareshop-dev.giamha.online/api/v1/products?categoryId=1&page=1&pageSize=1',
+  ]);
+});
 
 describe('fixed route themes', () => {
   it.each([
