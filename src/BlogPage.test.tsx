@@ -42,15 +42,17 @@ it.each(['pointer', 'Enter', 'Space'] as const)('updates selection via %s after 
   expect(fetchMock).toHaveBeenCalledTimes(1);
 });
 
-it('updates selection as soon as a pointer presses a category', async () => {
+it('keeps pointer selection when bubbling is interrupted and leaves one category active', async () => {
   const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ items: [], totalItems: 0 }) });
   vi.stubGlobal('fetch', fetchMock);
   render(<MemoryRouter><BlogPage /></MemoryRouter>);
   const category = screen.getByRole('button', { name: 'Kinh nghiệm mua sắm' });
+  category.addEventListener('pointerdown', event => event.stopPropagation(), { once: true });
 
   fireEvent.pointerDown(category);
 
   expectSelected('Kinh nghiệm mua sắm');
+  expect(screen.getAllByRole('button').filter(button => button.closest('.category-pills') && button.getAttribute('aria-pressed') === 'true')).toHaveLength(1);
   expect(fetchMock).toHaveBeenCalledTimes(1);
 });
 
