@@ -59,14 +59,8 @@ function response(body: unknown, ok = true) {
   return Promise.resolve({ ok, status: ok ? 200 : 500, json: () => Promise.resolve(body) } as Response);
 }
 
-function flushPendingAsyncWork() {
-  return new Promise<void>(resolve => window.setTimeout(resolve, 0));
-}
-
-async function cleanupTestEnvironment() {
+function cleanupTestEnvironment() {
   cleanup();
-  // Let already-resolved fetch mocks finish their chained requests before the next test replaces fetch.
-  await flushPendingAsyncWork();
   localStorage.clear();
   window.history.replaceState({}, '', '/');
   Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 });
@@ -75,22 +69,6 @@ async function cleanupTestEnvironment() {
 }
 
 afterEach(cleanupTestEnvironment);
-
-it('settles chained Home API requests after unmount before fetch is replaced', async () => {
-  const fetchMock = vi.fn()
-    .mockResolvedValueOnce(response(categories))
-    .mockResolvedValueOnce(response(products))
-    .mockResolvedValueOnce(response({ items: [], page: 1, pageSize: 1, totalItems: 42, totalPages: 42 }));
-  vi.stubGlobal('fetch', fetchMock);
-  renderAppAt('/');
-  await cleanupTestEnvironment();
-
-  expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
-    'https://api-compareshop-dev.giamha.online/api/v1/categories',
-    'https://api-compareshop-dev.giamha.online/api/v1/products?page=1&pageSize=10',
-    'https://api-compareshop-dev.giamha.online/api/v1/products?categoryId=1&page=1&pageSize=1',
-  ]);
-});
 
 describe('fixed route themes', () => {
   it.each([
@@ -105,7 +83,7 @@ describe('fixed route themes', () => {
     ['/wishlist', 'light-shell', 'light'],
     ['/login', 'light-shell', 'light'],
     ['/account', 'light-shell', 'light'],
-  ] as const)('%s always uses the %s %s scheme independent of OS preference', (path, shellClass, scheme) => {
+  ] as const)('%s always uses the %s %s scheme independent of OS preference', async (path, shellClass, scheme) => {
     setColorScheme('dark');
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ items: [] })));
     renderAppAt(path);
@@ -113,6 +91,9 @@ describe('fixed route themes', () => {
     expect(document.querySelector(`.${shellClass}`)).toBeTruthy();
     expect(shellColorScheme(shellClass)).toBe(scheme);
     expect(stylesheet).not.toContain('prefers-color-scheme');
+    if (path === '/') {
+      expect(await screen.findByText('Chưa có sản phẩm nổi bật')).toBeTruthy();
+    }
   });
 
   it('provides visible focus indicators for both fixed themes', () => {
@@ -148,11 +129,13 @@ describe('fixed route themes', () => {
   });
 
   it('sends unknown routes to the fixed dark Home route', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ items: [] })));
     renderAppAt('/not-a-real-route');
 
     await waitFor(() => expect(document.querySelector('.home-shell')).toBeTruthy());
     expect(window.location.pathname).toBe('/');
     expect(shellColorScheme('home-shell')).toBe('dark');
+    expect(await screen.findByText('Chưa có sản phẩm nổi bật')).toBeTruthy();
   });
 });
 
@@ -210,14 +193,17 @@ describe('Home API data', () => {
 
 
 it('renders the storefront and opens the saved products page', async () => {
-  vi.stubGlobal('fetch', vi.fn()
+  const fetchMock = vi.fn()
     .mockResolvedValueOnce(response(categories))
     .mockResolvedValueOnce(response(products))
     .mockResolvedValueOnce(response({ items: [], page: 1, pageSize: 1, totalItems: 42, totalPages: 42 }))
-    .mockResolvedValueOnce(response({ items: [] })));
+    .mockResolvedValueOnce(response({ items: [] }));
+  vi.stubGlobal('fetch', fetchMock);
   renderApp();
 
   expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('So sánh giá');
+  expect(await screen.findByRole('link', { name: 'Sample Phone' })).toBeTruthy();
+  expect(fetchMock).toHaveBeenCalledTimes(3);
   fireEvent.click(screen.getAllByRole('link', { name: /Yêu thích/ })[0]);
   expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Sản phẩm yêu thích');
   expect(await screen.findByText('Chưa có sản phẩm yêu thích')).toBeTruthy();
