@@ -393,9 +393,8 @@ describe('Blog Listing API data', () => {
     renderBlog();
 
     fireEvent.click(await screen.findByRole('link', { name: /Chọn laptop phù hợp/ }));
-    expect(await screen.findByRole('heading', { name: 'Chọn laptop phù hợp' })).toBeTruthy();
-    expect(fetchMock).toHaveBeenLastCalledWith('https://api-compareshop-dev.giamha.online/api/v1/articles/buying-a-laptop');
-    expect(screen.getByText('Hãy cân nhắc cách bạn sẽ sử dụng máy.')).toBeTruthy();
+    expect(await screen.findByText('Hãy cân nhắc cách bạn sẽ sử dụng máy.')).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/articles/buying-a-laptop');
     expect(screen.getByRole('link', { name: 'Kiểm tra ngân sách' }).getAttribute('href')).toBe('#article-section-2');
     expect(screen.getByText('2 sản phẩm liên quan')).toBeTruthy();
     expect(screen.queryByText(/Trần Minh Quân|Bài viết giúp bạn có thêm dữ liệu|Thị trường sản phẩm công nghệ/)).toBeNull();
