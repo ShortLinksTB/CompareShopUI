@@ -59,8 +59,10 @@ function response(body: unknown, ok = true) {
   return Promise.resolve({ ok, status: ok ? 200 : 500, json: () => Promise.resolve(body) } as Response);
 }
 
-function flushPendingAsyncWork() {
-  return new Promise<void>(resolve => window.setTimeout(resolve, 0));
+async function flushPendingAsyncWork() {
+  for (let turn = 0; turn < 3; turn += 1) {
+    await new Promise<void>(resolve => window.setTimeout(resolve, 0));
+  }
 }
 
 async function cleanupTestEnvironment() {
@@ -210,14 +212,16 @@ describe('Home API data', () => {
 
 
 it('renders the storefront and opens the saved products page', async () => {
-  vi.stubGlobal('fetch', vi.fn()
+  const fetchMock = vi.fn()
     .mockResolvedValueOnce(response(categories))
     .mockResolvedValueOnce(response(products))
     .mockResolvedValueOnce(response({ items: [], page: 1, pageSize: 1, totalItems: 42, totalPages: 42 }))
-    .mockResolvedValueOnce(response({ items: [] })));
+    .mockResolvedValueOnce(response({ items: [] }));
+  vi.stubGlobal('fetch', fetchMock);
   renderApp();
 
   expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('So sánh giá');
+  expect(await screen.findByRole('link', { name: 'Sample Phone' })).toBeTruthy();
   fireEvent.click(screen.getAllByRole('link', { name: /Yêu thích/ })[0]);
   expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Sản phẩm yêu thích');
   expect(await screen.findByText('Chưa có sản phẩm yêu thích')).toBeTruthy();
