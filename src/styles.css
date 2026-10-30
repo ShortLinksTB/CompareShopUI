@@ -45,7 +45,7 @@
 .home-shell .hero-search input::placeholder,
 .home-shell .header-search input::placeholder,
 .home-shell .newsletter input::placeholder { color: var(--muted); opacity: 1; }
-.home-shell .hero-search button:focus-visible { outline-color: #b93800; background: #fff; color: #b93800; }
+.home-shell .hero-search button:focus-visible { outline-color: #fff; }
 .home-shell .partner-mark.orange { background: #c2410c; }
 .home-shell .partner-mark.purple { background: #6d28d9; }
 .home-shell .partner-mark.blue { background: #0369a1; }

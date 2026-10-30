@@ -98,9 +98,11 @@ describe('fixed route themes', () => {
 
   it('provides visible focus indicators for the fixed light theme', () => {
     expect(stylesheet).toMatch(/\.home-shell :focus-visible\s*\{[^}]*outline:\s*3px solid #b93800;\s*outline-offset:\s*2px/);
+    expect(stylesheet).toMatch(/\.home-shell \.hero-search button:focus-visible\s*\{[^}]*outline-color:\s*#fff/);
     expect(stylesheet).toMatch(/\.light-shell :focus-visible[^\{]*\{[^}]*outline:\s*3px solid #b93800/);
     expect(contrastRatio('#b93800', '#fff8f2')).toBeGreaterThanOrEqual(3);
     expect(contrastRatio('#b93800', '#ffffff')).toBeGreaterThanOrEqual(3);
+    expect(contrastRatio('#ffffff', '#c2410c')).toBeGreaterThanOrEqual(3);
   });
 
   it('keeps Account member metadata and verified badge above AA on their light surfaces', () => {
