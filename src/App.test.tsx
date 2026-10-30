@@ -59,16 +59,8 @@ function response(body: unknown, ok = true) {
   return Promise.resolve({ ok, status: ok ? 200 : 500, json: () => Promise.resolve(body) } as Response);
 }
 
-async function flushPendingAsyncWork() {
-  for (let turn = 0; turn < 3; turn += 1) {
-    await new Promise<void>(resolve => window.setTimeout(resolve, 0));
-  }
-}
-
-async function cleanupTestEnvironment() {
+function cleanupTestEnvironment() {
   cleanup();
-  // Let already-resolved fetch mocks finish their chained requests before the next test replaces fetch.
-  await flushPendingAsyncWork();
   localStorage.clear();
   window.history.replaceState({}, '', '/');
   Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 });
@@ -78,25 +70,9 @@ async function cleanupTestEnvironment() {
 
 afterEach(cleanupTestEnvironment);
 
-it('settles chained Home API requests after unmount before fetch is replaced', async () => {
-  const fetchMock = vi.fn()
-    .mockResolvedValueOnce(response(categories))
-    .mockResolvedValueOnce(response(products))
-    .mockResolvedValueOnce(response({ items: [], page: 1, pageSize: 1, totalItems: 42, totalPages: 42 }));
-  vi.stubGlobal('fetch', fetchMock);
-  renderAppAt('/');
-  await cleanupTestEnvironment();
-
-  expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
-    'https://api-compareshop-dev.giamha.online/api/v1/categories',
-    'https://api-compareshop-dev.giamha.online/api/v1/products?page=1&pageSize=10',
-    'https://api-compareshop-dev.giamha.online/api/v1/products?categoryId=1&page=1&pageSize=1',
-  ]);
-});
-
 describe('fixed route themes', () => {
   it.each([
-    ['/', 'home-shell', 'dark'],
+    ['/', 'home-shell', 'light'],
     ['/search', 'light-shell', 'light'],
     ['/category/phones', 'light-shell', 'light'],
     ['/product/sample-phone', 'product-shell', 'light'],
@@ -107,7 +83,7 @@ describe('fixed route themes', () => {
     ['/wishlist', 'light-shell', 'light'],
     ['/login', 'light-shell', 'light'],
     ['/account', 'light-shell', 'light'],
-  ] as const)('%s always uses the %s %s scheme independent of OS preference', (path, shellClass, scheme) => {
+  ] as const)('%s always uses the %s %s scheme independent of OS preference', async (path, shellClass, scheme) => {
     setColorScheme('dark');
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ items: [] })));
     renderAppAt(path);
@@ -115,12 +91,15 @@ describe('fixed route themes', () => {
     expect(document.querySelector(`.${shellClass}`)).toBeTruthy();
     expect(shellColorScheme(shellClass)).toBe(scheme);
     expect(stylesheet).not.toContain('prefers-color-scheme');
+    if (path === '/') {
+      expect(await screen.findByText('Chưa có sản phẩm nổi bật')).toBeTruthy();
+    }
   });
 
-  it('provides visible focus indicators for both fixed themes', () => {
-    expect(stylesheet).toMatch(/\.home-shell :focus-visible\s*\{[^}]*outline:\s*3px solid #ff9a66/);
+  it('provides visible focus indicators for the fixed light theme', () => {
+    expect(stylesheet).toMatch(/\.home-shell :focus-visible\s*\{[^}]*outline:\s*3px solid #b93800;\s*outline-offset:\s*2px/);
     expect(stylesheet).toMatch(/\.light-shell :focus-visible[^\{]*\{[^}]*outline:\s*3px solid #b93800/);
-    expect(contrastRatio('#ff9a66', '#111827')).toBeGreaterThanOrEqual(3);
+    expect(contrastRatio('#b93800', '#fff8f2')).toBeGreaterThanOrEqual(3);
     expect(contrastRatio('#b93800', '#ffffff')).toBeGreaterThanOrEqual(3);
   });
 
@@ -146,15 +125,17 @@ describe('fixed route themes', () => {
     expect(contrastRatio('#15803d', '#ffffff')).toBeGreaterThanOrEqual(4.5);
     expect(contrastRatio('#b45309', '#ffffff')).toBeGreaterThanOrEqual(4.5);
     expect(contrastRatio('#8b8b8b', '#f8f9fa')).toBeGreaterThanOrEqual(3);
-    expect(contrastRatio('#6b7280', '#1f2937')).toBeGreaterThanOrEqual(3);
+    expect(contrastRatio('#6b7280', '#ffffff')).toBeGreaterThanOrEqual(4.5);
   });
 
-  it('sends unknown routes to the fixed dark Home route', async () => {
+  it('sends unknown routes to the fixed light Home route', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ items: [] })));
     renderAppAt('/not-a-real-route');
 
     await waitFor(() => expect(document.querySelector('.home-shell')).toBeTruthy());
     expect(window.location.pathname).toBe('/');
-    expect(shellColorScheme('home-shell')).toBe('dark');
+    expect(shellColorScheme('home-shell')).toBe('light');
+    expect(await screen.findByText('Chưa có sản phẩm nổi bật')).toBeTruthy();
   });
 });
 
@@ -222,6 +203,7 @@ it('renders the storefront and opens the saved products page', async () => {
 
   expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('So sánh giá');
   expect(await screen.findByRole('link', { name: 'Sample Phone' })).toBeTruthy();
+  expect(fetchMock).toHaveBeenCalledTimes(3);
   fireEvent.click(screen.getAllByRole('link', { name: /Yêu thích/ })[0]);
   expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Sản phẩm yêu thích');
   expect(await screen.findByText('Chưa có sản phẩm yêu thích')).toBeTruthy();
@@ -676,7 +658,7 @@ describe('Product Detail API data', () => {
 
     renderAppAt('/');
     expect(document.querySelector('.home-shell')).toBeTruthy();
-    expect(shellColorScheme('home-shell')).toBe('dark');
+    expect(shellColorScheme('home-shell')).toBe('light');
     fireEvent.click(await screen.findByRole('link', { name: 'Sample Product 01' }));
     expect(await screen.findByRole('heading', { name: 'Sample Product 01' })).toBeTruthy();
     expect(document.querySelector('.product-shell')).toBeTruthy();
