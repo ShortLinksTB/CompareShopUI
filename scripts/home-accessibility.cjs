@@ -29,22 +29,23 @@ const contrast = (a, b) => (Math.max(luminance(a), luminance(b)) + .05) / (Math.
       await page.locator('.popular-searches a').waitFor();
       const chip = await page.locator('.popular-searches a').evaluate(el => {
         const s = getComputedStyle(el);
-        return { border: s.borderTopColor, style: s.borderTopStyle, width: s.borderTopWidth, fill: s.backgroundColor };
+        return { border: s.borderTopColor, style: s.borderTopStyle, width: s.borderTopWidth, fill: s.backgroundColor, text: s.color };
       });
       assert.equal(chip.style, 'solid');
       assert.equal(chip.width, '1px');
-      // Hero gradient endpoints and chip fill are all adjacent to its border.
-      for (const adjacent of ['rgb(17, 24, 39)', 'rgb(31, 41, 55)', chip.fill]) assert.ok(contrast(chip.border, adjacent) >= 3);
-      assert.equal(await page.locator('.home-shell').evaluate(el => getComputedStyle(el).colorScheme), 'dark');
+      assert.ok(contrast(chip.text, chip.fill) >= 4.5, 'quick-search chip text must meet WCAG AA');
+      // The light hero gradient and chip fill are all adjacent to its border.
+      for (const adjacent of ['rgb(255, 248, 242)', 'rgb(255, 255, 255)', chip.fill]) assert.ok(contrast(chip.border, adjacent) >= 3);
+      assert.equal(await page.locator('.home-shell').evaluate(el => getComputedStyle(el).colorScheme), 'light');
       const input = page.locator('.hero-search input');
       const placeholderColors = await input.evaluate(el => {
         const foreground = getComputedStyle(el, '::placeholder').color;
-        const background = getComputedStyle(el).backgroundColor;
+        const background = getComputedStyle(el.parentElement).backgroundColor;
         return { foreground, background };
       });
       const placeholder = { ...placeholderColors, ratio: contrast(placeholderColors.foreground, placeholderColors.background) };
-      assert.equal(placeholder.foreground, 'rgb(184, 184, 184)');
-      assert.equal(placeholder.background, 'rgb(59, 59, 59)');
+      assert.equal(placeholder.foreground, 'rgb(107, 114, 128)');
+      assert.equal(placeholder.background, 'rgb(255, 255, 255)');
       assert.ok(placeholder.ratio >= 4.5, `Home search placeholder contrast ${placeholder.ratio}:1 is below WCAG AA`);
       console.log(`Home hero placeholder: foreground ${placeholder.foreground}, background ${placeholder.background}, contrast ${placeholder.ratio.toFixed(2)}:1`);
       for (let i = 0; i < 30 && !(await input.evaluate(el => el === document.activeElement)); i++) await page.keyboard.press('Tab');
@@ -52,7 +53,8 @@ const contrast = (a, b) => (Math.max(luminance(a), luminance(b)) + .05) / (Math.
       for (const selector of ['input', 'button']) {
         const focus = await page.locator(`.hero-search ${selector}`).evaluate(el => {
           const s = getComputedStyle(el), r = el.getBoundingClientRect(), p = el.parentElement.getBoundingClientRect();
-          return { visible: el.matches(':focus-visible'), outline: s.outlineStyle, color: s.outlineColor, fill: s.backgroundColor, size: parseFloat(s.outlineWidth), offset: parseFloat(s.outlineOffset), left: r.left - p.left, right: p.right - r.right, top: r.top - p.top, bottom: p.bottom - r.bottom };
+          const fill = s.backgroundColor === 'rgba(0, 0, 0, 0)' ? getComputedStyle(el.parentElement).backgroundColor : s.backgroundColor;
+          return { visible: el.matches(':focus-visible'), outline: s.outlineStyle, color: s.outlineColor, fill, size: parseFloat(s.outlineWidth), offset: parseFloat(s.outlineOffset), left: r.left - p.left, right: p.right - r.right, top: r.top - p.top, bottom: p.bottom - r.bottom };
         });
         assert.ok(focus.visible);
         assert.equal(focus.outline, 'solid');
