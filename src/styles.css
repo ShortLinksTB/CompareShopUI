@@ -116,7 +116,11 @@
 .home-shell .trust-grid b { color: #f3f4f6; }
 .home-shell .site-footer a,
 .home-shell .site-footer p { color: #cbd5e1; }
-.home-shell .popular-searches a { background: #374151; color: #e5e7eb; }
+.home-shell .popular-searches a { background: #374151; color: #e5e7eb; border: 1px solid #a3acb9; }
+
+/* Keep the keyboard indicator inside the rounded form's clipping boundary. */
+.home-shell .hero-search :focus-visible { outline-offset: -3px; }
+.home-shell .hero-search button:focus-visible { outline-color: #111827; }
 
 
 .article-card .article-image{width:190px;height:145px;object-fit:cover;border-radius:8px}@media(max-width:639px){.article-card .article-image{width:110px;height:110px}}
