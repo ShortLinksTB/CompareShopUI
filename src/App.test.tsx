@@ -156,6 +156,15 @@ describe('fixed route themes', () => {
   });
 });
 
+describe('Wishlist wireframe alignment', () => {
+  it('lets the tabs border span the page width and uses the wireframe inset as padding only', () => {
+    const rule = stylesheet.match(/\.wishlist-page \.wishlist-tabs\s*\{([^}]+)\}/)?.[1] ?? '';
+    expect(rule).toContain('padding:0 24px');
+    expect(rule).toContain('margin-bottom:20px');
+    expect(rule).not.toMatch(/margin:\s*0\s+24px/);
+  });
+});
+
 describe('Home API data', () => {
   it('loads categories and products from the catalog endpoints and renders API fields', async () => {
     const fetchMock = vi.fn()

@@ -150,7 +150,7 @@
 .wishlist-page .page-title{padding:34px 0 20px;margin-bottom:0;align-items:flex-start;flex-direction:column}
 .wishlist-page .page-title h1{font-size:28px}
 .wishlist-page .page-title p{margin:6px 0 0;font-size:13px}
-.wishlist-page .wishlist-tabs{margin:0 0 20px;padding:0 24px}
+.wishlist-page .wishlist-tabs{margin-bottom:20px;padding:0 24px}
 .wishlist-page .wishlist-list{margin:0 24px}
 .wishlist-page .empty-state{padding:60px 20px}
 .wishlist-page .empty-state>span{font-size:38px}
