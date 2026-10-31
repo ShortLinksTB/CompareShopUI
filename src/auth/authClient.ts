@@ -14,6 +14,9 @@ function getManager() {
       redirect_uri: config.redirectUri,
       response_type: 'code',
       scope: 'openid profile email',
+      // Keep nonce available for the adapter assertion while retaining
+      // oidc-client-ts filtering for the other optional protocol claims.
+      filterProtocolClaims: ['nbf', 'jti', 'auth_time', 'acr', 'amr', 'azp', 'at_hash'],
       automaticSilentRenew: false,
       monitorSession: false,
       loadUserInfo: false,
@@ -21,6 +24,12 @@ function getManager() {
     });
   }
   return manager;
+}
+
+function createNonce(): string {
+  const bytes = new Uint8Array(32);
+  window.crypto.getRandomValues(bytes);
+  return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
 export function getSafeReturnPath(value: unknown, origin = window.location.origin): string {
@@ -36,8 +45,9 @@ export function getSafeReturnPath(value: unknown, origin = window.location.origi
 
 export async function startSignIn(returnTo: unknown): Promise<void> {
   const safePath = getSafeReturnPath(returnTo);
+  const nonce = createNonce();
   window.sessionStorage.setItem(RETURN_TO_KEY, safePath);
-  await getManager().signinRedirect({ state: { returnTo: safePath } });
+  await getManager().signinRedirect({ nonce, state: { returnTo: safePath, nonce } });
 }
 
 export function getPendingReturnPath(): string {
@@ -49,7 +59,10 @@ export function completeSignInCallback(): Promise<string> {
     let task: Promise<string>;
     task = Promise.resolve().then(() => getManager().signinCallback()).then(user => {
       if (!user) throw new Error('The sign-in response could not be confirmed.');
-      const state = user.state as { returnTo?: unknown } | undefined;
+      const state = user.state as { returnTo?: unknown; nonce?: unknown } | undefined;
+      if (typeof state?.nonce !== 'string' || !state.nonce || user.profile.nonce !== state.nonce) {
+        throw new Error('The sign-in response nonce could not be confirmed.');
+      }
       const returnTo = getSafeReturnPath(state?.returnTo ?? window.sessionStorage.getItem(RETURN_TO_KEY));
       window.sessionStorage.removeItem(RETURN_TO_KEY);
       return returnTo;
