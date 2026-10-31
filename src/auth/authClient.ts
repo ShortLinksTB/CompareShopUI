@@ -50,6 +50,16 @@ export async function startSignIn(returnTo: unknown): Promise<void> {
   await getManager().signinRedirect({ nonce, state: { returnTo: safePath, nonce } });
 }
 
+export async function getAuthenticatedAccessToken(): Promise<string | null> {
+  const user = await getManager().getUser();
+  if (!user || user.expired || !user.access_token) return null;
+  return user.access_token;
+}
+
+export async function clearAuthenticatedSession(): Promise<void> {
+  await getManager().removeUser();
+}
+
 export function getPendingReturnPath(): string {
   return getSafeReturnPath(window.sessionStorage.getItem(RETURN_TO_KEY));
 }

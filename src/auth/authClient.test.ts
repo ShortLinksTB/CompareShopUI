@@ -4,6 +4,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 const oidc = vi.hoisted(() => ({
   signinRedirect: vi.fn<(args: unknown) => Promise<void>>(),
   signinCallback: vi.fn<() => Promise<{ state?: unknown; profile?: { nonce?: string } }>>(),
+  getUser: vi.fn<() => Promise<{ expired?: boolean; access_token?: string } | null>>(),
+  removeUser: vi.fn<() => Promise<void>>(),
   constructor: vi.fn(),
   storageStore: vi.fn(),
 }));
@@ -20,10 +22,12 @@ vi.mock('oidc-client-ts', () => ({
     }
     signinRedirect = oidc.signinRedirect;
     signinCallback = oidc.signinCallback;
+    getUser = oidc.getUser;
+    removeUser = oidc.removeUser;
   },
 }));
 
-import { completeSignInCallback, getSafeReturnPath, startSignIn } from './authClient';
+import { clearAuthenticatedSession, completeSignInCallback, getAuthenticatedAccessToken, getSafeReturnPath, startSignIn } from './authClient';
 
 describe('auth callback return path validation', () => {
   afterEach(() => {
@@ -99,5 +103,22 @@ describe('auth callback return path validation', () => {
     oidc.signinCallback.mockResolvedValue({ state: { returnTo: '/wishlist', nonce: 'expected-nonce' }, profile: { nonce: 'different-nonce' } });
 
     await expect(completeSignInCallback()).rejects.toThrow('nonce could not be confirmed');
+  });
+
+  it('exposes only a usable access token and clears the current OIDC user when asked', async () => {
+    window.__APP_CONFIG__ = {
+      KEYCLOAK_URL: 'https://keycloak.example/realms/shortlink',
+      KEYCLOAK_REALM: 'shortlink',
+      KEYCLOAK_CLIENT_ID: 'compareshop-public-ui',
+    };
+    oidc.getUser.mockResolvedValueOnce({ expired: false, access_token: 'valid-token' })
+      .mockResolvedValueOnce({ expired: true, access_token: 'expired-token' })
+      .mockResolvedValueOnce(null);
+
+    await expect(getAuthenticatedAccessToken()).resolves.toBe('valid-token');
+    await expect(getAuthenticatedAccessToken()).resolves.toBeNull();
+    await expect(getAuthenticatedAccessToken()).resolves.toBeNull();
+    await clearAuthenticatedSession();
+    expect(oidc.removeUser).toHaveBeenCalledOnce();
   });
 });

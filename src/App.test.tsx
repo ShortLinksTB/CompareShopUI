@@ -7,6 +7,19 @@ import { LanguageProvider } from './i18n';
 import { ProductDetailPage } from './ProductDetailPage';
 import stylesheet from './styles.css?inline';
 
+const authMock = vi.hoisted(() => ({
+  getToken: vi.fn<() => Promise<string | null>>(),
+  clear: vi.fn<() => Promise<void>>(),
+  signIn: vi.fn<(_: unknown) => Promise<void>>(),
+}));
+vi.mock('./auth/authClient', () => ({
+  getAuthenticatedAccessToken: authMock.getToken,
+  clearAuthenticatedSession: authMock.clear,
+  startSignIn: authMock.signIn,
+  completeSignInCallback: vi.fn(() => Promise.reject(new Error('callback failed'))),
+  getPendingReturnPath: vi.fn(() => '/wishlist'),
+}));
+
 const categories = { items: [{ id: 1, slug: 'phones', name: 'Phones' }] };
 const products = {
   items: [{ id: 5, slug: 'sample-phone', name: 'Sample Phone', brand: 'Example', category: { id: 1, slug: 'phones', name: 'Phones' }, offerSummary: { minPrice: 1200000, maxPrice: 1500000, offerCount: 2 } }],
@@ -61,6 +74,10 @@ function response(body: unknown, ok = true) {
 
 function cleanupTestEnvironment() {
   cleanup();
+  vi.unstubAllGlobals();
+  authMock.getToken.mockReset().mockResolvedValue(null);
+  authMock.clear.mockReset().mockResolvedValue();
+  authMock.signIn.mockReset().mockResolvedValue();
   localStorage.clear();
   window.history.replaceState({}, '', '/');
   Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 });
@@ -206,7 +223,7 @@ it('renders the storefront and opens the saved products page', async () => {
   expect(fetchMock).toHaveBeenCalledTimes(3);
   fireEvent.click(screen.getAllByRole('link', { name: /Yêu thích/ })[0]);
   expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Sản phẩm yêu thích');
-  expect(await screen.findByText('Chưa có sản phẩm yêu thích')).toBeTruthy();
+  expect(await screen.findByRole('heading', { name: 'Đăng nhập để xem sản phẩm đã lưu' })).toBeTruthy();
 });
 
 it('renders the auth callback outside the storefront shell', async () => {
@@ -217,14 +234,15 @@ it('renders the auth callback outside the storefront shell', async () => {
 
 describe('Wishlist API data', () => {
   it('keeps the page loading until the authenticated wishlist request resolves', async () => {
+    authMock.getToken.mockResolvedValue('access-token');
     let resolveRequest!: (value: Response) => void;
-    const fetchMock = vi.fn(() => new Promise<Response>(resolve => { resolveRequest = resolve; }));
+    const fetchMock = vi.fn((..._args: Parameters<typeof fetch>) => new Promise<Response>(resolve => { resolveRequest = resolve; }));
     vi.stubGlobal('fetch', fetchMock);
     renderAppAt('/wishlist');
 
-    expect(screen.getByRole('status').textContent).toBe('Đang tải sản phẩm yêu thích...');
+    expect(screen.getByLabelText('Đang tải sản phẩm yêu thích').getAttribute('aria-busy')).toBe('true');
     expect(screen.queryByText('Chưa có sản phẩm yêu thích')).toBeNull();
-    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/wishlist');
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/wishlist', { headers: { Authorization: 'Bearer access-token' } }));
     resolveRequest(await response({ items: [{ productId: 12, slug: 'real-phone', name: 'Real Phone', createdAtUtc: '2026-10-19T00:00:00Z' }] }));
     expect(await screen.findByRole('link', { name: 'Real Phone' })).toBeTruthy();
     expect(screen.getByText('Giá hiện tại chưa có dữ liệu')).toBeTruthy();
@@ -232,25 +250,28 @@ describe('Wishlist API data', () => {
   });
 
   it('removes an item through the API and renders the empty state after success', async () => {
+    authMock.getToken.mockResolvedValue('access-token');
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(response({ items: [{ productId: 12, slug: 'real-phone', name: 'Real Phone', createdAtUtc: '2026-10-19T00:00:00Z' }] }))
-      .mockResolvedValueOnce(response(null))
-      .mockResolvedValueOnce(response({ items: [] }));
+      .mockResolvedValueOnce({ ok: true, status: 204 } as Response);
     vi.stubGlobal('fetch', fetchMock);
     renderAppAt('/wishlist');
 
     fireEvent.click(await screen.findByRole('button', { name: 'Xóa Real Phone' }));
     expect(await screen.findByText('Chưa có sản phẩm yêu thích')).toBeTruthy();
-    expect(fetchMock).toHaveBeenLastCalledWith('https://api-compareshop-dev.giamha.online/api/v1/wishlist/12', { method: 'DELETE' });
+    expect(fetchMock).toHaveBeenLastCalledWith('https://api-compareshop-dev.giamha.online/api/v1/wishlist', {
+      method: 'POST', headers: { Authorization: 'Bearer access-token', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ productId: 12, operation: 'remove' }),
+    });
   });
 
   it('shows the unauthenticated state for an unauthorized response', async () => {
+    authMock.getToken.mockResolvedValue('expired-token');
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 401 } as Response));
     renderAppAt('/wishlist');
 
     expect(await screen.findByRole('heading', { name: 'Đăng nhập để xem sản phẩm đã lưu' })).toBeTruthy();
-    const loginCta = screen.getByRole('link', { name: 'Đăng nhập' });
-    expect(loginCta.getAttribute('href')).toBe('/login');
+    const loginCta = screen.getByRole('button', { name: 'Đăng nhập' });
     expect(loginCta.classList.contains('wishlist-unauthenticated__cta')).toBe(true);
     const promptFlow = loginCta.parentElement;
     expect(promptFlow?.classList.contains('wishlist-unauthenticated__actions')).toBe(true);
@@ -259,6 +280,7 @@ describe('Wishlist API data', () => {
   });
 
   it('shows an error and retries the wishlist request', async () => {
+    authMock.getToken.mockResolvedValue('access-token');
     const fetchMock = vi.fn().mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce(response({ items: [] }));
     vi.stubGlobal('fetch', fetchMock);
     renderAppAt('/wishlist');
