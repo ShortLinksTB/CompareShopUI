@@ -10,6 +10,7 @@ import { ShopPage } from './ShopPage';
 import { getSearchSuggestions } from './searchApi';
 import { ComparePage } from './ComparePage';
 import { AuthCallbackPage } from './AuthCallbackPage';
+import { WishlistPage } from './WishlistPage';
 
 function Header() {
   const navigate = useNavigate();
@@ -41,48 +42,6 @@ function getShellClass(pathname: string) {
 function Shell({ children }: { children: React.ReactNode }) { const location = useLocation(); return <div className={getShellClass(location.pathname)}><Header /><main className="container">{children}</main><BottomNav /></div>; }
 function Partners() { const partners = [{ name: 'Shopee', mark: 'S', tone: 'orange', note: 'Marketplace' }, { name: 'Lazada', mark: 'L', tone: 'purple', note: 'Marketplace' }, { name: 'Tiki', mark: 'T', tone: 'blue', note: 'E-commerce' }, { name: 'FPT Shop', mark: 'F', tone: 'slate', note: 'Công nghệ' }, { name: 'CellphoneS', mark: 'C', tone: 'red', note: 'Công nghệ' }, { name: 'Viettel Store', mark: 'V', tone: 'slate', note: 'Điện máy' }, { name: 'Hoàng Hà Mobile', mark: 'H', tone: 'green', note: 'Công nghệ' }]; return <section className="partners"><div className="partners-heading"><span className="eyebrow">Mua sắm cùng những nơi uy tín</span><h2>Đối tác của chúng tôi</h2><p>Giá được tổng hợp từ các cửa hàng và sàn thương mại điện tử hàng đầu.</p></div><div className="partner-grid">{partners.map(partner => <Link className="partner-card" to={`/shops/${partner.name.toLowerCase().replaceAll(' ', '-')}`} key={partner.name}><span className={`partner-mark ${partner.tone}`}>{partner.mark}</span><span><strong>{partner.name}</strong><small>{partner.note}</small></span><b>↗</b></Link>)}</div><div className="trust-grid"><div><span className="trust-icon">⌕</span><span><b>So sánh nhanh chóng</b><small>Tìm giá tốt trong vài giây</small></span></div><div><span className="trust-icon">✓</span><span><b>Thông tin minh bạch</b><small>Dữ liệu cập nhật rõ ràng</small></span></div><div><span className="trust-icon">◷</span><span><b>Tiết kiệm thời gian</b><small>Đỡ phải mở nhiều tab</small></span></div><div><span className="trust-icon">♡</span><span><b>Hoàn toàn miễn phí</b><small>Luôn miễn phí cho bạn</small></span></div></div></section>; }
 function Footer() { return <footer className="site-footer"><div className="footer-newsletter"><div><span className="eyebrow">Ưu đãi mỗi tuần</span><h3>Nhận giá tốt trước mọi người.</h3><p>Đăng ký để nhận sản phẩm nổi bật và deal mới nhất.</p></div><form className="newsletter"><input placeholder="Nhập email của bạn" type="email" /><button className="button button-primary">Đăng ký <span>→</span></button></form></div><div className="footer-main"><div className="footer-brand"><Link className="brand" to="/"><span className="brand-mark">G</span><span>GiaTot<small>So sánh giá thông minh</small></span></Link><p>So sánh giá - Mua đúng nơi - Tiết kiệm hơn mỗi ngày.</p><div className="social-links"><span>f</span><span>◎</span><span>in</span></div></div><div><strong>Về chúng tôi</strong><Link to="/blog">Blog</Link><Link to="/account">Tài khoản</Link><Link to="/shops/techmart">Đối tác</Link></div><div><strong>Khám phá</strong><Link to="/search">Danh mục</Link><Link to="/compare">So sánh sản phẩm</Link><Link to="/wishlist">Theo dõi giá</Link></div><div><strong>Hỗ trợ</strong><Link to="/search">Trung tâm trợ giúp</Link><Link to="/account">Điều khoản</Link><Link to="/account">Chính sách bảo mật</Link></div></div><div className="footer-bottom"><span>© 2026 GiaTot. Tất cả quyền được bảo lưu.</span><span>Made for smarter shopping <b>♥</b></span></div></footer>; }
-interface WishlistItem { productId: number; slug: string; name: string; createdAtUtc: string }
-const WISHLIST_API = 'https://api-compareshop-dev.giamha.online/api/v1/wishlist';
-
-function WishlistPage() {
-  const [items, setItems] = useState<WishlistItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<'unauthenticated' | 'request' | null>(null);
-  const [removing, setRemoving] = useState<number | null>(null);
-  const [retry, setRetry] = useState(0);
-
-  useEffect(() => {
-    let active = true;
-    setLoading(true);
-    setError(null);
-    fetch(WISHLIST_API)
-      .then(response => {
-        if (response.status === 401 || response.status === 403) throw new Error('unauthenticated');
-        if (!response.ok) throw new Error('request');
-        return response.json() as Promise<{ items?: WishlistItem[] }>;
-      })
-      .then(result => { if (active) setItems(Array.isArray(result.items) ? result.items.filter(item => Number.isInteger(item.productId) && typeof item.slug === 'string' && typeof item.name === 'string') : []); })
-      .catch(reason => { if (active) { setItems([]); setError(reason instanceof Error && reason.message === 'unauthenticated' ? 'unauthenticated' : 'request'); } })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
-  }, [retry]);
-
-  const remove = async (item: WishlistItem) => {
-    setRemoving(item.productId);
-    setError(null);
-    try {
-      const response = await fetch(`${WISHLIST_API}/${item.productId}`, { method: 'DELETE' });
-      if (response.status === 401 || response.status === 403) { setError('unauthenticated'); return; }
-      if (!response.ok) throw new Error('request');
-      setItems(current => current.filter(saved => saved.productId !== item.productId));
-    } catch { setError('request'); }
-    finally { setRemoving(null); }
-  };
-
-  return <><div className="page-title"><div><span className="eyebrow">Cá nhân</span><h1>Sản phẩm yêu thích</h1><p className="muted">Theo dõi giá và nhận thông báo khi sản phẩm giảm giá.</p></div></div><div className="wishlist-tabs"><button className="active">Sản phẩm đã lưu ({loading ? '…' : items.length})</button><button>Theo dõi giá (0)</button></div>
-    {loading ? <p className="detail-state" role="status">Đang tải sản phẩm yêu thích...</p> : error === 'unauthenticated' ? <div className="empty-state wishlist-unauthenticated-state" role="status"><span>♡</span><h3>Đăng nhập để xem sản phẩm đã lưu</h3><div className="wishlist-unauthenticated__actions"><p>Danh sách yêu thích chỉ hiển thị cho tài khoản đã xác thực.</p><Link className="button button-primary wishlist-unauthenticated__cta" to="/login">Đăng nhập</Link></div></div> : error ? <div className="empty-state" role="alert"><h3>Không thể tải sản phẩm yêu thích</h3><p>Vui lòng thử lại.</p><button className="button button-primary" onClick={() => setRetry(value => value + 1)}>Thử lại</button></div> : items.length ? <div className="wishlist-list">{items.map(item => <div className="wishlist-item" key={item.productId}><div className="safe-image-fallback" role="img" aria-label={item.name}><span>Chưa có hình ảnh</span></div><div><Link to={`/product/${item.slug}`}><strong>{item.name}</strong></Link><span className="price">Giá hiện tại chưa có dữ liệu</span></div><button className="button button-ghost" onClick={() => void remove(item)} disabled={removing === item.productId} aria-label={`Xóa ${item.name}`}>{removing === item.productId ? '…' : '×'}</button></div>)}</div> : <div className="empty-state"><span>♡</span><h3>Chưa có sản phẩm yêu thích</h3><p>Nhấn biểu tượng trái tim trên sản phẩm để lưu lại.</p><Link className="button button-primary" to="/search">Khám phá sản phẩm</Link></div>}
-  </>;
-}
 function LoginPage() { return <div className="auth-page"><div className="auth-panel"><Link className="brand" to="/"><span className="brand-mark">G</span><span>GiaTot</span></Link><h1>Đăng nhập để trải nghiệm tốt hơn</h1><p className="muted">Lưu sản phẩm, theo dõi giá và nhận ưu đãi.</p><button className="social-button">🌐 Tiếp tục với Google</button><button className="social-button">● Tiếp tục với Apple</button><div className="auth-divider">hoặc</div><input placeholder="Nhập email của bạn" type="email" /><input placeholder="Nhập mật khẩu" type="password" /><button className="button button-primary button-large">Đăng nhập</button><p className="muted">Chưa có tài khoản? <Link to="/account">Đăng ký ngay</Link></p></div><div className="auth-art"><div className="promo-bag">%</div><h2>Mua sắm thông minh,<br />tiết kiệm hơn.</h2></div></div>; }
 function AccountPage() { const actions = [{ icon: '♡', title: 'Sản phẩm yêu thích', description: 'Các sản phẩm bạn đã lưu', value: '3 sản phẩm', to: '/wishlist' }, { icon: '⌁', title: 'Theo dõi giá', description: 'Nhận thông báo khi giá giảm', value: '2 sản phẩm', to: '/wishlist' }, { icon: '◷', title: 'Lịch sử xem', description: 'Xem lại các sản phẩm gần đây', value: '12 sản phẩm', to: '/search' }, { icon: '▤', title: 'Bài viết đã lưu', description: 'Nội dung bạn muốn đọc lại', value: '4 bài viết', to: '/blog' }, { icon: '♢', title: 'Thông báo', description: 'Cập nhật mới nhất cho bạn', value: '2 tin mới', to: '/wishlist' }, { icon: '⚙', title: 'Cài đặt tài khoản', description: 'Thông tin cá nhân và bảo mật', value: '', to: '/account' }]; return <div className="account-page"><section className="account-hero"><div className="account-profile"><div className="account-avatar">T<span className="avatar-status"></span></div><div><span className="eyebrow">Tài khoản cá nhân</span><h1>Xin chào, Trần Minh Quân</h1><p className="muted">quanquan@gmail.com <span className="verified">✓ Đã xác thực</span></p><small>Thành viên từ tháng 09/2024</small></div></div><button className="button button-outline">Chỉnh sửa hồ sơ</button></section><section className="account-stats"><div><span className="stat-icon orange">♡</span><span><b>3</b><small>Sản phẩm yêu thích</small></span></div><div><span className="stat-icon green">⌁</span><span><b>2</b><small>Đang theo dõi giá</small></span></div><div><span className="stat-icon blue">◷</span><span><b>12</b><small>Lượt xem gần đây</small></span></div><div><span className="stat-icon purple">▤</span><span><b>4</b><small>Bài viết đã lưu</small></span></div></section><div className="account-content"><section><div className="account-section-heading"><div><span className="eyebrow">Quản lý tài khoản</span><h2>Truy cập nhanh</h2></div></div><div className="account-action-grid">{actions.map(action => <Link className="account-action-card" to={action.to} key={action.title}><span className="account-action-icon">{action.icon}</span><span className="account-action-copy"><strong>{action.title}</strong><small>{action.description}</small>{action.value && <em>{action.value}</em>}</span><span className="account-arrow">→</span></Link>)}</div></section><aside className="account-side"><div className="account-tip"><span className="tip-icon">✦</span><div><strong>Mẹo mua sắm thông minh</strong><p>Lưu sản phẩm để GiaTot thông báo ngay khi có giá tốt hơn.</p><Link to="/search">Khám phá sản phẩm →</Link></div></div><div className="account-security"><div><span className="security-icon">✓</span><span><strong>Tài khoản an toàn</strong><small>Email đã được xác thực</small></span></div><Link to="/account">Quản lý bảo mật →</Link></div></aside></div><div className="account-logout-row"><button className="logout-button" onClick={() => { window.location.href = '/'; }}>⇥ Đăng xuất khỏi tài khoản</button></div></div>; }
 export function App() {
