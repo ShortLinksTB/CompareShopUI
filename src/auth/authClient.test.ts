@@ -2,8 +2,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const oidc = vi.hoisted(() => ({
-  signinRedirect: vi.fn<() => Promise<void>>(),
-  signinCallback: vi.fn<() => Promise<{ state?: unknown }>>(),
+  signinRedirect: vi.fn<(args: unknown) => Promise<void>>(),
+  signinCallback: vi.fn<() => Promise<{ state?: unknown; profile?: { nonce?: string } }>>(),
   constructor: vi.fn(),
   storageStore: vi.fn(),
 }));
@@ -69,8 +69,11 @@ describe('auth callback return path validation', () => {
       client_id: 'compareshop-public-ui',
       redirect_uri: `${window.location.origin}/auth/callback`,
       response_type: 'code',
+      filterProtocolClaims: false,
     }));
-    expect(oidc.signinRedirect).toHaveBeenCalledWith({ state: { returnTo: '/wishlist' } });
+    const request = oidc.signinRedirect.mock.calls.at(-1)?.[0] as { nonce: string; state: { returnTo: string; nonce: string } };
+    expect(request.nonce).toMatch(/^[0-9a-f]{64}$/);
+    expect(request.state).toEqual({ returnTo: '/wishlist', nonce: request.nonce });
     expect(window.sessionStorage.getItem('compareshop.auth.returnTo')).toBe('/wishlist');
   });
 
@@ -81,9 +84,20 @@ describe('auth callback return path validation', () => {
       KEYCLOAK_CLIENT_ID: 'compareshop-public-ui',
     };
     window.sessionStorage.setItem('compareshop.auth.returnTo', '/wishlist');
-    oidc.signinCallback.mockResolvedValue({ state: { returnTo: '/wishlist' } });
+    oidc.signinCallback.mockResolvedValue({ state: { returnTo: '/wishlist', nonce: 'verified-nonce' }, profile: { nonce: 'verified-nonce' } });
 
     await expect(completeSignInCallback()).resolves.toBe('/wishlist');
     expect(window.sessionStorage.getItem('compareshop.auth.returnTo')).toBeNull();
+  });
+
+  it('rejects a callback when the ID-token nonce does not match the sign-in transaction', async () => {
+    window.__APP_CONFIG__ = {
+      KEYCLOAK_URL: 'https://keycloak.example/realms/shortlink',
+      KEYCLOAK_REALM: 'shortlink',
+      KEYCLOAK_CLIENT_ID: 'compareshop-public-ui',
+    };
+    oidc.signinCallback.mockResolvedValue({ state: { returnTo: '/wishlist', nonce: 'expected-nonce' }, profile: { nonce: 'different-nonce' } });
+
+    await expect(completeSignInCallback()).rejects.toThrow('nonce could not be confirmed');
   });
 });
