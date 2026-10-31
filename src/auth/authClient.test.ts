@@ -69,7 +69,7 @@ describe('auth callback return path validation', () => {
       client_id: 'compareshop-public-ui',
       redirect_uri: `${window.location.origin}/auth/callback`,
       response_type: 'code',
-      filterProtocolClaims: false,
+      filterProtocolClaims: ['nbf', 'jti', 'auth_time', 'acr', 'amr', 'azp', 'at_hash'],
     }));
     const request = oidc.signinRedirect.mock.calls.at(-1)?.[0] as { nonce: string; state: { returnTo: string; nonce: string } };
     expect(request.nonce).toMatch(/^[0-9a-f]{64}$/);

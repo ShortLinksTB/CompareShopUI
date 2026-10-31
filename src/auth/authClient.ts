@@ -14,9 +14,9 @@ function getManager() {
       redirect_uri: config.redirectUri,
       response_type: 'code',
       scope: 'openid profile email',
-      // Preserve the verified nonce claim so the adapter can assert the
-      // same value in its returned profile after oidc-client-ts validates it.
-      filterProtocolClaims: false,
+      // Keep nonce available for the adapter assertion while retaining
+      // oidc-client-ts filtering for the other optional protocol claims.
+      filterProtocolClaims: ['nbf', 'jti', 'auth_time', 'acr', 'amr', 'azp', 'at_hash'],
       automaticSilentRenew: false,
       monitorSession: false,
       loadUserInfo: false,
