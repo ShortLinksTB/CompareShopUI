@@ -209,6 +209,12 @@ it('renders the storefront and opens the saved products page', async () => {
   expect(await screen.findByText('Chưa có sản phẩm yêu thích')).toBeTruthy();
 });
 
+it('renders the auth callback outside the storefront shell', async () => {
+  renderAppAt('/auth/callback');
+  expect(await screen.findByRole('button', { name: 'Thử đăng nhập lại' })).toBeTruthy();
+  expect(document.querySelector('.site-header')).toBeNull();
+});
+
 describe('Wishlist API data', () => {
   it('keeps the page loading until the authenticated wishlist request resolves', async () => {
     let resolveRequest!: (value: Response) => void;

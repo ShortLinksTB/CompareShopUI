@@ -13,6 +13,7 @@
     "test:category-presentation": "node scripts/check-category-presentation.mjs"
   },
   "dependencies": {
+    "keycloak-js": "^26.2.5",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-router-dom": "^7.9.1"
