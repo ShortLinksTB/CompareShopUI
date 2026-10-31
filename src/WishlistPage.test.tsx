@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
+/// <reference types="vite/client" />
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import stylesheet from './styles.css?inline';
 
 const auth = vi.hoisted(() => ({
   getToken: vi.fn<() => Promise<string | null>>(),
@@ -59,6 +61,18 @@ describe('WishlistPage', () => {
     expect(await screen.findByRole('link', { name: 'Sample item' })).toBeTruthy();
     expect(screen.queryByText('invalid')).toBeNull();
     expect(screen.queryByLabelText('Đang tải sản phẩm yêu thích')).toBeNull();
+  });
+
+  it('keeps the empty-state action below its description with wireframe spacing', async () => {
+    auth.getToken.mockResolvedValue('access-token');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, { items: [] })));
+    renderPage();
+
+    expect(await screen.findByRole('heading', { name: 'Chưa có sản phẩm yêu thích' })).toBeTruthy();
+    const description = screen.getByText('Nhấn biểu tượng trái tim trên sản phẩm để lưu lại.');
+    const action = screen.getByRole('link', { name: 'Khám phá sản phẩm' });
+    expect(description.compareDocumentPosition(action) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(stylesheet).toMatch(/\.wishlist-page \.empty-state p\s*\{\s*margin:\s*0 0 18px;\s*font-size:\s*13px\s*;?\s*\}/);
   });
 
   it('clears unusable auth after a 401 and offers retryable sign-in', async () => {

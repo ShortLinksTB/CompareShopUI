@@ -155,7 +155,7 @@
 .wishlist-page .empty-state{padding:60px 20px}
 .wishlist-page .empty-state>span{font-size:38px}
 .wishlist-page .empty-state h3{font-size:17px}
-.wishlist-page .empty-state p{font-size:13px}
+.wishlist-page .empty-state p{margin:0 0 18px;font-size:13px}
 .wishlist-page .wishlist-alert{margin:0 24px 16px}
 .wishlist-page .wishlist-item>.safe-image-fallback{width:64px;height:64px;flex:0 0 64px;border-radius:8px}
 .wishlist-page .wishlist-item>button{width:30px;height:30px;padding:0;border:1px solid var(--border);border-radius:7px;background:#fff;color:var(--muted)}
