@@ -12,12 +12,13 @@ import { getSearchSuggestions } from './searchApi';
 import { ComparePage } from './ComparePage';
 import { AuthCallbackPage } from './AuthCallbackPage';
 import { WishlistPage } from './WishlistPage';
-import { CountrySelection } from './components/CountrySelection';
 import { getApplicationTitle } from './pageMetadata';
 
 function Header() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [query, setQuery] = useState('');
+  const [languageOpen, setLanguageOpen] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [suggestionsError, setSuggestionsError] = useState(false);
   const { language, setLanguage, t } = useLanguage();
@@ -30,7 +31,26 @@ function Header() {
     return () => { active = false; window.clearTimeout(timer); };
   }, [query]);
   const chooseSuggestion = (item: string) => { setQuery(item); setSuggestions([]); navigate(`/search?q=${encodeURIComponent(item)}`); };
-  return <header className="site-header"><div className="header-inner"><Link className="brand" to="/"><span className="brand-mark">G</span><span>GiaTot<small>{language === 'vi' ? 'So sánh giá thông minh' : language === 'id' ? 'Perbandingan harga cerdas' : 'Smart price comparison'}</small></span></Link><nav className="desktop-nav"><Link to="/">{t('home')}</Link><Link to="/category/phone">{t('categories')}</Link><Link to="/search">{t('featured')}</Link><Link to="/blog">{t('blog')}</Link></nav><div className="header-search-wrap"><form className="header-search" onSubmit={submit}><span>⌕</span><input value={query} onChange={event => setQuery(event.target.value)} placeholder={t('searchPlaceholder')} aria-label={t('searchPlaceholder')} aria-expanded={suggestions.length > 0} aria-controls="search-suggestions" /><button>⌘ K</button></form>{suggestions.length > 0 && <div className="search-suggestions" id="search-suggestions" role="listbox">{suggestions.map((item, index) => <button type="button" role="option" key={`${item}-${index}`} onClick={() => chooseSuggestion(item)}>{item}</button>)}</div>}{suggestionsError && <span className="suggestion-error" role="status">{t('searchSuggestionsUnavailable')}</span>}</div><nav className="header-links" aria-label="Header actions"><Link className="header-action" to="/wishlist"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z" /></svg>{t('wishlist')}</Link><Link className="header-action" to="/account"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5" /><path d="M5 20a7 7 0 0 1 14 0" /></svg>{t('account')}</Link><span className="header-actions-divider" aria-hidden="true" /><CountrySelection /><span className="header-language-control"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18" /></svg><label className="visually-hidden" htmlFor="header-language">Change language</label><select id="header-language" className="language-switcher" value={language} onChange={event => setLanguage(event.target.value as typeof language)} aria-label="Change language"><option value="vi">VI</option><option value="en">EN</option><option value="id">ID</option></select><svg className="language-chevron" aria-hidden="true" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" /></svg></span></nav><button className="mobile-search" onClick={() => navigate('/search')}>⌕</button></div></header>;
+  const routes = [
+    { to: '/', key: 'home', active: location.pathname === '/', label: t('home') },
+    { to: '/category/phone', key: 'categories', active: location.pathname.startsWith('/category/'), label: t('categories') },
+    { to: '/search', key: 'featured', active: location.pathname === '/search', label: t('featured') },
+    { to: '/blog', key: 'blog', active: location.pathname === '/blog' || location.pathname.startsWith('/blog/'), label: t('blog') },
+  ];
+  const languageOptions = [
+    { code: 'vi', label: 'VI — Tiếng Việt', marker: 'VN' },
+    { code: 'en', label: 'EN — English', marker: 'EN' },
+    { code: 'id', label: 'ID — Bahasa Indonesia', marker: 'ID' },
+  ] as const;
+  return <header className="site-header"><div className="header-inner">
+    <Link className="brand" to="/"><span className="brand-mark">G</span><span>GiaTot<small>{language === 'vi' ? 'So sánh giá thông minh' : language === 'id' ? 'Perbandingan harga cerdas' : 'Smart price comparison'}</small></span></Link>
+    <span className="header-brand-divider" aria-hidden="true" />
+    <nav className="desktop-nav" aria-label="Primary navigation">{routes.map(route => <Link key={route.key} className={route.active ? 'active' : undefined} aria-current={route.active ? 'page' : undefined} to={route.to}>{route.label}{route.key === 'categories' && <svg className="nav-chevron" aria-hidden="true" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" /></svg>}</Link>)}</nav>
+    <div className="header-search-wrap"><form className="header-search" onSubmit={submit}><span>⌕</span><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Tìm sản phẩm, thương hiệu, mã SKU…" aria-label="Tìm sản phẩm, thương hiệu, mã SKU…" aria-expanded={suggestions.length > 0} aria-controls="search-suggestions" /><button>⌘ K</button></form>{suggestions.length > 0 && <div className="search-suggestions" id="search-suggestions" role="listbox">{suggestions.map((item, index) => <button type="button" role="option" key={`${item}-${index}`} onClick={() => chooseSuggestion(item)}>{item}</button>)}</div>}{suggestionsError && <span className="suggestion-error" role="status">{t('searchSuggestionsUnavailable')}</span>}</div>
+    <nav className="header-links" aria-label="Header actions"><Link className="header-action" to="/wishlist"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z" /></svg>{t('wishlist')}</Link><Link className="header-action" to="/account"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5" /><path d="M5 20a7 7 0 0 1 14 0" /></svg>{t('account')}</Link><span className="header-actions-divider" aria-hidden="true" />
+      <div className="header-language-wrap"><button type="button" className="header-language-control" aria-label="Change language" aria-haspopup="listbox" aria-expanded={languageOpen} onClick={() => setLanguageOpen(open => !open)}><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18" /></svg><b>{language.toUpperCase()}</b><svg className="language-chevron" aria-hidden="true" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" /></svg></button>
+      {languageOpen && <div className="language-menu" role="listbox" aria-label="Choose language">{languageOptions.map(option => <button type="button" role="option" aria-selected={language === option.code} className={language === option.code ? 'selected' : undefined} key={option.code} onClick={() => { setLanguage(option.code); setLanguageOpen(false); }}><span className={`language-marker language-marker-${option.code}`} aria-hidden="true">{option.marker}</span>{option.label}{language === option.code && <span className="language-check" aria-hidden="true">✓</span>}</button>)}</div>}</div>
+    </nav><button className="mobile-search" onClick={() => navigate('/search')}>⌕</button></div></header>;
 }
 function BottomNav() {
   const location = useLocation(); const { t } = useLanguage(); return <nav className="bottom-nav" aria-label="Primary navigation"><Link className={location.pathname === '/' ? 'active' : ''} to="/">⌂<span>{t('home')}</span></Link><Link className={location.pathname.startsWith('/category') ? 'active' : ''} to="/category/phone">◫<span>{t('categories')}</span></Link><Link className={location.pathname === '/wishlist' ? 'active' : ''} to="/wishlist">♡<span>{t('wishlist')}</span></Link><Link className={location.pathname.startsWith('/blog') ? 'active' : ''} to="/blog">▤<span>{t('blog')}</span></Link><Link className={location.pathname === '/account' ? 'active' : ''} to="/account">♙<span>{t('account')}</span></Link></nav>; }
