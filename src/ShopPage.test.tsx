@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { App } from './App';
 import { LanguageProvider } from './i18n';
+import { CountryProvider } from './country';
 import { ShopPage } from './ShopPage';
 import stylesheet from './styles.css?inline';
 import './styles.css';
@@ -22,7 +23,7 @@ function renderShop() {
 }
 
 function renderShopRoute() {
-  return render(<LanguageProvider><MemoryRouter initialEntries={['/shops/sample-shop']}><App /></MemoryRouter></LanguageProvider>);
+  return render(<LanguageProvider><CountryProvider><MemoryRouter initialEntries={['/shops/sample-shop']}><App /></MemoryRouter></CountryProvider></LanguageProvider>);
 }
 
 function setColorScheme(theme: 'light' | 'dark') {

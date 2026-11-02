@@ -3,23 +3,26 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { LanguageProvider } from './i18n';
+import { CountryProvider } from './country';
 import { App } from './App';
 
 const auth = vi.hoisted(() => ({
   complete: vi.fn<() => Promise<string>>(),
   pendingReturnPath: vi.fn<() => string>(),
   start: vi.fn<(returnTo: unknown) => Promise<void>>(),
+  getToken: vi.fn<() => Promise<string | null>>().mockResolvedValue(null),
 }));
 
 vi.mock('./auth/authClient', () => ({
   completeSignInCallback: auth.complete,
   getPendingReturnPath: auth.pendingReturnPath,
   startSignIn: auth.start,
+  getAuthenticatedAccessToken: auth.getToken,
 }));
 
 function renderCallback() {
   window.history.replaceState({}, '', '/auth/callback?code=authorization-code&state=opaque-state');
-  return render(<LanguageProvider><BrowserRouter><App /></BrowserRouter></LanguageProvider>);
+  return render(<LanguageProvider><CountryProvider><BrowserRouter><App /></BrowserRouter></CountryProvider></LanguageProvider>);
 }
 
 afterEach(() => {
