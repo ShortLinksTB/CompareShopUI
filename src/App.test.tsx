@@ -201,7 +201,8 @@ describe('browser storage failures', () => {
     expect(stylesheet).toMatch(/@media\s*\(max-width:\s*1024px\)[\s\S]*?\.desktop-nav\s*\{\s*display:\s*none/);
     expect(stylesheet).toMatch(/\.header-links \.header-action[\s\S]*?height:\s*36px/);
     expect(stylesheet).toMatch(/\.header-links \.header-action svg[\s\S]*?fill:\s*none/);
-    expect(stylesheet).toMatch(/\.header-language-control\s*\{[^}]*display:\s*inline-flex[^}]*flex:\s*0 0 auto/);
+    expect(stylesheet).toMatch(/\.header-links \.header-language-control\s*\{[^}]*display:\s*inline-flex/);
+    expect(stylesheet).toMatch(/\.header-language-control\s*\{[^}]*flex:\s*0 0 auto/);
     expect(stylesheet).toMatch(/\.header-language-control > svg[\s\S]*?stroke:\s*currentColor/);
     expect(stylesheet).toMatch(/@media\s*\(max-width:\s*639px\)[\s\S]*?\.header-links \.header-action\s*\{\s*display:\s*none/);
     expect(stylesheet).not.toMatch(/\.header-language-control\s*\{[^}]*display:\s*none/);

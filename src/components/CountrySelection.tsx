@@ -6,6 +6,7 @@ export function CountrySelection() {
 
   return (
     <div className="country-selection">
+      <span className="country-flagdot" aria-hidden="true">{country}</span>
       <label className="visually-hidden" htmlFor="country-selection">Country</label>
       <select
         id="country-selection"
@@ -15,9 +16,10 @@ export function CountrySelection() {
         aria-label="Country"
       >
         {ENABLED_COUNTRIES.map(option => (
-          <option key={option.code} value={option.code}>{option.code} — {option.name}</option>
+          <option key={option.code} value={option.code}>{option.name}</option>
         ))}
       </select>
+      <svg className="country-chevron" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
       {suggestedCountry && (
         <section className="country-suggestion" role="region" aria-labelledby="country-suggestion-title">
           <p id="country-suggestion-title">Use {suggestedCountry.name} as your country?</p>
