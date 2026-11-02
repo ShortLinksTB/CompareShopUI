@@ -233,7 +233,7 @@
 .header-links .country-switcher { appearance: none; max-width: 116px; min-width: 0; height: 34px; padding: 0; border: 0; outline: 0; background: transparent; color: inherit; font-size: 13px; font-weight: 600; line-height: 1; cursor: pointer; }
 .country-chevron,
 .language-chevron { flex: 0 0 auto; color: var(--muted); }
-.language-chevron { width: 13px; height: 13px; }
+.header-language-control > .language-chevron { width: 13px; height: 13px; }
 .header-links .country-selection:hover,
 .header-links .country-selection:focus-within,
 .header-links .header-language-control:hover,
