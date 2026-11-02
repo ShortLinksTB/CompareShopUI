@@ -43,6 +43,8 @@ try {
         bottomNav: getComputedStyle(document.querySelector('.bottom-nav')).display,
         mobileSearch: getComputedStyle(document.querySelector('.mobile-search')).display,
         actions: rect('.header-links'),
+        languageControl: rect('.header-language-control'),
+        languageDisplay: getComputedStyle(document.querySelector('.header-language-control')).display,
         search: rect('.header-search-wrap'),
         controls,
         actionStyles: [...document.querySelectorAll('.header-action, .country-switcher')].map(element => {
@@ -53,9 +55,12 @@ try {
     });
 
     assert(layout.documentWidth <= width, `Horizontal overflow at ${width}px: ${JSON.stringify(layout)}`);
+    assert.notEqual(layout.languageDisplay, 'none', `Language selector stays visible at ${width}px`);
+    assert(layout.languageControl?.width > 0 && layout.languageControl.left >= 0 && layout.languageControl.right <= width,
+      `Language selector fits at ${width}px: ${JSON.stringify(layout.languageControl)}`);
     if (width === 1440) {
       assert.notEqual(layout.desktopNav, 'none', 'Wide desktop keeps desktop navigation visible');
-      assert.deepEqual(layout.controls.slice(0, 4), ['header-action', 'header-action', 'header-actions-divider', 'country-selection']);
+      assert.deepEqual(layout.controls, ['header-action', 'header-action', 'header-actions-divider', 'country-selection', 'header-language-control']);
     }
     if (width === 1024) {
       assert.equal(layout.desktopNav, 'none', 'Desktop navigation collapses at 1024px');

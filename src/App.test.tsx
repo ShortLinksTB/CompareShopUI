@@ -141,7 +141,10 @@ describe('browser storage failures', () => {
     expect((controls[1] as HTMLAnchorElement).getAttribute('href')).toBe('/account');
     expect(controls[2].className).toContain('header-actions-divider');
     expect(controls[3].querySelector('[aria-label="Country"]')).toBeTruthy();
-    expect(controls[5].getAttribute('aria-label')).toBe('Change language');
+    const languageControl = actions.querySelector('.header-language-control');
+    expect(languageControl).toBeTruthy();
+    expect(languageControl?.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
+    expect(languageControl?.querySelector('select')?.getAttribute('aria-label')).toBe('Change language');
 
     fireEvent.change(screen.getByRole('combobox', { name: 'Change language' }), { target: { value: 'en' } });
     expect(document.documentElement.lang).toBe('en');
@@ -167,6 +170,10 @@ describe('browser storage failures', () => {
     expect(stylesheet).toMatch(/@media\s*\(max-width:\s*1024px\)[\s\S]*?\.desktop-nav\s*\{\s*display:\s*none/);
     expect(stylesheet).toMatch(/\.header-links \.header-action[\s\S]*?height:\s*36px/);
     expect(stylesheet).toMatch(/\.header-links \.header-action svg[\s\S]*?fill:\s*none/);
+    expect(stylesheet).toMatch(/\.header-language-control\s*\{[^}]*display:\s*inline-flex[^}]*flex:\s*0 0 auto/);
+    expect(stylesheet).toMatch(/\.header-language-control > svg[\s\S]*?stroke:\s*currentColor/);
+    expect(stylesheet).toMatch(/@media\s*\(max-width:\s*639px\)[\s\S]*?\.header-links \.header-action\s*\{\s*display:\s*none/);
+    expect(stylesheet).not.toMatch(/\.header-language-control\s*\{[^}]*display:\s*none/);
   });
 });
 

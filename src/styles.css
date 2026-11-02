@@ -233,7 +233,9 @@
 .header-actions-divider { width: 1px; height: 24px; margin: 0 2px; background: var(--border); }
 .header-links .country-selection { margin-left: 0; }
 .header-links .country-switcher { max-width: none; padding: 0 10px; color: #171b24; }
-.header-links .language-switcher { appearance: none; min-width: 48px; padding: 0 8px; cursor: pointer; }
+.header-language-control { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; gap: 3px; }
+.header-language-control > svg { width: 15px; height: 15px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.header-links .language-switcher { appearance: none; min-width: 42px; padding: 0 6px; cursor: pointer; }
 .header-links :focus-visible { outline: 3px solid #b93800; outline-offset: 2px; }
 @media (max-width: 1024px) {
   .desktop-nav { display: none; }
@@ -256,4 +258,7 @@
   .header-links .header-actions-divider { display: none; }
   .header-links .country-switcher { max-width: 104px; padding: 0 5px; font-size: 13px; }
   .header-links .language-switcher { min-width: 42px; }
+}
+@media (max-width: 360px) {
+  .header-links .country-switcher { max-width: 88px; }
 }
