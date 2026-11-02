@@ -36,6 +36,12 @@ function renderAppAt(path: string) {
   return renderApp();
 }
 
+function chooseLanguage(code: 'vi' | 'en' | 'id') {
+  fireEvent.click(screen.getByRole('button', { name: 'Change language' }));
+  const optionName = { vi: 'VI — Tiếng Việt', en: 'EN — English', id: 'ID — Bahasa Indonesia' }[code];
+  fireEvent.click(screen.getByRole('option', { name: new RegExp(optionName) }));
+}
+
 function setColorScheme(theme: 'light' | 'dark') {
   vi.stubGlobal('matchMedia', vi.fn((query: string) => ({
     matches: query.includes('prefers-color-scheme: dark') && theme === 'dark',
@@ -96,11 +102,11 @@ describe('homepage document title localization', () => {
     renderAppAt('/');
 
     await waitFor(() => expect(document.title).toBe('GiaTot - So sánh giá thông minh'));
-    fireEvent.change(screen.getByRole('combobox', { name: 'Change language' }), { target: { value: 'en' } });
+    chooseLanguage('en');
     await waitFor(() => expect(document.title).toBe('GiaTot - Smart Price Comparison'));
     expect(document.documentElement.lang).toBe('en');
 
-    fireEvent.change(screen.getByRole('combobox', { name: 'Change language' }), { target: { value: 'vi' } });
+    chooseLanguage('vi');
     await waitFor(() => expect(document.title).toBe('GiaTot - So sánh giá thông minh'));
     expect(document.documentElement.lang).toBe('vi');
   });
@@ -109,7 +115,7 @@ describe('homepage document title localization', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ items: [] })));
     renderAppAt('/blog');
 
-    fireEvent.change(screen.getByRole('combobox', { name: 'Change language' }), { target: { value: 'en' } });
+    chooseLanguage('en');
     await waitFor(() => expect(document.title).toBe('GiaTot - Smart Price Comparison'));
 
     fireEvent.click(screen.getAllByRole('link', { name: 'Home' })[0]);
@@ -121,41 +127,34 @@ describe('homepage document title localization', () => {
 });
 
 describe('browser storage failures', () => {
-  it('renders the app and keeps country and language selection usable when storage reads and writes throw', () => {
+  it('renders the language-only header and keeps language selection usable when storage reads and writes throw', () => {
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('read blocked'); });
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('write blocked'); });
     vi.stubGlobal('navigator', { languages: ['id-ID'], language: 'id-ID' });
 
     renderAppAt('/');
 
-    const countryPicker = screen.getByRole('combobox', { name: 'Country' }) as HTMLSelectElement;
-    expect(countryPicker.value).toBe('VN');
-    expect(screen.getByRole('region', { name: 'Use Indonesia as your country?' })).toBeTruthy();
-    fireEvent.change(countryPicker, { target: { value: 'ID' } });
-    expect(countryPicker.value).toBe('ID');
-    expect(screen.getByText(/could not be saved/)).toBeTruthy();
-
-    expect(screen.getByRole('combobox', { name: 'Change language' })).toBeTruthy();
+    expect(screen.queryByRole('combobox', { name: 'Country' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Change language' })).toBeTruthy();
     expect(document.documentElement.lang).toBe('vi');
     expect(screen.getByRole('link', { name: 'Trang chủ' })).toBeTruthy();
-    fireEvent.change(screen.getByRole('combobox', { name: 'Change language' }), { target: { value: 'en' } });
+    chooseLanguage('en');
     expect(document.documentElement.lang).toBe('en');
-    expect((screen.getByRole('combobox', { name: 'Change language' }) as HTMLSelectElement).value).toBe('en');
-    expect((screen.getByRole('combobox', { name: 'Country' }) as HTMLSelectElement).value).toBe('ID');
+    expect(screen.getByRole('button', { name: 'Change language' }).textContent).toContain('EN');
   });
 
-  it('keeps the language preference independent from the selected country', () => {
+  it('does not modify saved country preference when changing header language', () => {
     localStorage.setItem('compareshop.country', 'VN');
     localStorage.setItem('giatot-language', 'en');
     renderAppAt('/');
 
-    expect((screen.getByRole('combobox', { name: 'Country' }) as HTMLSelectElement).value).toBe('VN');
+    expect(screen.queryByRole('combobox', { name: 'Country' })).toBeNull();
     expect(document.documentElement.lang).toBe('en');
-    expect((screen.getByRole('combobox', { name: 'Change language' }) as HTMLSelectElement).value).toBe('en');
-    fireEvent.change(screen.getByRole('combobox', { name: 'Country' }), { target: { value: 'ID' } });
-    expect(document.documentElement.lang).toBe('en');
-    expect(localStorage.getItem('compareshop.country')).toBe('ID');
-    expect(localStorage.getItem('giatot-language')).toBe('en');
+    expect(screen.getByRole('button', { name: 'Change language' }).textContent).toContain('EN');
+    chooseLanguage('id');
+    expect(document.documentElement.lang).toBe('id');
+    expect(localStorage.getItem('compareshop.country')).toBe('VN');
+    expect(localStorage.getItem('giatot-language')).toBe('id');
   });
 
   it('renders the approved header actions in order and selects English through the language provider', () => {
@@ -171,17 +170,65 @@ describe('browser storage failures', () => {
     expect((controls[0] as HTMLAnchorElement).getAttribute('href')).toBe('/wishlist');
     expect((controls[1] as HTMLAnchorElement).getAttribute('href')).toBe('/account');
     expect(controls[2].className).toContain('header-actions-divider');
-    expect(controls[3].querySelector('[aria-label="Country"]')).toBeTruthy();
+    expect(controls[3].className).toContain('header-language-wrap');
+    expect(actions.querySelector('[aria-label="Country"]')).toBeNull();
     const languageControl = actions.querySelector('.header-language-control');
     expect(languageControl).toBeTruthy();
     expect(languageControl?.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
-    expect(languageControl?.querySelector('select')?.getAttribute('aria-label')).toBe('Change language');
+    expect(languageControl?.getAttribute('aria-label')).toBe('Change language');
 
-    fireEvent.change(screen.getByRole('combobox', { name: 'Change language' }), { target: { value: 'en' } });
+    chooseLanguage('en');
     expect(document.documentElement.lang).toBe('en');
     expect(screen.getByRole('link', { name: 'Wishlist' })).toBeTruthy();
-    expect((screen.getByRole('combobox', { name: 'Country' }) as HTMLSelectElement).value).toBe('VN');
     expect(localStorage.getItem('giatot-language')).toBe('en');
+  });
+
+  it('renders language choices with markers, selected check, and closes after selection', () => {
+    renderAppAt('/');
+    const trigger = screen.getByRole('button', { name: 'Change language' });
+    expect(trigger.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(trigger);
+
+    expect(screen.getByRole('option', { name: /VI — Tiếng Việt/ }).getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByRole('option', { name: /VI — Tiếng Việt/ }).querySelector('.language-marker-vi')).toBeTruthy();
+    expect(screen.getByRole('option', { name: /VI — Tiếng Việt/ }).querySelector('.language-check')).toBeTruthy();
+    expect(screen.getByRole('option', { name: /EN — English/ }).querySelector('.language-marker-en')).toBeTruthy();
+    expect(screen.getByRole('option', { name: /ID — Bahasa Indonesia/ }).querySelector('.language-marker-id')).toBeTruthy();
+    fireEvent.click(screen.getByRole('option', { name: /ID — Bahasa Indonesia/ }));
+    expect(trigger.getAttribute('aria-expanded')).toBe('false');
+    expect(trigger.textContent).toContain('ID');
+  });
+
+  it.each([
+    ['/', 'home'],
+    ['/category/phones', 'categories'],
+    ['/search', 'featured'],
+    ['/blog', 'blog'],
+    ['/blog/article-1', 'blog'],
+  ])('marks only the matching header navigation item active at %s', (path, activeKey) => {
+    renderAppAt(path);
+    const navigation = screen.getAllByRole('navigation', { name: 'Primary navigation' })[0];
+    const links = Array.from(navigation.querySelectorAll('a'));
+    expect(links.filter(link => link.classList.contains('active'))).toHaveLength(1);
+    expect(links.find(link => link.classList.contains('active'))?.getAttribute('href')).toBe({
+      home: '/', categories: '/category/phone', featured: '/search', blog: '/blog',
+    }[activeKey]);
+    expect(links[1].querySelector('.nav-chevron')).toBeTruthy();
+  });
+
+  it('keeps all header navigation items inactive on non-navigation routes', () => {
+    renderAppAt('/wishlist');
+    const navigation = screen.getAllByRole('navigation', { name: 'Primary navigation' })[0];
+    expect(navigation.querySelectorAll('a.active')).toHaveLength(0);
+  });
+
+  it('defines approved light and dark header tokens for the selector states', () => {
+    expect(stylesheet).toContain('--header-bg: #fff');
+    expect(stylesheet).toContain('--header-primary-soft: #fff3eb');
+    expect(stylesheet).toContain('[data-theme="dark"] .site-header');
+    expect(stylesheet).toContain('--header-bg: #13151a');
+    expect(stylesheet).toContain('--header-primary-soft: #2a1b12');
+    expect(stylesheet).toContain('.language-menu button.selected');
   });
 
   it('shows the search suggestion error in English when English is selected', async () => {
@@ -191,7 +238,7 @@ describe('browser storage failures', () => {
       : response({ items: [] })));
     renderAppAt('/');
 
-    fireEvent.change(screen.getByRole('textbox', { name: 'Search products, brands...' }), { target: { value: 'phone' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Tìm sản phẩm, thương hiệu, mã SKU…' }), { target: { value: 'phone' } });
 
     expect(await screen.findByText('Search suggestions are currently unavailable.')).toBeTruthy();
     expect(screen.queryByText('Gợi ý tìm kiếm hiện không khả dụng.')).toBeNull();
@@ -547,7 +594,7 @@ it('renders product-object suggestions without crashing the search route', async
   vi.stubGlobal('fetch', fetchMock);
   const { container } = renderAppAt('/search');
 
-  fireEvent.change(screen.getByRole('textbox', { name: 'Tìm sản phẩm, thương hiệu...' }), { target: { value: 'Sample Product 03' } });
+  fireEvent.change(screen.getByRole('textbox', { name: 'Tìm sản phẩm, thương hiệu, mã SKU…' }), { target: { value: 'Sample Product 03' } });
   expect(await screen.findByRole('option', { name: 'Sample Product 03' })).toBeTruthy();
   expect(screen.getByRole('heading', { name: 'Tất cả sản phẩm' })).toBeTruthy();
   expect(container.textContent).toContain('Tất cả sản phẩm');
@@ -871,7 +918,7 @@ describe('Search and Category API data', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
     renderAppAt('/search');
-    fireEvent.change(screen.getByRole('textbox', { name: 'Tìm sản phẩm, thương hiệu...' }), { target: { value: 'phone' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Tìm sản phẩm, thương hiệu, mã SKU…' }), { target: { value: 'phone' } });
     expect(await screen.findByRole('option', { name: 'phone suggestion' })).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/search/suggestions?q=phone&limit=5');
     expect(await screen.findByRole('alert')).toBeTruthy();
