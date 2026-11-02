@@ -373,6 +373,7 @@ describe('English route copy', () => {
     renderAppAt(path);
 
     expect(await screen.findByText(expectedCopy)).toBeTruthy();
+    expect(document.title).toBe('GiaTot - Smart Price Comparison');
     expect(screen.queryByText('Đang tải sản phẩm...')).toBeNull();
   });
 });
