@@ -27,5 +27,27 @@ const translations = {
 interface LanguageContextValue { language: Language; setLanguage: (language: Language) => void; t: (key: TranslationKey) => string; }
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
-export function LanguageProvider({ children }: { children: ReactNode }) { const [language, setLanguage] = useState<Language>(() => (localStorage.getItem('giatot-language') as Language) || 'vi'); const changeLanguage = (next: Language) => { localStorage.setItem('giatot-language', next); setLanguage(next); document.documentElement.lang = next; }; const value = useMemo(() => ({ language, setLanguage: changeLanguage, t: (key: TranslationKey) => translations[language][key] }), [language]); return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>; }
+function readSavedLanguage(): Language {
+  try {
+    const saved = window.localStorage.getItem('giatot-language');
+    return saved === 'en' || saved === 'id' || saved === 'vi' ? saved : 'vi';
+  } catch {
+    return 'vi';
+  }
+}
+
+export function LanguageProvider({ children }: { children: ReactNode }) {
+  const [language, setLanguage] = useState<Language>(readSavedLanguage);
+  const changeLanguage = (next: Language) => {
+    setLanguage(next);
+    document.documentElement.lang = next;
+    try {
+      window.localStorage.setItem('giatot-language', next);
+    } catch {
+      // Keep language switching available when browser storage is unavailable.
+    }
+  };
+  const value = useMemo(() => ({ language, setLanguage: changeLanguage, t: (key: TranslationKey) => translations[language][key] }), [language]);
+  return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
+}
 export function useLanguage() { const context = useContext(LanguageContext); if (!context) throw new Error('useLanguage must be used inside LanguageProvider'); return context; }
