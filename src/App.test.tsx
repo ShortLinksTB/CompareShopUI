@@ -28,7 +28,7 @@ const products = {
 };
 
 function renderApp() {
-  return render(<LanguageProvider><CountryProvider><BrowserRouter><App /></BrowserRouter></CountryProvider></LanguageProvider>);
+  return render(<CountryProvider><LanguageProvider><BrowserRouter><App /></BrowserRouter></LanguageProvider></CountryProvider>);
 }
 
 function renderAppAt(path: string) {
@@ -104,21 +104,23 @@ describe('browser storage failures', () => {
     expect(countryPicker.value).toBe('ID');
     expect(screen.getByText(/could not be saved/)).toBeTruthy();
 
-    const languagePicker = screen.getByRole('combobox', { name: 'Change language' }) as HTMLSelectElement;
-    fireEvent.change(languagePicker, { target: { value: 'en' } });
-    expect(languagePicker.value).toBe('en');
-    expect(screen.getByRole('link', { name: 'Home' })).toBeTruthy();
+    expect(screen.queryByRole('combobox', { name: 'Change language' })).toBeNull();
+    expect(document.documentElement.lang).toBe('id');
+    expect(screen.getByRole('link', { name: 'Beranda' })).toBeTruthy();
   });
 
-  it('restores and persists a valid saved language when storage is available', () => {
+  it('derives language from saved country and ignores the legacy language preference', () => {
+    localStorage.setItem('compareshop.country', 'VN');
     localStorage.setItem('giatot-language', 'id');
     renderAppAt('/');
 
-    const languagePicker = screen.getByRole('combobox', { name: 'Change language' }) as HTMLSelectElement;
-    expect(languagePicker.value).toBe('id');
-    fireEvent.change(languagePicker, { target: { value: 'en' } });
-    expect(languagePicker.value).toBe('en');
-    expect(localStorage.getItem('giatot-language')).toBe('en');
+    expect((screen.getByRole('combobox', { name: 'Country' }) as HTMLSelectElement).value).toBe('VN');
+    expect(document.documentElement.lang).toBe('vi');
+    expect(screen.queryByRole('combobox', { name: 'Change language' })).toBeNull();
+    fireEvent.change(screen.getByRole('combobox', { name: 'Country' }), { target: { value: 'ID' } });
+    expect(document.documentElement.lang).toBe('id');
+    expect(localStorage.getItem('compareshop.country')).toBe('ID');
+    expect(localStorage.getItem('giatot-language')).toBe('id');
   });
 });
 
@@ -814,7 +816,7 @@ describe('Product Detail API data', () => {
       if (url.includes('/products?categoryId=7')) return response({ items: [] });
       return response({}, false);
     }));
-    render(<LanguageProvider><MemoryRouter initialEntries={['/product/sample-product-01']}><Link to="/product/other-product">Open other product</Link><Routes><Route path="/product/:slug" element={<ProductDetailPage />} /></Routes></MemoryRouter></LanguageProvider>);
+    render(<CountryProvider><LanguageProvider><MemoryRouter initialEntries={['/product/sample-product-01']}><Link to="/product/other-product">Open other product</Link><Routes><Route path="/product/:slug" element={<ProductDetailPage />} /></Routes></MemoryRouter></LanguageProvider></CountryProvider>);
 
     fireEvent.click(screen.getByRole('link', { name: 'Open other product' }));
     expect(await screen.findByRole('heading', { name: 'Other Product' })).toBeTruthy();

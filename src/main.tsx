@@ -6,4 +6,4 @@ import './styles.css';
 import { LanguageProvider } from './i18n';
 import { CountryProvider } from './country';
 
-createRoot(document.getElementById('root')!).render(<StrictMode><LanguageProvider><CountryProvider><BrowserRouter><App /></BrowserRouter></CountryProvider></LanguageProvider></StrictMode>);
+createRoot(document.getElementById('root')!).render(<StrictMode><CountryProvider><LanguageProvider><BrowserRouter><App /></BrowserRouter></LanguageProvider></CountryProvider></StrictMode>);

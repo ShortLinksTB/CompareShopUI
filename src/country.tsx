@@ -2,17 +2,19 @@ import { createContext, useContext, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 
 export const ENABLED_COUNTRIES = [
-  { code: 'VN', name: 'Vietnam' },
-  { code: 'ID', name: 'Indonesia' },
+  { code: 'VN', name: 'Vietnam', language: 'vi' },
+  { code: 'ID', name: 'Indonesia', language: 'id' },
 ] as const;
 
 export type CountryCode = (typeof ENABLED_COUNTRIES)[number]['code'];
+export type CountryLanguage = (typeof ENABLED_COUNTRIES)[number]['language'];
 
 const DEFAULT_COUNTRY: CountryCode = 'VN';
 const COUNTRY_STORAGE_KEY = 'compareshop.country';
 
 type CountryState = {
   country: CountryCode;
+  language: CountryLanguage;
   suggestion: CountryCode | null;
   persistenceError: boolean;
   selectCountry: (country: CountryCode) => void;
@@ -78,6 +80,7 @@ export function CountryProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<CountryState>(() => ({
     country,
+    language: ENABLED_COUNTRIES.find(option => option.code === country)!.language,
     suggestion,
     persistenceError,
     selectCountry: nextCountry => {
