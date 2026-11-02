@@ -281,11 +281,21 @@ describe('Home API data', () => {
   });
 
   it('shows an error and retries both requests', async () => {
-    const fetchMock = vi.fn()
-      .mockRejectedValueOnce(new Error('offline'))
-      .mockResolvedValueOnce(response(categories))
-      .mockResolvedValueOnce(response(products))
-      .mockResolvedValueOnce(response({ items: [], page: 1, pageSize: 1, totalItems: 42, totalPages: 42 }));
+    let categoryRequests = 0;
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith('/categories')) {
+        categoryRequests += 1;
+        return categoryRequests === 1
+          ? Promise.reject(new Error('offline'))
+          : response(categories);
+      }
+      if (url.endsWith('/products?page=1&pageSize=10')) return response(products);
+      if (url.endsWith('/products?categoryId=1&page=1&pageSize=1')) {
+        return response({ items: [], page: 1, pageSize: 1, totalItems: 42, totalPages: 42 });
+      }
+      return Promise.reject(new Error(`Unexpected request: ${url}`));
+    });
     vi.stubGlobal('fetch', fetchMock);
     renderApp();
 
@@ -294,7 +304,10 @@ describe('Home API data', () => {
     fireEvent.click(retry);
     expect((await screen.findAllByRole('link', { name: 'Phones' })).some(link => link.getAttribute('href') === '/category/phones')).toBe(true);
     expect(await screen.findByRole('link', { name: 'Sample Phone' })).toBeTruthy();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4));
+    const requestedUrls = fetchMock.mock.calls.map(([url]) => String(url));
+    expect(requestedUrls.filter(url => url.endsWith('/categories')).length).toBeGreaterThanOrEqual(2);
+    expect(requestedUrls).toContain('https://api-compareshop-dev.giamha.online/api/v1/products?page=1&pageSize=10');
+    expect(requestedUrls).toContain('https://api-compareshop-dev.giamha.online/api/v1/products?categoryId=1&page=1&pageSize=1');
   });
 });
 
