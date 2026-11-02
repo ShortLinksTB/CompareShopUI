@@ -411,10 +411,13 @@ describe('Home API data', () => {
       if (url.endsWith('/categories')) return response({ items: [
         { id: 1, slug: 'phones', name: 'Phones' },
         { id: 2, slug: 'audio', name: 'Audio' },
+        { id: 3, slug: 'computers', name: 'Computers' },
+        { id: 4, slug: 'home-goods', name: 'Home goods' },
       ] });
       if (url.endsWith('/products?page=1&pageSize=10')) return response({ ...products, items: featuredItems });
       if (url.includes('categoryId=1')) return response({ ...products, items: [], totalItems: 0 });
       if (url.includes('categoryId=2')) return response({ ...products, items: [], totalItems: 7 });
+      if (url.includes('categoryId=')) return response({ ...products, items: [], totalItems: 3 });
       return Promise.reject(new Error(`Unexpected request: ${url}`));
     });
     vi.stubGlobal('fetch', fetchMock);
@@ -430,6 +433,8 @@ describe('Home API data', () => {
     expect(featuredCard.querySelectorAll('.hero-featured-product')[1].querySelector('.hero-featured-price')).toBeNull();
     expect((await screen.findAllByRole('link', { name: 'Phones 0 sản phẩm' })).length).toBeGreaterThan(0);
     expect(screen.getAllByText('7 sản phẩm').length).toBeGreaterThan(0);
+    const categoryIcons = Array.from(document.querySelectorAll('.category-card svg')).map(icon => icon.getAttribute('data-category-icon'));
+    expect(categoryIcons).toEqual(['phone', 'audio', 'computer', 'category']);
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes('featured'))).toBe(false);
   });
 

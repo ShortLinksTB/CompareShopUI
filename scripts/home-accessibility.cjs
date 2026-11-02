@@ -50,10 +50,12 @@ const contrast = (a, b) => (Math.max(luminance(a), luminance(b)) + .05) / (Math.
           left: bounds.left,
           right: bounds.right,
           iconBackground: getComputedStyle(icon).backgroundColor,
+          icon: icon.querySelector('svg')?.getAttribute('data-category-icon'),
           hasArrow: Boolean(arrow),
         };
       }));
       assert.equal(categoryCards.length, 3);
+      assert.deepEqual(categoryCards.map(card => card.icon), ['audio', 'computer', 'phone']);
       for (const card of categoryCards) {
         assert.ok(card.left >= 0 && card.right <= width, `Category card clipped at ${width}px: ${JSON.stringify(card)}`);
         assert.equal(card.iconBackground, 'rgb(255, 243, 235)');
