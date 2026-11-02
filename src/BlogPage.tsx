@@ -22,6 +22,16 @@ export function BlogPage() {
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
+    document.title = language === 'en'
+      ? 'GiaTot - Smart price comparison'
+      : language === 'id'
+        ? 'GiaTot - Perbandingan harga cerdas'
+        : 'GiaTot - So sánh giá thông minh';
+
+    return () => { document.title = 'GiaTot - So sánh giá thông minh'; };
+  }, [language]);
+
+  useEffect(() => {
     let active = true;
     setLoading(true);
     setError(false);
