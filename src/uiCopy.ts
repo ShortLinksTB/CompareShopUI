@@ -2,6 +2,10 @@ import type { Language } from './i18n';
 
 const englishCopy: Record<string, string> = {
   'Vui lòng thử lại sau.': 'Please try again later.',
+  'Xem ngay': 'View now',
+  'Biểu đồ lịch sử giá': 'Price history chart',
+  'Số lượt đánh giá chưa có': 'Review count unavailable',
+  'Đang tải sản phẩm yêu thích': 'Loading wishlist products',
   'Không thể tải danh mục': 'Could not load categories',
   'Không tìm thấy danh mục': 'Category not found',
   'Thông tin mô tả chưa được cung cấp.': 'No description is available yet.',
