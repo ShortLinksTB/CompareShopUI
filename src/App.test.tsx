@@ -106,9 +106,11 @@ describe('browser storage failures', () => {
 
     expect(screen.getByRole('combobox', { name: 'Change language' })).toBeTruthy();
     expect(document.documentElement.lang).toBe('vi');
+    expect(document.title).toBe('GiaTot - So sánh giá thông minh');
     expect(screen.getByRole('link', { name: 'Trang chủ' })).toBeTruthy();
     fireEvent.change(screen.getByRole('combobox', { name: 'Change language' }), { target: { value: 'en' } });
     expect(document.documentElement.lang).toBe('en');
+    expect(document.title).toBe('GiaTot - Smart Price Comparison');
     expect((screen.getByRole('combobox', { name: 'Change language' }) as HTMLSelectElement).value).toBe('en');
     expect((screen.getByRole('combobox', { name: 'Country' }) as HTMLSelectElement).value).toBe('ID');
   });
@@ -120,6 +122,7 @@ describe('browser storage failures', () => {
 
     expect((screen.getByRole('combobox', { name: 'Country' }) as HTMLSelectElement).value).toBe('VN');
     expect(document.documentElement.lang).toBe('en');
+    expect(document.title).toBe('GiaTot - Smart Price Comparison');
     expect((screen.getByRole('combobox', { name: 'Change language' }) as HTMLSelectElement).value).toBe('en');
     fireEvent.change(screen.getByRole('combobox', { name: 'Country' }), { target: { value: 'ID' } });
     expect(document.documentElement.lang).toBe('en');
