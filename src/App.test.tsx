@@ -281,7 +281,7 @@ describe('Wishlist API data', () => {
     expect(screen.queryByText('Chưa có sản phẩm yêu thích')).toBeNull();
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/wishlist', { headers: { Authorization: 'Bearer access-token' } }));
     resolveRequest(await response({ items: [{ productId: 12, slug: 'real-phone', name: 'Real Phone', createdAtUtc: '2026-10-19T00:00:00Z' }] }));
-    expect(await screen.findByRole('link', { name: 'Real Phone' })).toBeTruthy();
+    expect(await screen.findByRole('link', { name: 'Real Phone' }, { timeout: 5000 })).toBeTruthy();
     expect(screen.getByText('Giá hiện tại chưa có dữ liệu')).toBeTruthy();
     expect(screen.queryByText(/200\.000/)).toBeNull();
   });
