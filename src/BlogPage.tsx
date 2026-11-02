@@ -4,6 +4,7 @@ import { uiText } from './uiCopy';
 import { Link } from 'react-router-dom';
 import { getArticles, type PublicArticleSummary } from './blogApi';
 import { SafeImage } from './components/SafeImage';
+import { getApplicationTitle } from './pageMetadata';
 
 const formatPublishedDate = (value: string, language: string) => new Intl.DateTimeFormat(language === 'en' ? 'en-US' : language === 'id' ? 'id-ID' : 'vi-VN', {
   day: '2-digit',
@@ -28,7 +29,7 @@ export function BlogPage() {
         ? 'GiaTot - Perbandingan harga cerdas'
         : 'GiaTot - So sánh giá thông minh';
 
-    return () => { document.title = 'GiaTot - So sánh giá thông minh'; };
+    return () => { document.title = getApplicationTitle(language); };
   }, [language]);
 
   useEffect(() => {

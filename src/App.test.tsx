@@ -104,6 +104,20 @@ describe('homepage document title localization', () => {
     await waitFor(() => expect(document.title).toBe('GiaTot - So sánh giá thông minh'));
     expect(document.documentElement.lang).toBe('vi');
   });
+
+  it('restores the shared English application title when navigating away from the blog', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ items: [] })));
+    renderAppAt('/blog');
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Change language' }), { target: { value: 'en' } });
+    await waitFor(() => expect(document.title).toBe('GiaTot - Smart Price Comparison'));
+
+    fireEvent.click(screen.getAllByRole('link', { name: 'Home' })[0]);
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/');
+      expect(document.title).toBe('GiaTot - Smart Price Comparison');
+    });
+  });
 });
 
 describe('browser storage failures', () => {
