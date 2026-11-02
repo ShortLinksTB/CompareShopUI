@@ -195,3 +195,11 @@
 .country-suggestion button:first-child{border-color:var(--primary);background:var(--primary);color:#fff}
 .country-suggestion button:hover{border-color:var(--primary)}
 @media(max-width:639px){.header-inner{gap:10px}.header-links{display:flex;gap:0;margin-left:auto}.header-links>a{display:none}.country-switcher{max-width:104px;padding:6px 5px;font-size:9px}.country-suggestion{position:fixed;top:66px;right:12px;width:min(270px,calc(100vw - 24px))}.mobile-search{margin-left:0}}
+
+@media (min-width: 640px) and (max-width: 900px) {
+  .header-inner { gap: 14px; }
+  .header-search-wrap { flex: 1 1 160px; min-width: 0; }
+  .header-links { flex: 0 0 auto; gap: 12px; margin-left: 0; font-size: 12px; }
+  .header-links a { flex: 0 0 auto; white-space: nowrap; }
+  .country-switcher { white-space: nowrap; }
+}
