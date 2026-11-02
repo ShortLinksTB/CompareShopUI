@@ -4,6 +4,10 @@ export type Language = 'vi' | 'en' | 'id';
 const LANGUAGE_STORAGE_KEY = 'giatot-language';
 type TranslationKey = keyof typeof translations.vi;
 
+function isLanguage(value: unknown): value is Language {
+  return value === 'vi' || value === 'en' || value === 'id';
+}
+
 const translations = {
   vi: {
     home: 'Trang chủ', categories: 'Danh mục', featured: 'Sản phẩm nổi bật', blog: 'Blog', wishlist: 'Yêu thích', account: 'Tài khoản', searchPlaceholder: 'Tìm sản phẩm, thương hiệu...', searchSuggestionsUnavailable: 'Gợi ý tìm kiếm hiện không khả dụng.',
@@ -31,7 +35,7 @@ const LanguageContext = createContext<LanguageContextValue | null>(null);
 function readSavedLanguage(): Language {
   try {
     const saved = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
-    return saved === 'vi' || saved === 'en' || saved === 'id' ? saved : 'vi';
+    return isLanguage(saved) ? saved : 'vi';
   } catch {
     return 'vi';
   }
@@ -41,6 +45,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<Language>(readSavedLanguage);
   useEffect(() => { document.documentElement.lang = language; }, [language]);
   const setLanguage = (next: Language) => {
+    if (!isLanguage(next)) return;
     setLanguageState(next);
     try {
       window.localStorage.setItem(LANGUAGE_STORAGE_KEY, next);
