@@ -75,6 +75,7 @@ function response(body: unknown, ok = true) {
 
 function cleanupTestEnvironment() {
   cleanup();
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
   authMock.getToken.mockReset().mockResolvedValue(null);
   authMock.clear.mockReset().mockResolvedValue();
@@ -87,6 +88,39 @@ function cleanupTestEnvironment() {
 }
 
 afterEach(cleanupTestEnvironment);
+
+describe('browser storage failures', () => {
+  it('renders the app and keeps country and language selection usable when storage reads and writes throw', () => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('read blocked'); });
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('write blocked'); });
+    vi.stubGlobal('navigator', { languages: ['id-ID'], language: 'id-ID' });
+
+    renderAppAt('/');
+
+    const countryPicker = screen.getByRole('combobox', { name: 'Country' }) as HTMLSelectElement;
+    expect(countryPicker.value).toBe('VN');
+    expect(screen.getByRole('region', { name: 'Use Indonesia as your country?' })).toBeTruthy();
+    fireEvent.change(countryPicker, { target: { value: 'ID' } });
+    expect(countryPicker.value).toBe('ID');
+    expect(screen.getByText(/could not be saved/)).toBeTruthy();
+
+    const languagePicker = screen.getByRole('combobox', { name: 'Change language' }) as HTMLSelectElement;
+    fireEvent.change(languagePicker, { target: { value: 'en' } });
+    expect(languagePicker.value).toBe('en');
+    expect(screen.getByRole('link', { name: 'Home' })).toBeTruthy();
+  });
+
+  it('restores and persists a valid saved language when storage is available', () => {
+    localStorage.setItem('giatot-language', 'id');
+    renderAppAt('/');
+
+    const languagePicker = screen.getByRole('combobox', { name: 'Change language' }) as HTMLSelectElement;
+    expect(languagePicker.value).toBe('id');
+    fireEvent.change(languagePicker, { target: { value: 'en' } });
+    expect(languagePicker.value).toBe('en');
+    expect(localStorage.getItem('giatot-language')).toBe('en');
+  });
+});
 
 describe('fixed route themes', () => {
   it.each([
