@@ -13,6 +13,7 @@ import { ComparePage } from './ComparePage';
 import { AuthCallbackPage } from './AuthCallbackPage';
 import { WishlistPage } from './WishlistPage';
 import { CountrySelection } from './components/CountrySelection';
+import { getApplicationTitle } from './pageMetadata';
 
 function Header() {
   const navigate = useNavigate();
@@ -55,7 +56,7 @@ export function App() {
   const location = useLocation();
   const { language } = useLanguage();
   useEffect(() => {
-    document.title = language === 'en' ? 'GiaTot - Smart Price Comparison' : 'GiaTot - So sánh giá thông minh';
+    document.title = getApplicationTitle(language);
   }, [language]);
   if (location.pathname === '/auth/callback') return <AuthCallbackPage />;
   return <Shell><Routes><Route path="/" element={<HomePage partners={<Partners />} footer={<Footer />} />} /><Route path="/search" element={<SearchPage />} /><Route path="/category/:slug" element={<SearchPage />} /><Route path="/product/:slug" element={<ProductDetailPage />} /><Route path="/compare" element={<ComparePage />} /><Route path="/blog" element={<BlogPage />} /><Route path="/blog/:id" element={<BlogDetailPage />} /><Route path="/shops/:slug" element={<ShopPage />} /><Route path="/wishlist" element={<WishlistPage />} /><Route path="/login" element={<LoginPage />} /><Route path="/account" element={<AccountPage />} /><Route path="*" element={<Navigate to="/" replace />} /></Routes></Shell>;

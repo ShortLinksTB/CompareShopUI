@@ -1,12 +1,21 @@
-import { LanguageProvider } from './i18n';
+import { LanguageProvider, useLanguage } from './i18n';
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { Link, MemoryRouter, Route, Routes } from 'react-router-dom';
 import { BlogPage } from './BlogPage';
 
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+afterEach(() => { cleanup(); localStorage.clear(); vi.unstubAllGlobals(); });
+
+function LanguageControl() {
+  const { setLanguage } = useLanguage();
+  return <>
+    <button onClick={() => setLanguage('en')}>Select English</button>
+    <button onClick={() => setLanguage('id')}>Select Indonesian</button>
+    <button onClick={() => setLanguage('vi')}>Select Vietnamese</button>
+  </>;
+}
 
 function expectSelected(name: string) {
   const buttons = screen.getAllByRole('button').filter(button => button.closest('.category-pills'));
@@ -80,4 +89,26 @@ it('preserves a selection made while the article request is pending', async () =
   await act(async () => { resolve({ ok: true, json: async () => ({ items: [] }) } as Response); });
   await screen.findByText('Chưa có bài viết');
   expectSelected('Kinh nghiệm mua sắm');
+});
+
+it('localizes the document title and resets it when leaving the blog route', async () => {
+  const user = userEvent.setup();
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ items: [] }) }));
+  document.title = 'GiaTot - So sánh giá thông minh';
+  render(<LanguageProvider><MemoryRouter initialEntries={['/blog']}>
+    <LanguageControl />
+    <Link to="/home">Leave blog</Link>
+    <Routes><Route path="/blog" element={<BlogPage />} /><Route path="/home" element={<p>Home</p>} /></Routes>
+  </MemoryRouter></LanguageProvider>);
+
+  expect(document.title).toBe('GiaTot - So sánh giá thông minh');
+  await user.click(screen.getByRole('button', { name: 'Select English' }));
+  expect(document.title).toBe('GiaTot - Smart price comparison');
+  await user.click(screen.getByRole('button', { name: 'Select Indonesian' }));
+  expect(document.title).toBe('GiaTot - Perbandingan harga cerdas');
+  await user.click(screen.getByRole('button', { name: 'Select Vietnamese' }));
+  expect(document.title).toBe('GiaTot - So sánh giá thông minh');
+  await user.click(screen.getByRole('link', { name: 'Leave blog' }));
+  expect(screen.getByText('Home')).toBeTruthy();
+  expect(document.title).toBe('GiaTot - So sánh giá thông minh');
 });
