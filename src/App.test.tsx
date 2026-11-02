@@ -172,6 +172,8 @@ describe('browser storage failures', () => {
     expect(controls[2].className).toContain('header-actions-divider');
     expect(controls[3].className).toContain('header-language-wrap');
     expect(actions.querySelector('[aria-label="Country"]')).toBeNull();
+    expect(screen.getByRole('textbox', { name: 'Tìm sản phẩm, thương hiệu, mã SKU…' }).getAttribute('placeholder'))
+      .toBe('Tìm sản phẩm, thương hiệu, mã SKU…');
     const languageControl = actions.querySelector('.header-language-control');
     expect(languageControl).toBeTruthy();
     expect(languageControl?.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
