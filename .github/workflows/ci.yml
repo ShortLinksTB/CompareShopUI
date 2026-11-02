@@ -19,6 +19,9 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npm run build
       - run: npm test
+      - run: npm run test:coverage
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:header-layout
 
   publish-image:
     if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
