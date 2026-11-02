@@ -81,6 +81,7 @@ function cleanupTestEnvironment() {
   authMock.clear.mockReset().mockResolvedValue();
   authMock.signIn.mockReset().mockResolvedValue();
   localStorage.clear();
+  document.title = 'GiaTot - So sánh giá thông minh';
   window.history.replaceState({}, '', '/');
   Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 });
   Object.defineProperty(window, 'innerHeight', { configurable: true, value: 768 });
@@ -88,6 +89,22 @@ function cleanupTestEnvironment() {
 }
 
 afterEach(cleanupTestEnvironment);
+
+describe('homepage document title localization', () => {
+  it('updates the application title for English and restores Vietnamese when selected', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ items: [] })));
+    renderAppAt('/');
+
+    await waitFor(() => expect(document.title).toBe('GiaTot - So sánh giá thông minh'));
+    fireEvent.change(screen.getByRole('combobox', { name: 'Change language' }), { target: { value: 'en' } });
+    await waitFor(() => expect(document.title).toBe('GiaTot - Smart price comparison'));
+    expect(document.documentElement.lang).toBe('en');
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Change language' }), { target: { value: 'vi' } });
+    await waitFor(() => expect(document.title).toBe('GiaTot - So sánh giá thông minh'));
+    expect(document.documentElement.lang).toBe('vi');
+  });
+});
 
 describe('browser storage failures', () => {
   it('renders the app and keeps country and language selection usable when storage reads and writes throw', () => {
