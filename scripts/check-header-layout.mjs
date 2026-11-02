@@ -36,7 +36,7 @@ try {
         return bounds ? { left: bounds.left, right: bounds.right, width: bounds.width, height: bounds.height } : null;
       };
       const controls = [...document.querySelectorAll('.header-links > *')].map(element => element.className || element.tagName);
-      const language = document.querySelector('#header-language');
+      const language = document.querySelector('.language-trigger');
       const languageBounds = language?.getBoundingClientRect();
       return {
         viewportWidth: innerWidth,
@@ -53,11 +53,13 @@ try {
           width: languageBounds.width,
           display: getComputedStyle(language).display,
           visibility: getComputedStyle(language).visibility,
-          value: language.value,
+          value: language.querySelector('b')?.textContent,
         } : null,
+        searchPlaceholder: document.querySelector('.header-search input')?.placeholder,
+        countryPicker: document.querySelector('#country-selection'),
         search: rect('.header-search-wrap'),
         controls,
-        actionStyles: [...document.querySelectorAll('.header-action, .country-switcher')].map(element => {
+        actionStyles: [...document.querySelectorAll('.header-action, .language-trigger')].map(element => {
           const style = getComputedStyle(element);
           return { height: style.height, fontSize: style.fontSize, fontWeight: style.fontWeight, borderRadius: style.borderRadius };
         }),
@@ -72,15 +74,17 @@ try {
     assert.notEqual(layout.languageDisplay, 'none', `Language selector stays visible at ${width}px`);
     assert(layout.languageControl?.width > 0 && layout.languageControl.left >= 0 && layout.languageControl.right <= width,
       `Language selector fits at ${width}px: ${JSON.stringify(layout.languageControl)}`);
+    assert.equal(layout.countryPicker, null, 'Header does not render country selection');
+    assert.equal(layout.searchPlaceholder, 'Tìm sản phẩm, thương hiệu, mã SKU…', 'Search uses the approved placeholder');
     if (width === 1440) {
       assert.notEqual(layout.desktopNav, 'none', 'Wide desktop keeps desktop navigation visible');
-      assert.deepEqual(layout.controls, ['header-action', 'header-action', 'header-actions-divider', 'country-selection', 'header-language-control']);
+      assert.deepEqual(layout.controls, ['header-action', 'header-action', 'header-actions-divider', 'header-language-control']);
     }
     if (width === 1024) {
       assert.equal(layout.desktopNav, 'none', 'Desktop navigation collapses at 1024px');
       assert(layout.search.width > 0, 'Search remains visible at the 1024px collapse');
       assert(layout.actions.right <= width, 'Header action row fits at 1024px');
-      assert(layout.actionStyles.every(style => style.height === '36px' && style.fontSize === '13px' && style.fontWeight === '600' && style.borderRadius === '8px'));
+      assert(layout.actionStyles.every((style, index) => style.height === '36px' && style.fontSize === '13px' && style.fontWeight === '600' && style.borderRadius === (index === layout.actionStyles.length - 1 ? '999px' : '8px')));
     }
     if (width === 900 || width === 640) {
       assert.equal(layout.desktopNav, 'none', `Tablet layout keeps desktop navigation collapsed at ${width}px`);
@@ -90,19 +94,21 @@ try {
     if (width <= 390) {
       assert.equal(layout.bottomNav, 'flex', 'Mobile bottom navigation remains visible');
       assert.notEqual(layout.mobileSearch, 'none', 'Mobile search action remains visible');
-      assert.equal(layout.actionStyles.at(-1)?.fontSize, '13px', 'Country picker retains approved type size on mobile');
+      assert.equal(layout.actionStyles.at(-1)?.fontSize, '13px', 'Language selector retains approved type size on mobile');
     }
     console.log(`PASS header layout ${width}px: no overflow; desktop nav ${layout.desktopNav}; bottom nav ${layout.bottomNav}`);
 
-    await page.selectOption('#header-language', 'en');
+    await page.locator('.language-trigger').click();
+    await page.getByRole('option', { name: 'EN — English' }).click();
     const languageState = await page.evaluate(() => ({
       documentLanguage: document.documentElement.lang,
-      country: document.querySelector('#country-selection')?.value,
-      selectedLanguage: document.querySelector('#header-language')?.value,
+      country: localStorage.getItem('compareshop.country'),
+      selectedLanguage: document.querySelector('.language-trigger b')?.textContent?.toLowerCase(),
     }));
-    assert.deepEqual(languageState, { documentLanguage: 'en', country: 'VN', selectedLanguage: 'en' },
-      `Language selection must work independently at ${width}px`);
-    await page.selectOption('#header-language', 'vi');
+    assert.deepEqual(languageState, { documentLanguage: 'en', country: null, selectedLanguage: 'en' },
+      `Language selection persists without country UI at ${width}px`);
+    await page.locator('.language-trigger').click();
+    await page.getByRole('option', { name: 'VI — Tiếng Việt' }).click();
   }
 } finally {
   await browser?.close();

@@ -7,7 +7,7 @@ describe('Product Detail presentation CSS', () => {
   it('keeps Product Detail in the fixed light native control scheme', () => {
     expect(stylesheet).toMatch(/\.light-shell, \.product-shell, \.shop-shell, \.blog-shell\s*\{\s*color-scheme:\s*light;/);
     expect(stylesheet).not.toContain('.product-shell {');
-    expect(stylesheet).not.toContain('prefers-color-scheme');
+    expect(stylesheet).toMatch(/@media\s*\(prefers-color-scheme:\s*dark\)[\s\S]*?\.site-header/);
   });
 
   it('keeps the product error actions in a centered column with a 12px gap', () => {

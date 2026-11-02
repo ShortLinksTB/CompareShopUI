@@ -89,7 +89,7 @@ describe('Partner Shop API data', () => {
     expect(shell?.querySelector('.shop-hero')?.children).toHaveLength(3);
     expect(shell?.classList.contains('shop-shell')).toBe(true);
     expect(stylesheet).toMatch(/\.light-shell, \.product-shell, \.shop-shell, \.blog-shell\s*\{\s*color-scheme:\s*light;/);
-    expect(stylesheet).not.toContain('prefers-color-scheme');
+    expect(stylesheet).toMatch(/@media\s*\(prefers-color-scheme:\s*dark\)[\s\S]*?\.site-header/);
   });
 
   it('uses neutral fallbacks for absent logo and price, and renders the empty catalog state', async () => {
