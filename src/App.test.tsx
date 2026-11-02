@@ -150,6 +150,19 @@ describe('browser storage failures', () => {
     expect(localStorage.getItem('giatot-language')).toBe('en');
   });
 
+  it('shows the search suggestion error in English when English is selected', async () => {
+    localStorage.setItem('giatot-language', 'en');
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => String(input).includes('/search/suggestions?')
+      ? Promise.reject(new Error('offline'))
+      : response({ items: [] })));
+    renderAppAt('/');
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Search products, brands...' }), { target: { value: 'phone' } });
+
+    expect(await screen.findByText('Search suggestions are currently unavailable.')).toBeTruthy();
+    expect(screen.queryByText('Gợi ý tìm kiếm hiện không khả dụng.')).toBeNull();
+  });
+
   it('collapses desktop navigation at 1024px and styles the action controls consistently', () => {
     expect(stylesheet).toMatch(/@media\s*\(max-width:\s*1024px\)[\s\S]*?\.desktop-nav\s*\{\s*display:\s*none/);
     expect(stylesheet).toMatch(/\.header-links \.header-action[\s\S]*?height:\s*36px/);

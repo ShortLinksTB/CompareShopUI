@@ -10,7 +10,8 @@
     "test": "vitest run",
     "preview": "vite preview",
     "test:home-accessibility": "node scripts/home-accessibility.cjs",
-    "test:category-presentation": "node scripts/check-category-presentation.mjs"
+    "test:category-presentation": "node scripts/check-category-presentation.mjs",
+    "test:header-layout": "node scripts/check-header-layout.mjs"
   },
   "dependencies": {
     "oidc-client-ts": "^3.5.0",
