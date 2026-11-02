@@ -233,7 +233,7 @@
 .header-actions-divider { width: 1px; height: 24px; margin: 0 2px; background: var(--border); }
 .header-links .country-selection { margin-left: 0; }
 .header-links .country-switcher { max-width: none; padding: 0 10px; color: #171b24; }
-.header-links .language-switcher { appearance: none; min-width: 48px; padding: 0 8px; cursor: pointer; }
+.header-links .language-switcher { appearance: auto; flex: 0 0 52px; width: 52px; min-width: 52px; padding: 0 3px; cursor: pointer; }
 .header-links :focus-visible { outline: 3px solid #b93800; outline-offset: 2px; }
 @media (max-width: 1024px) {
   .desktop-nav { display: none; }
@@ -255,5 +255,5 @@
   .header-links .header-action { display: none; }
   .header-links .header-actions-divider { display: none; }
   .header-links .country-switcher { max-width: 104px; padding: 0 5px; font-size: 13px; }
-  .header-links .language-switcher { min-width: 42px; }
+  .header-links .language-switcher { flex-basis: 52px; width: 52px; min-width: 52px; padding: 0 3px; }
 }
