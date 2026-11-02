@@ -271,7 +271,7 @@ describe('fixed route themes', () => {
     expect(shellColorScheme(shellClass)).toBe(scheme);
     expect(stylesheet).toMatch(/@media\s*\(prefers-color-scheme:\s*dark\)[\s\S]*?\.site-header/);
     if (path === '/') {
-      expect(await screen.findByText('Chưa có sản phẩm nổi bật')).toBeTruthy();
+      expect((await screen.findAllByText('Chưa có sản phẩm nổi bật')).length).toBeGreaterThan(0);
     }
   });
 
@@ -283,11 +283,18 @@ describe('fixed route themes', () => {
   });
 
   it('keeps the dark 72px header override scoped to the home shell', () => {
-    expect(stylesheet).toMatch(/\.home-shell \.site-header\s*\{[^}]*height:\s*72px[^}]*background:\s*#15171c/);
+    expect(stylesheet).toMatch(/\.home-shell \.site-header\s*\{[^}]*color-scheme:\s*dark[^}]*height:\s*72px[^}]*background:\s*#15171c/);
     expect(stylesheet).toMatch(/\.home-shell \.site-header \.desktop-nav a\.active\s*\{[^}]*background:\s*#ff5a00[^}]*color:\s*#fff/);
     expect(stylesheet).toContain('.home-shell .site-header .header-links .header-language-control');
     expect(stylesheet).toContain('background: #15171c;');
     expect(stylesheet).not.toMatch(/(?:^|})\s*\.site-header\s*\{[^}]*background:\s*#15171c/);
+  });
+
+  it('keeps popular category cards in a contained mobile grid', () => {
+    expect(stylesheet).toMatch(/@media\s*\(max-width:\s*639px\)[\s\S]*?\.home-shell \.category-grid\s*\{[^}]*width:\s*100%;\s*grid-template-columns:\s*minmax\(0,\s*1fr\)/);
+    expect(stylesheet).toMatch(/\.home-shell \.category-card\s*\{[^}]*min-width:\s*0/);
+    expect(stylesheet).toContain('.home-shell .category-icon');
+    expect(stylesheet).toContain('.home-shell .category-arrow');
   });
 
   it('keeps Account member metadata and verified badge above AA on their light surfaces', () => {
@@ -322,7 +329,7 @@ describe('fixed route themes', () => {
     await waitFor(() => expect(document.querySelector('.home-shell')).toBeTruthy());
     expect(window.location.pathname).toBe('/');
     expect(shellColorScheme('home-shell')).toBe('light');
-    expect(await screen.findByText('Chưa có sản phẩm nổi bật')).toBeTruthy();
+    expect((await screen.findAllByText('Chưa có sản phẩm nổi bật')).length).toBeGreaterThan(0);
   });
 });
 
@@ -363,7 +370,7 @@ describe('Home API data', () => {
     renderApp();
 
     expect(await screen.findByText('No categories yet')).toBeTruthy();
-    expect(screen.getByText('No featured products yet')).toBeTruthy();
+    expect(screen.getAllByText('No featured products yet').length).toBeGreaterThan(0);
     expect(screen.queryByText('Chưa có danh mục')).toBeNull();
     expect(screen.queryByText('Chưa có sản phẩm nổi bật')).toBeNull();
   });
@@ -404,10 +411,13 @@ describe('Home API data', () => {
       if (url.endsWith('/categories')) return response({ items: [
         { id: 1, slug: 'phones', name: 'Phones' },
         { id: 2, slug: 'audio', name: 'Audio' },
+        { id: 3, slug: 'computers', name: 'Computers' },
+        { id: 4, slug: 'home-goods', name: 'Home goods' },
       ] });
       if (url.endsWith('/products?page=1&pageSize=10')) return response({ ...products, items: featuredItems });
       if (url.includes('categoryId=1')) return response({ ...products, items: [], totalItems: 0 });
       if (url.includes('categoryId=2')) return response({ ...products, items: [], totalItems: 7 });
+      if (url.includes('categoryId=')) return response({ ...products, items: [], totalItems: 3 });
       return Promise.reject(new Error(`Unexpected request: ${url}`));
     });
     vi.stubGlobal('fetch', fetchMock);
@@ -423,6 +433,8 @@ describe('Home API data', () => {
     expect(featuredCard.querySelectorAll('.hero-featured-product')[1].querySelector('.hero-featured-price')).toBeNull();
     expect((await screen.findAllByRole('link', { name: 'Phones 0 sản phẩm' })).length).toBeGreaterThan(0);
     expect(screen.getAllByText('7 sản phẩm').length).toBeGreaterThan(0);
+    const categoryIcons = Array.from(document.querySelectorAll('.category-card svg')).map(icon => icon.getAttribute('data-category-icon'));
+    expect(categoryIcons).toEqual(['phone', 'audio', 'computer', 'category']);
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes('featured'))).toBe(false);
   });
 
@@ -433,7 +445,10 @@ describe('Home API data', () => {
     renderApp();
 
     expect(await screen.findByText('Chưa có danh mục')).toBeTruthy();
-    expect(screen.getByText('Chưa có sản phẩm nổi bật')).toBeTruthy();
+    expect(screen.getAllByText('Chưa có sản phẩm nổi bật').length).toBeGreaterThan(0);
+    const heroCard = document.querySelector('.hero-featured-card');
+    expect(heroCard?.querySelector('.hero-featured-empty')?.textContent).toBe('Chưa có sản phẩm nổi bật');
+    expect(heroCard?.querySelectorAll('.hero-featured-product')).toHaveLength(0);
   });
 
   it('shows an error and retries both requests', async () => {

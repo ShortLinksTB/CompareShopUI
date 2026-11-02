@@ -40,6 +40,35 @@ function HeroFeaturedProduct({ product }: { product: HomeProduct }) {
   </div>;
 }
 
+function CategoryIcon({ slug }: { slug: string }) {
+  const normalizedSlug = slug.toLowerCase();
+  const icon = /audio|headphone|sound|speaker/.test(normalizedSlug)
+    ? 'audio'
+    : /computer|laptop|desktop|pc/.test(normalizedSlug)
+      ? 'computer'
+      : /phone|mobile/.test(normalizedSlug)
+        ? 'phone'
+        : 'category';
+
+  return <svg data-category-icon={icon} aria-hidden="true" viewBox="0 0 24 24">
+    {icon === 'audio' ? <>
+      <path d="M3 18v-6a9 9 0 0 1 18 0v6" />
+      <path d="M3 18a2 2 0 0 0 2 2h1v-7H3v5Zm18 0a2 2 0 0 1-2 2h-1v-7h3v5Z" />
+    </> : icon === 'computer' ? <>
+      <rect x="3" y="4" width="18" height="12" rx="2" />
+      <path d="M8 20h8M12 16v4" />
+    </> : icon === 'phone' ? <>
+      <rect x="7" y="2" width="10" height="20" rx="2" />
+      <path d="M11 18h2" />
+    </> : <>
+      <rect x="3" y="3" width="7" height="7" rx="1.5" />
+      <rect x="14" y="3" width="7" height="7" rx="1.5" />
+      <rect x="3" y="14" width="7" height="7" rx="1.5" />
+      <rect x="14" y="14" width="7" height="7" rx="1.5" />
+    </>}
+  </svg>;
+}
+
 export function HomePage({ partners, footer }: { partners: React.ReactNode; footer: React.ReactNode }) {
   const { language, t } = useLanguage();
   const [categories, setCategories] = useState<HomeCategory[]>([]);
@@ -89,7 +118,9 @@ export function HomePage({ partners, footer }: { partners: React.ReactNode; foot
 
       <div className="hero-featured-card">
         <h2>🔥 {t('featuredProducts')}</h2>
-        {loading ? <p role="status">{t('loadingProducts')}</p> : !error && heroProducts.map(product => <HeroFeaturedProduct key={product.id} product={product} />)}
+        {loading ? <p role="status">{t('loadingProducts')}</p> : !error && (heroProducts.length
+          ? heroProducts.map(product => <HeroFeaturedProduct key={product.id} product={product} />)
+          : <p className="hero-featured-empty">{t('noFeaturedProducts')}</p>)}
       </div>
     </section>
 
@@ -103,7 +134,7 @@ export function HomePage({ partners, footer }: { partners: React.ReactNode; foot
       </div>
       {loading ? <p role="status">{t('loadingCategories')}</p> : error ? null : categories.length ? <div className="category-grid">
         {categories.map(category => <Link className="category-card" to={`/category/${category.slug}`} key={category.id}>
-          <span className="category-icon" aria-hidden="true">◇</span>
+          <span className="category-icon"><CategoryIcon slug={category.slug} /></span>
           <span className="category-copy">
             <strong>{category.name}</strong>
             <small>{productCount(category.productCount)}</small>
