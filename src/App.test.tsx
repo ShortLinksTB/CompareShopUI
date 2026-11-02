@@ -282,6 +282,14 @@ describe('fixed route themes', () => {
     expect(contrastRatio('#b93800', '#ffffff')).toBeGreaterThanOrEqual(3);
   });
 
+  it('keeps the dark 72px header override scoped to the home shell', () => {
+    expect(stylesheet).toMatch(/\.home-shell \.site-header\s*\{[^}]*height:\s*72px[^}]*background:\s*#15171c/);
+    expect(stylesheet).toMatch(/\.home-shell \.site-header \.desktop-nav a\.active\s*\{[^}]*background:\s*#ff5a00[^}]*color:\s*#fff/);
+    expect(stylesheet).toContain('.home-shell .site-header .header-links .header-language-control');
+    expect(stylesheet).toContain('background: #15171c;');
+    expect(stylesheet).not.toMatch(/(?:^|})\s*\.site-header\s*\{[^}]*background:\s*#15171c/);
+  });
+
   it('keeps Account member metadata and verified badge above AA on their light surfaces', () => {
     const style = document.createElement('style');
     style.textContent = stylesheet;
@@ -374,13 +382,48 @@ describe('Home API data', () => {
     expect(screen.getByText('42 sản phẩm')).toBeTruthy();
     expect(screen.getByText(/Từ 1\.200\.000/)).toBeTruthy();
     expect(screen.getByText('2 cửa hàng đang bán')).toBeTruthy();
-    expect(screen.getByText('Chưa có hình ảnh')).toBeTruthy();
-    expect(screen.getByRole('img', { name: 'Chưa có hình ảnh' })).toBeTruthy();
+    expect(screen.getAllByText('Chưa có hình ảnh').length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('img', { name: 'Chưa có hình ảnh' }).length).toBeGreaterThan(0);
     expect(screen.queryByText('Apple')).toBeNull();
     expect(screen.queryByText(/★/)).toBeNull();
     expect(fetchMock).toHaveBeenNthCalledWith(1, 'https://api-compareshop-dev.giamha.online/api/v1/categories');
     expect(fetchMock).toHaveBeenNthCalledWith(2, 'https://api-compareshop-dev.giamha.online/api/v1/products?page=1&pageSize=10');
     expect(fetchMock).toHaveBeenNthCalledWith(3, 'https://api-compareshop-dev.giamha.online/api/v1/products?categoryId=1&page=1&pageSize=1');
+  });
+
+  it('renders the first three loaded products and wireframe category cards with existing counts', async () => {
+    const featuredItems = [1, 2, 3, 4].map(id => ({
+      ...products.items[0],
+      id,
+      slug: `sample-phone-${id}`,
+      name: `Sample Phone ${id}`,
+      offerSummary: { ...products.items[0].offerSummary, minPrice: id === 2 ? 0 : id * 1000 },
+    }));
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith('/categories')) return response({ items: [
+        { id: 1, slug: 'phones', name: 'Phones' },
+        { id: 2, slug: 'audio', name: 'Audio' },
+      ] });
+      if (url.endsWith('/products?page=1&pageSize=10')) return response({ ...products, items: featuredItems });
+      if (url.includes('categoryId=1')) return response({ ...products, items: [], totalItems: 0 });
+      if (url.includes('categoryId=2')) return response({ ...products, items: [], totalItems: 7 });
+      return Promise.reject(new Error(`Unexpected request: ${url}`));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderAppAt('/');
+
+    const featuredCard = document.querySelector('.hero-featured-card') as HTMLElement;
+    expect((await screen.findAllByRole('link', { name: 'Sample Phone 1' })).length).toBeGreaterThan(0);
+    expect(featuredCard.querySelectorAll('.hero-featured-product')).toHaveLength(3);
+    expect(featuredCard.querySelectorAll('.hero-featured-name')[0].textContent).toBe('Sample Phone 1');
+    expect(featuredCard.querySelectorAll('.hero-featured-name')[2].textContent).toBe('Sample Phone 3');
+    expect(Array.from(featuredCard.querySelectorAll('.hero-featured-name')).some(name => name.textContent === 'Sample Phone 4')).toBe(false);
+    expect(featuredCard.querySelectorAll('.hero-featured-image')).toHaveLength(3);
+    expect(featuredCard.querySelectorAll('.hero-featured-product')[1].querySelector('.hero-featured-price')).toBeNull();
+    expect((await screen.findAllByRole('link', { name: 'Phones 0 sản phẩm' })).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('7 sản phẩm').length).toBeGreaterThan(0);
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('featured'))).toBe(false);
   });
 
   it('shows empty states when both API collections are empty', async () => {
