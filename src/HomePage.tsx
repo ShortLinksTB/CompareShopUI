@@ -89,7 +89,9 @@ export function HomePage({ partners, footer }: { partners: React.ReactNode; foot
 
       <div className="hero-featured-card">
         <h2>🔥 {t('featuredProducts')}</h2>
-        {loading ? <p role="status">{t('loadingProducts')}</p> : !error && heroProducts.map(product => <HeroFeaturedProduct key={product.id} product={product} />)}
+        {loading ? <p role="status">{t('loadingProducts')}</p> : !error && (heroProducts.length
+          ? heroProducts.map(product => <HeroFeaturedProduct key={product.id} product={product} />)
+          : <p className="hero-featured-empty">{t('noFeaturedProducts')}</p>)}
       </div>
     </section>
 

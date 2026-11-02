@@ -19,15 +19,47 @@ const contrast = (a, b) => (Math.max(luminance(a), luminance(b)) + .05) / (Math.
     });
     browser = await chromium.launch({ headless: true, ...(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {}) });
     await mkdir('coverage/home-accessibility', { recursive: true });
-    for (const width of [1440, 390]) for (const colorScheme of ['light', 'dark']) {
+    for (const width of [1440, 768, 390]) for (const colorScheme of ['light', 'dark']) {
       const page = await browser.newPage({ viewport: { width, height: 1000 }, colorScheme });
       await page.route('https://api-compareshop-dev.giamha.online/**', route => route.fulfill({ json: {
-        items: route.request().url().includes('/categories') ? [{ id: 1, slug: 'phone', name: 'Điện thoại' }] : [],
+        items: route.request().url().includes('/categories') ? [
+          { id: 1, slug: 'audio', name: 'Audio' },
+          { id: 2, slug: 'computers', name: 'Computers' },
+          { id: 3, slug: 'phones', name: 'Phones' },
+        ] : [],
         totalItems: 0,
       } }));
       await page.goto('http://127.0.0.1:4175/');
-      await page.locator('.popular-searches a').waitFor();
-      const chip = await page.locator('.popular-searches a').evaluate(el => {
+      await page.locator('.popular-searches a').first().waitFor();
+      await page.locator('.category-card').last().waitFor();
+      const headerStyles = await page.evaluate(() => ({
+        background: getComputedStyle(document.querySelector('.site-header')).backgroundColor,
+        activeBackground: getComputedStyle(document.querySelector('.desktop-nav a.active')).backgroundColor,
+        activeColor: getComputedStyle(document.querySelector('.desktop-nav a.active')).color,
+      }));
+      assert.deepEqual(headerStyles, {
+        background: 'rgb(21, 23, 28)',
+        activeBackground: 'rgb(255, 90, 0)',
+        activeColor: 'rgb(255, 255, 255)',
+      });
+      const categoryCards = await page.locator('.category-card').evaluateAll(cards => cards.map(card => {
+        const bounds = card.getBoundingClientRect();
+        const icon = card.querySelector('.category-icon');
+        const arrow = card.querySelector('.category-arrow');
+        return {
+          left: bounds.left,
+          right: bounds.right,
+          iconBackground: getComputedStyle(icon).backgroundColor,
+          hasArrow: Boolean(arrow),
+        };
+      }));
+      assert.equal(categoryCards.length, 3);
+      for (const card of categoryCards) {
+        assert.ok(card.left >= 0 && card.right <= width, `Category card clipped at ${width}px: ${JSON.stringify(card)}`);
+        assert.equal(card.iconBackground, 'rgb(255, 243, 235)');
+        assert.equal(card.hasArrow, true);
+      }
+      const chip = await page.locator('.popular-searches a').first().evaluate(el => {
         const s = getComputedStyle(el);
         return { border: s.borderTopColor, style: s.borderTopStyle, width: s.borderTopWidth, fill: s.backgroundColor, text: s.color };
       });
@@ -66,8 +98,8 @@ const contrast = (a, b) => (Math.max(luminance(a), luminance(b)) + .05) / (Math.
         await page.keyboard.press('Tab');
       }
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
-      await page.locator('.popular-searches a').click();
-      assert.ok(page.url().endsWith('/category/phone'));
+      await page.locator('.popular-searches a').first().click();
+      assert.ok(page.url().endsWith('/category/audio'));
       await page.close();
       console.log(`PASS Home ${width}px / ${colorScheme}: chip contrast, keyboard input/button focus, responsive layout, category link`);
     }

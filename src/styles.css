@@ -54,6 +54,7 @@
 
 /* Home hero and its home-scoped always-dark header. */
 .home-shell .site-header {
+  color-scheme: dark;
   --primary: #ff5a00;
   --primary-soft: #2a1b12;
   --surface: #1f2128;
@@ -140,6 +141,10 @@
   .home-shell .hero-featured-product { min-height: 50px; }
   .home-shell .popular-searches { gap: 8px; margin-top: 12px; }
   .home-shell .popular-searches > span { width: 100%; }
+  .home-shell .category-grid { width: 100%; }
+  .home-shell .category-card { min-width: 0; gap: 10px; padding: 14px 12px; }
+  .home-shell .category-icon { width: 40px; height: 40px; flex-basis: 40px; }
+  .home-shell .category-copy { min-width: 0; overflow-wrap: anywhere; }
 }
 
 .auth-callback { min-height: 100vh; display: grid; place-items: center; padding: 14px 24px 0; background: #fff; color: #171b24; color-scheme: light; }
@@ -420,5 +425,5 @@
 }
 
 @media (max-width: 639px) {
-  .home-shell .category-grid { grid-template-columns: minmax(0, 1fr); }
+  .home-shell .category-grid { width: 100%; grid-template-columns: minmax(0, 1fr); }
 }
