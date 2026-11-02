@@ -352,6 +352,28 @@ describe('Home API data', () => {
   });
 });
 
+describe('English route copy', () => {
+  it.each([
+    ['/search', 'All products'],
+    ['/category/unknown-category', 'Category not found'],
+    ['/product/unknown-product', 'Could not load product details'],
+    ['/compare', 'No products to compare yet'],
+    ['/blog', 'No articles yet'],
+    ['/blog/unknown-article', 'Could not load the article'],
+    ['/shops/unknown-shop', 'Could not load shop details'],
+    ['/wishlist', 'Sign in to view saved products'],
+    ['/login', 'Sign in for a better experience'],
+    ['/account', 'Personal account'],
+  ])('%s renders English application copy', async (path, expectedCopy) => {
+    localStorage.setItem('giatot-language', 'en');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ items: [] })));
+    renderAppAt(path);
+
+    expect(await screen.findByText(expectedCopy)).toBeTruthy();
+    expect(screen.queryByText('Đang tải sản phẩm...')).toBeNull();
+  });
+});
+
 
 it('renders the storefront and opens the saved products page', async () => {
   const fetchMock = vi.fn()

@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "tsc -b --pretty false",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage --coverage.include=src/App.tsx --coverage.include=src/HomePage.tsx --coverage.include=src/i18n.tsx --coverage.reporter=text --coverage.reporter=text-summary --coverage.reporter=json --maxWorkers=1",
+    "test:coverage": "vitest run --coverage --coverage.include=src/App.tsx --coverage.include=src/HomePage.tsx --coverage.include=src/i18n.tsx --coverage.include=src/uiCopy.ts --coverage.include=src/SearchPage.tsx --coverage.include=src/ProductDetailPage.tsx --coverage.include=src/ComparePage.tsx --coverage.include=src/BlogPage.tsx --coverage.include=src/BlogDetailPage.tsx --coverage.include=src/ShopPage.tsx --coverage.include=src/WishlistPage.tsx --coverage.reporter=text --coverage.reporter=text-summary --coverage.reporter=json --maxWorkers=1",
     "preview": "vite preview",
     "test:home-accessibility": "node scripts/home-accessibility.cjs",
     "test:category-presentation": "node scripts/check-category-presentation.mjs",

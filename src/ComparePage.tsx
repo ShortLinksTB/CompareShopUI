@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useLanguage } from './i18n';
+import { uiText } from './uiCopy';
 import { Link } from 'react-router-dom';
 import { getCompareCandidates, getCompareProduct, type CompareProduct } from './compareApi';
 
@@ -15,6 +17,7 @@ function readSavedSlugs(): string[] {
 }
 
 export function ComparePage() {
+  const { language } = useLanguage();
   const [slugs, setSlugs] = useState(readSavedSlugs);
   const [products, setProducts] = useState<CompareProduct[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,20 +66,20 @@ export function ComparePage() {
   };
 
   return <>
-    <div className="page-title"><div><span className="eyebrow">Quyết định tốt hơn</span><h1>So sánh sản phẩm</h1><p className="muted">Chọn tối đa 4 sản phẩm để xem điểm khác biệt.</p></div></div>
-    {slugs.length < 4 && <div className="compare-add"><select aria-label="Thêm sản phẩm để so sánh" defaultValue="" onChange={event => { add(event.target.value); event.currentTarget.value = ''; }}><option value="">+ Thêm sản phẩm để so sánh</option>{candidates.filter(candidate => !slugs.includes(candidate.slug)).map(candidate => <option key={candidate.slug} value={candidate.slug}>{candidate.name}</option>)}</select></div>}
-    {candidatesError && <p className="muted" role="alert">Không thể tải danh sách sản phẩm. <button className="button button-ghost" onClick={loadCandidates}>Thử lại</button></p>}
-    {loading && <p className="detail-state" role="status">Đang tải sản phẩm so sánh...</p>}
-    {!loading && error && <div className="empty-state" role="alert"><h3>Không thể tải sản phẩm so sánh</h3><p>Vui lòng kiểm tra kết nối rồi thử lại.</p><button className="button button-primary" onClick={load}>Thử lại</button></div>}
-    {!loading && !error && slugs.length === 0 && <div className="empty-state compare-empty-state"><span>⇄</span><h3>Chưa có sản phẩm để so sánh</h3><p>Thêm sản phẩm từ danh sách để bắt đầu so sánh.</p><Link className="button button-primary compare-empty-state__cta" to="/search">Khám phá sản phẩm</Link></div>}
-    {!loading && !error && slugs.length > 0 && products.length === 0 && <div className="empty-state"><h3>Không tìm thấy sản phẩm đã lưu</h3><p>Hãy xóa sản phẩm không còn khả dụng hoặc thử lại.</p><button className="button button-primary" onClick={load}>Thử lại</button></div>}
-    {!loading && !error && products.length > 0 && <div className="compare-table"><div className="compare-row compare-head"><div>Thông tin</div>{products.map(product => <div key={product.slug}><button onClick={() => remove(product.slug)} aria-label={`Xóa ${product.name}`}>×</button><div className="compare-image-placeholder" role="img" aria-label="Chưa có hình ảnh">Ảnh chưa có</div><strong>{product.name}</strong><small>{product.brand || 'Chưa có thương hiệu'}</small></div>)}</div>
+    <div className="page-title"><div><span className="eyebrow">{uiText(language, 'Quyết định tốt hơn')}</span><h1>{uiText(language, 'So sánh sản phẩm')}</h1><p className="muted">{uiText(language, 'Chọn tối đa 4 sản phẩm để xem điểm khác biệt.')}</p></div></div>
+    {slugs.length < 4 && <div className="compare-add"><select aria-label={uiText(language, 'Thêm sản phẩm để so sánh')} defaultValue="" onChange={event => { add(event.target.value); event.currentTarget.value = ''; }}><option value="">{uiText(language, '+ Thêm sản phẩm để so sánh')}</option>{candidates.filter(candidate => !slugs.includes(candidate.slug)).map(candidate => <option key={candidate.slug} value={candidate.slug}>{candidate.name}</option>)}</select></div>}
+    {candidatesError && <p className="muted" role="alert">{uiText(language, 'Không thể tải danh sách sản phẩm.')}<button className="button button-ghost" onClick={loadCandidates}>{uiText(language, 'Thử lại')}</button></p>}
+    {loading && <p className="detail-state" role="status">{uiText(language, 'Đang tải sản phẩm so sánh...')}</p>}
+    {!loading && error && <div className="empty-state" role="alert"><h3>{uiText(language, 'Không thể tải sản phẩm so sánh')}</h3><p>{uiText(language, 'Vui lòng kiểm tra kết nối rồi thử lại.')}</p><button className="button button-primary" onClick={load}>{uiText(language, 'Thử lại')}</button></div>}
+    {!loading && !error && slugs.length === 0 && <div className="empty-state compare-empty-state"><span>⇄</span><h3>{uiText(language, 'Chưa có sản phẩm để so sánh')}</h3><p>{uiText(language, 'Thêm sản phẩm từ danh sách để bắt đầu so sánh.')}</p><Link className="button button-primary compare-empty-state__cta" to="/search">{uiText(language, 'Khám phá sản phẩm')}</Link></div>}
+    {!loading && !error && slugs.length > 0 && products.length === 0 && <div className="empty-state"><h3>{uiText(language, 'Không tìm thấy sản phẩm đã lưu')}</h3><p>{uiText(language, 'Hãy xóa sản phẩm không còn khả dụng hoặc thử lại.')}</p><button className="button button-primary" onClick={load}>{uiText(language, 'Thử lại')}</button></div>}
+    {!loading && !error && products.length > 0 && <div className="compare-table"><div className="compare-row compare-head"><div>{uiText(language, 'Thông tin')}</div>{products.map(product => <div key={product.slug}><button onClick={() => remove(product.slug)} aria-label={`${uiText(language, 'Xóa')} ${product.name}`}>×</button><div className="compare-image-placeholder" role="img" aria-label={uiText(language, 'Chưa có hình ảnh')}>{uiText(language, 'Ảnh chưa có')}</div><strong>{product.name}</strong><small>{product.brand || uiText(language, 'Chưa có thương hiệu')}</small></div>)}</div>
       {[
-        ['Giá tốt nhất', ...products.map(product => product.offerSummary.minPrice === null ? 'Chưa có giá' : money(product.offerSummary.minPrice))],
-        ['Số cửa hàng', ...products.map(product => `${product.offerSummary.offerCount} cửa hàng`)],
-        ['Thương hiệu', ...products.map(product => product.brand || 'Chưa có thông tin')],
-        ['Danh mục', ...products.map(product => product.category?.name || 'Chưa có thông tin')],
-        ['Thông số kỹ thuật', ...products.map(product => product.specificationGroups.flatMap(group => group.items).map(item => `${item.name}: ${item.value}`).join(' · ') || 'Chưa có thông tin')],
+        [uiText(language, 'Giá tốt nhất'), ...products.map(product => product.offerSummary.minPrice === null ? uiText(language, 'Chưa có giá') : money(product.offerSummary.minPrice))],
+        [uiText(language, 'Số cửa hàng'), ...products.map(product => `${product.offerSummary.offerCount} ${uiText(language, 'cửa hàng')}`)],
+        [uiText(language, 'Thương hiệu'), ...products.map(product => product.brand || uiText(language, 'Chưa có thông tin'))],
+        [uiText(language, 'Danh mục'), ...products.map(product => product.category?.name || uiText(language, 'Chưa có thông tin'))],
+        [uiText(language, 'Thông số kỹ thuật'), ...products.map(product => product.specificationGroups.flatMap(group => group.items).map(item => `${item.name}: ${item.value}`).join(' · ') || uiText(language, 'Chưa có thông tin'))],
       ].map((row, index) => <div className={`compare-row ${index === 0 ? 'highlight' : ''}`} key={String(row[0])}>{row.map((cell, i) => <div key={i}>{i === 0 ? <strong>{cell}</strong> : cell}</div>)}</div>)}</div>}
   </>;
 }

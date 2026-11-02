@@ -1,3 +1,4 @@
+import { LanguageProvider } from './i18n';
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
@@ -20,7 +21,7 @@ it.each(['pointer', 'Enter', 'Space'] as const)('updates selection via %s after 
   const user = userEvent.setup();
   const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ items: [], totalItems: 0 }) });
   vi.stubGlobal('fetch', fetchMock);
-  render(<MemoryRouter><BlogPage /></MemoryRouter>);
+  render(<LanguageProvider><MemoryRouter><BlogPage /></MemoryRouter></LanguageProvider>);
   await screen.findByText('Chưa có bài viết');
   expectSelected('Tất cả');
   const category = screen.getByRole('button', { name: 'Kinh nghiệm mua sắm' });
@@ -45,7 +46,7 @@ it.each(['pointer', 'Enter', 'Space'] as const)('updates selection via %s after 
 it('updates selection as soon as a pointer presses a category', async () => {
   const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ items: [], totalItems: 0 }) });
   vi.stubGlobal('fetch', fetchMock);
-  render(<MemoryRouter><BlogPage /></MemoryRouter>);
+  render(<LanguageProvider><MemoryRouter><BlogPage /></MemoryRouter></LanguageProvider>);
   const category = screen.getByRole('button', { name: 'Kinh nghiệm mua sắm' });
 
   fireEvent.pointerDown(category);
@@ -57,7 +58,7 @@ it('updates selection as soon as a pointer presses a category', async () => {
 it('selects a category during pointer capture even when an ancestor stops bubbling', () => {
   const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ items: [], totalItems: 0 }) });
   vi.stubGlobal('fetch', fetchMock);
-  render(<div onPointerDown={event => event.stopPropagation()}><MemoryRouter><BlogPage /></MemoryRouter></div>);
+  render(<div onPointerDown={event => event.stopPropagation()}><LanguageProvider><MemoryRouter><BlogPage /></MemoryRouter></LanguageProvider></div>);
   const category = screen.getByRole('button', { name: 'Kinh nghiệm mua sắm' });
 
   fireEvent.pointerDown(category);
@@ -70,7 +71,7 @@ it('preserves a selection made while the article request is pending', async () =
   const user = userEvent.setup();
   let resolve!: (value: Response) => void;
   vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(done => { resolve = done; })));
-  render(<MemoryRouter><BlogPage /></MemoryRouter>);
+  render(<LanguageProvider><MemoryRouter><BlogPage /></MemoryRouter></LanguageProvider>);
   expect(screen.getByRole('status')).toBeTruthy();
   expectSelected('Tất cả');
   await user.click(screen.getByRole('button', { name: 'Kinh nghiệm mua sắm' }));
