@@ -93,20 +93,21 @@
   align-items: center;
   min-height: 0;
   margin: 0 -24px;
-  padding: 56px max(24px, calc((100vw - 1200px) / 2 + 24px));
+  padding: 56px max(24px, calc((100vw - 1200px) / 2));
   overflow: hidden;
   background: linear-gradient(135deg, #fff4ec 0%, #ffe4d1 48%, #ffd6bb 100%);
 }
 .home-shell .hero-copy { position: relative; z-index: 1; }
 .home-shell .hero-copy > .eyebrow { display: inline-flex; align-items: center; gap: 8px; margin: 0; }
 .home-shell .hero-eyebrow-rule { display: inline-block; width: 20px; height: 2px; flex: 0 0 20px; background: #ff5a00; }
-.home-shell .hero-copy > h1 { max-width: 620px; margin: 16px 0 0; color: #171b24; font-size: clamp(36px, 4vw, 48px); line-height: 1.15; letter-spacing: -.035em; }
+.home-shell .hero-copy > h1 { max-width: 620px; margin: 16px 0 0; color: #171b24; font-size: 40px; line-height: 1.15; letter-spacing: -.035em; }
 .home-shell .hero-copy > p { max-width: 46ch; margin: 18px 0 28px; color: #6b7280; font-size: 15px; line-height: 1.6; }
 .home-shell .hero-search { display: flex; align-items: center; max-width: 560px; height: 58px; gap: 8px; padding: 6px 6px 6px 20px; border-radius: 14px; background: #fff; box-shadow: 0 10px 30px -12px rgba(23,27,36,.18); }
-.home-shell .hero-search input { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: #171b24; font-size: 14px; }
+.home-shell .hero-search input { height: 100%; min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: #171b24; font-size: 14px; }
+.home-shell .hero-search :focus-visible { outline: 3px solid #b93800; outline-offset: -3px; }
 .home-shell .hero-search button { display: grid; place-items: center; width: 46px; height: 46px; flex: 0 0 46px; border: 0; border-radius: 10px; background: #ff5a00; color: #fff; font-size: 22px; }
 .home-shell .popular-searches { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 18px; color: #6b7280; font-size: 13px; }
-.home-shell .popular-searches > a { padding: 6px 14px; border: 1px solid #e5e7eb; border-radius: 999px; background: #fff; color: #171b24; font-size: 13px; font-weight: 600; }
+.home-shell .popular-searches > a { padding: 6px 14px; border: 1px solid #767676; border-radius: 999px; background: #fff; color: #171b24; font-size: 13px; font-weight: 600; }
 .home-shell .hero-featured-card { width: min(100%, 420px); justify-self: end; padding: 18px; border-radius: 18px; background: #fff; box-shadow: 0 24px 48px -16px rgba(23,27,36,.22); }
 .home-shell .hero-featured-card > h2 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
 .home-shell .hero-featured-product { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 60px; padding: 8px 0; border-top: 1px solid #e5e7eb; }
