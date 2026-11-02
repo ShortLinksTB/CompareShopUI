@@ -55,10 +55,8 @@ export function App() {
   const location = useLocation();
   const { language } = useLanguage();
   useEffect(() => {
-    if (location.pathname === '/') {
-      document.title = language === 'en' ? 'GiaTot - Smart price comparison' : 'GiaTot - So sánh giá thông minh';
-    }
-  }, [language, location.pathname]);
+    document.title = language === 'en' ? 'GiaTot - Smart Price Comparison' : 'GiaTot - So sánh giá thông minh';
+  }, [language]);
   if (location.pathname === '/auth/callback') return <AuthCallbackPage />;
   return <Shell><Routes><Route path="/" element={<HomePage partners={<Partners />} footer={<Footer />} />} /><Route path="/search" element={<SearchPage />} /><Route path="/category/:slug" element={<SearchPage />} /><Route path="/product/:slug" element={<ProductDetailPage />} /><Route path="/compare" element={<ComparePage />} /><Route path="/blog" element={<BlogPage />} /><Route path="/blog/:id" element={<BlogDetailPage />} /><Route path="/shops/:slug" element={<ShopPage />} /><Route path="/wishlist" element={<WishlistPage />} /><Route path="/login" element={<LoginPage />} /><Route path="/account" element={<AccountPage />} /><Route path="*" element={<Navigate to="/" replace />} /></Routes></Shell>;
 }

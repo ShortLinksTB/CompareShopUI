@@ -97,7 +97,7 @@ describe('homepage document title localization', () => {
 
     await waitFor(() => expect(document.title).toBe('GiaTot - So sánh giá thông minh'));
     fireEvent.change(screen.getByRole('combobox', { name: 'Change language' }), { target: { value: 'en' } });
-    await waitFor(() => expect(document.title).toBe('GiaTot - Smart price comparison'));
+    await waitFor(() => expect(document.title).toBe('GiaTot - Smart Price Comparison'));
     expect(document.documentElement.lang).toBe('en');
 
     fireEvent.change(screen.getByRole('combobox', { name: 'Change language' }), { target: { value: 'vi' } });
@@ -387,6 +387,7 @@ describe('English route copy', () => {
     renderAppAt(path);
 
     expect(await screen.findByText(expectedCopy)).toBeTruthy();
+    expect(document.title).toBe('GiaTot - Smart Price Comparison');
     expect(screen.queryByText('Đang tải sản phẩm...')).toBeNull();
   });
 });
