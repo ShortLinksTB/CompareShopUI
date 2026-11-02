@@ -174,7 +174,7 @@ const englishCopy: Record<string, string> = {
   'Mua sắm thông minh,': 'Shop smarter,',
   'tiết kiệm hơn.': 'and save more.',
   'Tài khoản cá nhân': 'Personal account',
-  'Xin chào, Trần Minh Quân': 'Hello, Tran Minh Quan',
+  'Xin chào,': 'Hello,',
   'Thành viên từ tháng 09/2024': 'Member since September 2024',
   'Đã xác thực': 'Verified',
   'Chỉnh sửa hồ sơ': 'Edit profile',
