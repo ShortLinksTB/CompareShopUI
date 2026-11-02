@@ -141,7 +141,10 @@ describe('browser storage failures', () => {
     expect((controls[1] as HTMLAnchorElement).getAttribute('href')).toBe('/account');
     expect(controls[2].className).toContain('header-actions-divider');
     expect(controls[3].querySelector('[aria-label="Country"]')).toBeTruthy();
-    expect(controls[5].getAttribute('aria-label')).toBe('Change language');
+    const languageControl = actions.querySelector('.header-language-control');
+    expect(languageControl).toBeTruthy();
+    expect(languageControl?.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
+    expect(languageControl?.querySelector('select')?.getAttribute('aria-label')).toBe('Change language');
 
     fireEvent.change(screen.getByRole('combobox', { name: 'Change language' }), { target: { value: 'en' } });
     expect(document.documentElement.lang).toBe('en');
@@ -167,6 +170,10 @@ describe('browser storage failures', () => {
     expect(stylesheet).toMatch(/@media\s*\(max-width:\s*1024px\)[\s\S]*?\.desktop-nav\s*\{\s*display:\s*none/);
     expect(stylesheet).toMatch(/\.header-links \.header-action[\s\S]*?height:\s*36px/);
     expect(stylesheet).toMatch(/\.header-links \.header-action svg[\s\S]*?fill:\s*none/);
+    expect(stylesheet).toMatch(/\.header-language-control\s*\{[^}]*display:\s*inline-flex[^}]*flex:\s*0 0 auto/);
+    expect(stylesheet).toMatch(/\.header-language-control > svg[\s\S]*?stroke:\s*currentColor/);
+    expect(stylesheet).toMatch(/@media\s*\(max-width:\s*639px\)[\s\S]*?\.header-links \.header-action\s*\{\s*display:\s*none/);
+    expect(stylesheet).not.toMatch(/\.header-language-control\s*\{[^}]*display:\s*none/);
   });
 });
 
@@ -274,11 +281,21 @@ describe('Home API data', () => {
   });
 
   it('shows an error and retries both requests', async () => {
-    const fetchMock = vi.fn()
-      .mockRejectedValueOnce(new Error('offline'))
-      .mockResolvedValueOnce(response(categories))
-      .mockResolvedValueOnce(response(products))
-      .mockResolvedValueOnce(response({ items: [], page: 1, pageSize: 1, totalItems: 42, totalPages: 42 }));
+    let categoryRequests = 0;
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith('/categories')) {
+        categoryRequests += 1;
+        return categoryRequests === 1
+          ? Promise.reject(new Error('offline'))
+          : response(categories);
+      }
+      if (url.endsWith('/products?page=1&pageSize=10')) return response(products);
+      if (url.endsWith('/products?categoryId=1&page=1&pageSize=1')) {
+        return response({ items: [], page: 1, pageSize: 1, totalItems: 42, totalPages: 42 });
+      }
+      return Promise.reject(new Error(`Unexpected request: ${url}`));
+    });
     vi.stubGlobal('fetch', fetchMock);
     renderApp();
 
@@ -287,7 +304,10 @@ describe('Home API data', () => {
     fireEvent.click(retry);
     expect((await screen.findAllByRole('link', { name: 'Phones' })).some(link => link.getAttribute('href') === '/category/phones')).toBe(true);
     expect(await screen.findByRole('link', { name: 'Sample Phone' })).toBeTruthy();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4));
+    const requestedUrls = fetchMock.mock.calls.map(([url]) => String(url));
+    expect(requestedUrls.filter(url => url.endsWith('/categories')).length).toBeGreaterThanOrEqual(2);
+    expect(requestedUrls).toContain('https://api-compareshop-dev.giamha.online/api/v1/products?page=1&pageSize=10');
+    expect(requestedUrls).toContain('https://api-compareshop-dev.giamha.online/api/v1/products?categoryId=1&page=1&pageSize=1');
   });
 });
 

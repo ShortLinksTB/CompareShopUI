@@ -27,7 +27,7 @@ try {
   await page.route('**/api/v1/**', route => route.fulfill({ json: { items: [], page: 1, pageSize: 10, totalItems: 0, totalPages: 0 } }));
   await page.goto(origin, { waitUntil: 'networkidle' });
 
-  for (const width of [1440, 1024, 900, 640, 390, 320]) {
+  for (const width of [1440, 1024, 900, 768, 640, 390, 320]) {
     await page.setViewportSize({ width, height: 900 });
     const layout = await page.evaluate(() => {
       const rect = selector => {
@@ -36,6 +36,8 @@ try {
         return bounds ? { left: bounds.left, right: bounds.right, width: bounds.width, height: bounds.height } : null;
       };
       const controls = [...document.querySelectorAll('.header-links > *')].map(element => element.className || element.tagName);
+      const language = document.querySelector('#header-language');
+      const languageBounds = language?.getBoundingClientRect();
       return {
         viewportWidth: innerWidth,
         documentWidth: document.documentElement.scrollWidth,
@@ -43,6 +45,16 @@ try {
         bottomNav: getComputedStyle(document.querySelector('.bottom-nav')).display,
         mobileSearch: getComputedStyle(document.querySelector('.mobile-search')).display,
         actions: rect('.header-links'),
+        languageControl: rect('.header-language-control'),
+        languageDisplay: getComputedStyle(document.querySelector('.header-language-control')).display,
+        language: languageBounds ? {
+          left: languageBounds.left,
+          right: languageBounds.right,
+          width: languageBounds.width,
+          display: getComputedStyle(language).display,
+          visibility: getComputedStyle(language).visibility,
+          value: language.value,
+        } : null,
         search: rect('.header-search-wrap'),
         controls,
         actionStyles: [...document.querySelectorAll('.header-action, .country-switcher')].map(element => {
@@ -53,9 +65,16 @@ try {
     });
 
     assert(layout.documentWidth <= width, `Horizontal overflow at ${width}px: ${JSON.stringify(layout)}`);
+    assert(layout.language, `Independent language selector is missing at ${width}px`);
+    assert(layout.language.display !== 'none' && layout.language.visibility === 'visible' && layout.language.width >= 48,
+      `Language selector is not visible at ${width}px: ${JSON.stringify(layout.language)}`);
+    assert(layout.language.right <= width, `Language selector is clipped at ${width}px: ${JSON.stringify(layout)}`);
+    assert.notEqual(layout.languageDisplay, 'none', `Language selector stays visible at ${width}px`);
+    assert(layout.languageControl?.width > 0 && layout.languageControl.left >= 0 && layout.languageControl.right <= width,
+      `Language selector fits at ${width}px: ${JSON.stringify(layout.languageControl)}`);
     if (width === 1440) {
       assert.notEqual(layout.desktopNav, 'none', 'Wide desktop keeps desktop navigation visible');
-      assert.deepEqual(layout.controls.slice(0, 4), ['header-action', 'header-action', 'header-actions-divider', 'country-selection']);
+      assert.deepEqual(layout.controls, ['header-action', 'header-action', 'header-actions-divider', 'country-selection', 'header-language-control']);
     }
     if (width === 1024) {
       assert.equal(layout.desktopNav, 'none', 'Desktop navigation collapses at 1024px');
@@ -74,6 +93,16 @@ try {
       assert.equal(layout.actionStyles.at(-1)?.fontSize, '13px', 'Country picker retains approved type size on mobile');
     }
     console.log(`PASS header layout ${width}px: no overflow; desktop nav ${layout.desktopNav}; bottom nav ${layout.bottomNav}`);
+
+    await page.selectOption('#header-language', 'en');
+    const languageState = await page.evaluate(() => ({
+      documentLanguage: document.documentElement.lang,
+      country: document.querySelector('#country-selection')?.value,
+      selectedLanguage: document.querySelector('#header-language')?.value,
+    }));
+    assert.deepEqual(languageState, { documentLanguage: 'en', country: 'VN', selectedLanguage: 'en' },
+      `Language selection must work independently at ${width}px`);
+    await page.selectOption('#header-language', 'vi');
   }
 } finally {
   await browser?.close();
