@@ -1,3 +1,4 @@
+import { LanguageProvider } from './i18n';
 // @vitest-environment jsdom
 /// <reference types="vite/client" />
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -13,7 +14,7 @@ const product = (slug: string, name: string) => ({
   specificationGroups: [{ name: 'Cấu hình', items: [{ name: 'Dung lượng', value: '128 GB' }] }],
 });
 const response = (body: unknown, ok = true) => Promise.resolve({ ok, status: ok ? 200 : 500, json: () => Promise.resolve(body) } as Response);
-const renderPage = () => render(<MemoryRouter><ComparePage /></MemoryRouter>);
+const renderPage = () => render(<LanguageProvider><MemoryRouter><ComparePage /></MemoryRouter></LanguageProvider>);
 
 afterEach(() => { cleanup(); localStorage.clear(); vi.unstubAllGlobals(); });
 

@@ -19,7 +19,7 @@ function response(body: unknown, ok = true) {
 }
 
 function renderShop() {
-  return render(<MemoryRouter initialEntries={['/shops/sample-shop']}><Routes><Route path="/shops/:slug" element={<ShopPage />} /></Routes></MemoryRouter>);
+  return render(<LanguageProvider><MemoryRouter initialEntries={['/shops/sample-shop']}><Routes><Route path="/shops/:slug" element={<ShopPage />} /></Routes></MemoryRouter></LanguageProvider>);
 }
 
 function renderShopRoute() {

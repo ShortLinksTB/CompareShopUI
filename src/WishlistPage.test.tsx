@@ -1,3 +1,4 @@
+import { LanguageProvider } from './i18n';
 // @vitest-environment jsdom
 /// <reference types="vite/client" />
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -22,7 +23,7 @@ import { WishlistPage } from './WishlistPage';
 const item = { productId: 42, slug: 'sample-item', name: 'Sample item', createdAtUtc: '2026-10-30T10:00:00Z' };
 const jsonResponse = (status: number, body?: unknown) => ({ status, ok: status >= 200 && status < 300, json: () => Promise.resolve(body) }) as Response;
 
-function renderPage() { return render(<MemoryRouter><WishlistPage /></MemoryRouter>); }
+function renderPage() { return render(<LanguageProvider><MemoryRouter><WishlistPage /></MemoryRouter></LanguageProvider>); }
 
 afterEach(() => {
   cleanup();

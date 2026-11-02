@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { BrowserRouter, Link, MemoryRouter, Route, Routes } from 'react-router-dom';
 import { App } from './App';
@@ -247,6 +247,47 @@ describe('fixed route themes', () => {
 });
 
 describe('Home API data', () => {
+  it('renders complete English home copy while preserving source-provided catalog names', async () => {
+    localStorage.setItem('giatot-language', 'en');
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce(response({ items: [{ ...categories.items[0], productCount: 1 }] }))
+      .mockResolvedValueOnce(response(products))
+      .mockResolvedValueOnce(response({ items: [], page: 1, pageSize: 1, totalItems: 1, totalPages: 1 })));
+    renderApp();
+
+    expect((await screen.findAllByRole('link', { name: 'Phones' })).length).toBeGreaterThan(0);
+    expect(await screen.findByRole('link', { name: 'Sample Phone' })).toBeTruthy();
+    expect(screen.getByText('Shop smarter')).toBeTruthy();
+    expect(screen.getByText('Compare prices, buy better,')).toBeTruthy();
+    expect(screen.getByText('Popular categories')).toBeTruthy();
+    expect(screen.getByText('1 product')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'See price' })).toBeTruthy();
+    expect(screen.getByText('No products in this category yet')).toBeTruthy();
+    expect(screen.getByText('Our partners')).toBeTruthy();
+    expect(screen.getByText('Compare faster')).toBeTruthy();
+    expect(document.querySelector('.bottom-nav')?.textContent).toContain('Home');
+    expect(document.querySelector('.bottom-nav')?.textContent).toContain('Categories');
+    expect(document.querySelector('.bottom-nav')?.textContent).not.toContain('Trang chủ');
+    expect(screen.getByRole('textbox', { name: 'Enter your email address' })).toBeTruthy();
+    expect(screen.getByText(/All rights reserved\./)).toBeTruthy();
+    expect(screen.queryByText('Danh mục phổ biến')).toBeNull();
+    expect(screen.queryByText('Đang tải danh mục...')).toBeNull();
+    expect(screen.queryByText('Chưa có sản phẩm trong danh mục này')).toBeNull();
+  });
+
+  it('shows English empty states when home collections contain no data', async () => {
+    localStorage.setItem('giatot-language', 'en');
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce(response({ items: [] }))
+      .mockResolvedValueOnce(response({ items: [], page: 1, pageSize: 10, totalItems: 0, totalPages: 0 })));
+    renderApp();
+
+    expect(await screen.findByText('No categories yet')).toBeTruthy();
+    expect(screen.getByText('No featured products yet')).toBeTruthy();
+    expect(screen.queryByText('Chưa có danh mục')).toBeNull();
+    expect(screen.queryByText('Chưa có sản phẩm nổi bật')).toBeNull();
+  });
+
   it('loads categories and products from the catalog endpoints and renders API fields', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(response(categories))
@@ -308,6 +349,66 @@ describe('Home API data', () => {
     expect(requestedUrls.filter(url => url.endsWith('/categories')).length).toBeGreaterThanOrEqual(2);
     expect(requestedUrls).toContain('https://api-compareshop-dev.giamha.online/api/v1/products?page=1&pageSize=10');
     expect(requestedUrls).toContain('https://api-compareshop-dev.giamha.online/api/v1/products?categoryId=1&page=1&pageSize=1');
+  });
+});
+
+describe('English route copy', () => {
+  it.each([
+    ['/search', 'All products'],
+    ['/category/unknown-category', 'Category not found'],
+    ['/product/unknown-product', 'Could not load product details'],
+    ['/compare', 'No products to compare yet'],
+    ['/blog', 'No articles yet'],
+    ['/blog/unknown-article', 'Could not load the article'],
+    ['/shops/unknown-shop', 'Could not load shop details'],
+    ['/wishlist', 'Sign in to view saved products'],
+    ['/login', 'Sign in for a better experience'],
+    ['/account', 'Personal account'],
+  ])('%s renders English application copy', async (path, expectedCopy) => {
+    localStorage.setItem('giatot-language', 'en');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ items: [] })));
+    renderAppAt(path);
+
+    expect(await screen.findByText(expectedCopy)).toBeTruthy();
+    expect(screen.queryByText('Đang tải sản phẩm...')).toBeNull();
+  });
+});
+
+describe('English copy for route controls and accessible labels', () => {
+  beforeEach(() => localStorage.setItem('giatot-language', 'en'));
+
+  it('renders the product offer action and price-history chart label in English', async () => {
+    vi.stubGlobal('fetch', detailFetch());
+    renderAppAt('/product/sample-product-01');
+
+    expect(await screen.findByRole('link', { name: 'View now ↗' })).toBeTruthy();
+    expect(screen.getByRole('img', { name: 'Price history chart' })).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'Xem ngay ↗' })).toBeNull();
+    expect(screen.queryByRole('img', { name: 'Biểu đồ lịch sử giá' })).toBeNull();
+  });
+
+  it('renders the missing shop review-count fallback in English', async () => {
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => String(input).endsWith('/shops/sample-shop')
+      ? response({ id: 2, slug: 'sample-shop', name: 'Sample Shop', rating: null, reviewCount: null })
+      : response({ items: [], page: 1, pageSize: 12, totalItems: 0, totalPages: 0 })));
+    renderAppAt('/shops/sample-shop');
+
+    expect(await screen.findByText('(Review count unavailable)')).toBeTruthy();
+    expect(screen.queryByText(/Số lượt đánh giá chưa có/)).toBeNull();
+  });
+
+  it('renders the wishlist loading region label in English until the request resolves', async () => {
+    authMock.getToken.mockResolvedValue('access-token');
+    let resolveRequest!: (value: Response) => void;
+    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(resolve => { resolveRequest = resolve; })));
+    renderAppAt('/wishlist');
+
+    const loadingRegion = screen.getByLabelText('Loading wishlist products');
+    expect(loadingRegion.getAttribute('aria-busy')).toBe('true');
+    expect(screen.queryByLabelText('Đang tải sản phẩm yêu thích')).toBeNull();
+    await waitFor(() => expect(resolveRequest).toBeTruthy());
+    resolveRequest(await response({ items: [] }));
+    expect(await screen.findByText('Your wishlist is empty')).toBeTruthy();
   });
 });
 
