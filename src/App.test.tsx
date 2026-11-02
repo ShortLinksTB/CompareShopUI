@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { BrowserRouter, Link, MemoryRouter, Route, Routes } from 'react-router-dom';
 import { App } from './App';
 import { LanguageProvider } from './i18n';
+import { CountryProvider } from './country';
 import { ProductDetailPage } from './ProductDetailPage';
 import stylesheet from './styles.css?inline';
 
@@ -27,7 +28,7 @@ const products = {
 };
 
 function renderApp() {
-  return render(<LanguageProvider><BrowserRouter><App /></BrowserRouter></LanguageProvider>);
+  return render(<LanguageProvider><CountryProvider><BrowserRouter><App /></BrowserRouter></CountryProvider></LanguageProvider>);
 }
 
 function renderAppAt(path: string) {

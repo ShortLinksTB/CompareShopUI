@@ -4,5 +4,6 @@ import { BrowserRouter } from 'react-router-dom';
 import { App } from './App';
 import './styles.css';
 import { LanguageProvider } from './i18n';
+import { CountryProvider } from './country';
 
-createRoot(document.getElementById('root')!).render(<StrictMode><LanguageProvider><BrowserRouter><App /></BrowserRouter></LanguageProvider></StrictMode>);
+createRoot(document.getElementById('root')!).render(<StrictMode><LanguageProvider><CountryProvider><BrowserRouter><App /></BrowserRouter></CountryProvider></LanguageProvider></StrictMode>);
