@@ -104,23 +104,56 @@ describe('browser storage failures', () => {
     expect(countryPicker.value).toBe('ID');
     expect(screen.getByText(/could not be saved/)).toBeTruthy();
 
-    expect(screen.queryByRole('combobox', { name: 'Change language' })).toBeNull();
-    expect(document.documentElement.lang).toBe('id');
-    expect(screen.getByRole('link', { name: 'Beranda' })).toBeTruthy();
+    expect(screen.getByRole('combobox', { name: 'Change language' })).toBeTruthy();
+    expect(document.documentElement.lang).toBe('vi');
+    expect(screen.getByRole('link', { name: 'Trang chủ' })).toBeTruthy();
+    fireEvent.change(screen.getByRole('combobox', { name: 'Change language' }), { target: { value: 'en' } });
+    expect(document.documentElement.lang).toBe('en');
+    expect((screen.getByRole('combobox', { name: 'Change language' }) as HTMLSelectElement).value).toBe('en');
+    expect((screen.getByRole('combobox', { name: 'Country' }) as HTMLSelectElement).value).toBe('ID');
   });
 
-  it('derives language from saved country and ignores the legacy language preference', () => {
+  it('keeps the language preference independent from the selected country', () => {
     localStorage.setItem('compareshop.country', 'VN');
-    localStorage.setItem('giatot-language', 'id');
+    localStorage.setItem('giatot-language', 'en');
     renderAppAt('/');
 
     expect((screen.getByRole('combobox', { name: 'Country' }) as HTMLSelectElement).value).toBe('VN');
-    expect(document.documentElement.lang).toBe('vi');
-    expect(screen.queryByRole('combobox', { name: 'Change language' })).toBeNull();
+    expect(document.documentElement.lang).toBe('en');
+    expect((screen.getByRole('combobox', { name: 'Change language' }) as HTMLSelectElement).value).toBe('en');
     fireEvent.change(screen.getByRole('combobox', { name: 'Country' }), { target: { value: 'ID' } });
-    expect(document.documentElement.lang).toBe('id');
+    expect(document.documentElement.lang).toBe('en');
     expect(localStorage.getItem('compareshop.country')).toBe('ID');
-    expect(localStorage.getItem('giatot-language')).toBe('id');
+    expect(localStorage.getItem('giatot-language')).toBe('en');
+  });
+
+  it('renders the approved header actions in order and selects English through the language provider', () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ items: [] })));
+    renderAppAt('/');
+
+    const actions = screen.getByRole('navigation', { name: 'Header actions' });
+    const controls = Array.from(actions.children);
+    expect(controls[0].textContent).toContain('Yêu thích');
+    expect(controls[0].querySelector('svg')).toBeTruthy();
+    expect(controls[1].textContent).toContain('Tài khoản');
+    expect(controls[1].querySelector('svg')).toBeTruthy();
+    expect((controls[0] as HTMLAnchorElement).getAttribute('href')).toBe('/wishlist');
+    expect((controls[1] as HTMLAnchorElement).getAttribute('href')).toBe('/account');
+    expect(controls[2].className).toContain('header-actions-divider');
+    expect(controls[3].querySelector('[aria-label="Country"]')).toBeTruthy();
+    expect(controls[5].getAttribute('aria-label')).toBe('Change language');
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Change language' }), { target: { value: 'en' } });
+    expect(document.documentElement.lang).toBe('en');
+    expect(screen.getByRole('link', { name: 'Wishlist' })).toBeTruthy();
+    expect((screen.getByRole('combobox', { name: 'Country' }) as HTMLSelectElement).value).toBe('VN');
+    expect(localStorage.getItem('giatot-language')).toBe('en');
+  });
+
+  it('collapses desktop navigation at 1024px and styles the action controls consistently', () => {
+    expect(stylesheet).toMatch(/@media\s*\(max-width:\s*1024px\)[\s\S]*?\.desktop-nav\s*\{\s*display:\s*none/);
+    expect(stylesheet).toMatch(/\.header-links \.header-action[\s\S]*?height:\s*36px/);
+    expect(stylesheet).toMatch(/\.header-links \.header-action svg[\s\S]*?fill:\s*none/);
   });
 });
 
