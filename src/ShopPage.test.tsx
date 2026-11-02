@@ -23,7 +23,7 @@ function renderShop() {
 }
 
 function renderShopRoute() {
-  return render(<LanguageProvider><CountryProvider><MemoryRouter initialEntries={['/shops/sample-shop']}><App /></MemoryRouter></CountryProvider></LanguageProvider>);
+  return render(<CountryProvider><LanguageProvider><MemoryRouter initialEntries={['/shops/sample-shop']}><App /></MemoryRouter></LanguageProvider></CountryProvider>);
 }
 
 function setColorScheme(theme: 'light' | 'dark') {

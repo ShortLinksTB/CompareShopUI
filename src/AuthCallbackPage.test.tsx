@@ -22,7 +22,7 @@ vi.mock('./auth/authClient', () => ({
 
 function renderCallback() {
   window.history.replaceState({}, '', '/auth/callback?code=authorization-code&state=opaque-state');
-  return render(<LanguageProvider><CountryProvider><BrowserRouter><App /></BrowserRouter></CountryProvider></LanguageProvider>);
+  return render(<CountryProvider><LanguageProvider><BrowserRouter><App /></BrowserRouter></LanguageProvider></CountryProvider>);
 }
 
 afterEach(() => {

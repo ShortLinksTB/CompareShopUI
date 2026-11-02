@@ -1,6 +1,7 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, type ReactNode } from 'react';
+import { useCountry } from './country';
 
-export type Language = 'vi' | 'en' | 'id';
+export type Language = 'vi' | 'id';
 type TranslationKey = keyof typeof translations.vi;
 
 const translations = {
@@ -24,30 +25,13 @@ const translations = {
   },
 } as const;
 
-interface LanguageContextValue { language: Language; setLanguage: (language: Language) => void; t: (key: TranslationKey) => string; }
+interface LanguageContextValue { language: Language; t: (key: TranslationKey) => string; }
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
-function readSavedLanguage(): Language {
-  try {
-    const saved = window.localStorage.getItem('giatot-language');
-    return saved === 'en' || saved === 'id' || saved === 'vi' ? saved : 'vi';
-  } catch {
-    return 'vi';
-  }
-}
-
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguage] = useState<Language>(readSavedLanguage);
-  const changeLanguage = (next: Language) => {
-    setLanguage(next);
-    document.documentElement.lang = next;
-    try {
-      window.localStorage.setItem('giatot-language', next);
-    } catch {
-      // Keep language switching available when browser storage is unavailable.
-    }
-  };
-  const value = useMemo(() => ({ language, setLanguage: changeLanguage, t: (key: TranslationKey) => translations[language][key] }), [language]);
+  const { language } = useCountry();
+  useEffect(() => { document.documentElement.lang = language; }, [language]);
+  const value = useMemo(() => ({ language, t: (key: TranslationKey) => translations[language][key] }), [language]);
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }
 export function useLanguage() { const context = useContext(LanguageContext); if (!context) throw new Error('useLanguage must be used inside LanguageProvider'); return context; }
