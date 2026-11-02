@@ -247,6 +247,47 @@ describe('fixed route themes', () => {
 });
 
 describe('Home API data', () => {
+  it('renders complete English home copy while preserving source-provided catalog names', async () => {
+    localStorage.setItem('giatot-language', 'en');
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce(response({ items: [{ ...categories.items[0], productCount: 1 }] }))
+      .mockResolvedValueOnce(response(products))
+      .mockResolvedValueOnce(response({ items: [], page: 1, pageSize: 1, totalItems: 1, totalPages: 1 })));
+    renderApp();
+
+    expect((await screen.findAllByRole('link', { name: 'Phones' })).length).toBeGreaterThan(0);
+    expect(await screen.findByRole('link', { name: 'Sample Phone' })).toBeTruthy();
+    expect(screen.getByText('Shop smarter')).toBeTruthy();
+    expect(screen.getByText('Compare prices, buy better,')).toBeTruthy();
+    expect(screen.getByText('Popular categories')).toBeTruthy();
+    expect(screen.getByText('1 product')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'See price' })).toBeTruthy();
+    expect(screen.getByText('No products in this category yet')).toBeTruthy();
+    expect(screen.getByText('Our partners')).toBeTruthy();
+    expect(screen.getByText('Compare faster')).toBeTruthy();
+    expect(document.querySelector('.bottom-nav')?.textContent).toContain('Home');
+    expect(document.querySelector('.bottom-nav')?.textContent).toContain('Categories');
+    expect(document.querySelector('.bottom-nav')?.textContent).not.toContain('Trang chủ');
+    expect(screen.getByRole('textbox', { name: 'Enter your email address' })).toBeTruthy();
+    expect(screen.getByText(/All rights reserved\./)).toBeTruthy();
+    expect(screen.queryByText('Danh mục phổ biến')).toBeNull();
+    expect(screen.queryByText('Đang tải danh mục...')).toBeNull();
+    expect(screen.queryByText('Chưa có sản phẩm trong danh mục này')).toBeNull();
+  });
+
+  it('shows English empty states when home collections contain no data', async () => {
+    localStorage.setItem('giatot-language', 'en');
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce(response({ items: [] }))
+      .mockResolvedValueOnce(response({ items: [], page: 1, pageSize: 10, totalItems: 0, totalPages: 0 })));
+    renderApp();
+
+    expect(await screen.findByText('No categories yet')).toBeTruthy();
+    expect(screen.getByText('No featured products yet')).toBeTruthy();
+    expect(screen.queryByText('Chưa có danh mục')).toBeNull();
+    expect(screen.queryByText('Chưa có sản phẩm nổi bật')).toBeNull();
+  });
+
   it('loads categories and products from the catalog endpoints and renders API fields', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(response(categories))
