@@ -404,6 +404,15 @@ describe('English route copy', () => {
     expect(document.title).toBe('GiaTot - Smart Price Comparison');
     expect(screen.queryByText('Đang tải sản phẩm...')).toBeNull();
   });
+
+  it('preserves the account name diacritics when rendering English copy', () => {
+    localStorage.setItem('giatot-language', 'en');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ items: [] })));
+    renderAppAt('/account');
+
+    expect(screen.getByRole('heading', { name: 'Hello, Trần Minh Quân' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Hello, Tran Minh Quan' })).toBeNull();
+  });
 });
 
 describe('English copy for route controls and accessible labels', () => {
