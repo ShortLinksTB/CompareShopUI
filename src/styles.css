@@ -431,6 +431,26 @@
 
 /* Keep the home layout readable and fully scrollable above the mobile nav. */
 @media (max-width: 639px) {
+  /* Give the fixed home navigation five equal, shrinkable slots at narrow widths. */
+  .home-shell > .bottom-nav {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    width: 100%;
+    min-width: 0;
+    padding-inline: max(8px, env(safe-area-inset-left)) max(8px, env(safe-area-inset-right));
+  }
+
+  .home-shell > .bottom-nav a {
+    min-width: 0;
+    padding-inline: 2px;
+    text-align: center;
+  }
+
+  .home-shell > .bottom-nav a span {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
   .home-shell {
     min-width: 0;
     overflow-x: clip;
@@ -449,8 +469,11 @@
   }
 
   .home-shell .hero-copy > h1 {
+    max-width: 100%;
+    font-size: clamp(27px, 7.2vw, 32px);
     line-height: 1.2;
-    overflow-wrap: break-word;
+    overflow-wrap: anywhere;
+    text-wrap: balance;
   }
 
   .home-shell .popular-searches {
@@ -459,10 +482,12 @@
   }
 
   .home-shell .popular-searches > a {
+    flex: 0 1 auto;
     min-width: 0;
     max-width: 100%;
     line-height: 1.35;
     overflow-wrap: anywhere;
+    white-space: normal;
   }
 
   .home-shell .hero-featured-card > h2 {
@@ -471,6 +496,7 @@
   }
 
   .home-shell .hero-featured-product {
+    min-width: 0;
     grid-template-columns: 38px minmax(0, 1fr);
     grid-template-rows: auto auto;
     align-items: start;
@@ -492,9 +518,11 @@
 
   .home-shell .hero-featured-price {
     grid-column: 2;
+    min-width: 0;
     justify-self: start;
     line-height: 1.4;
     white-space: normal;
+    overflow-wrap: anywhere;
     text-align: left;
   }
 
