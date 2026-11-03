@@ -300,11 +300,15 @@ describe('fixed route themes', () => {
   it('keeps mobile home content clear of the bottom nav and wraps hero content', () => {
     expect(stylesheet).toMatch(/\.home-shell \.container\s*\{[^}]*padding-bottom:\s*calc\(128px \+ env\(safe-area-inset-bottom\)\)/);
     expect(stylesheet).toMatch(/\.home-shell \.hero \+ \.section\s*\{[^}]*padding-bottom:\s*calc\(88px \+ env\(safe-area-inset-bottom\)\)/);
+    expect(stylesheet).toMatch(/\.home-shell \.hero \+ \.section\s*\{[^}]*padding-top:\s*8px/);
+    expect(stylesheet).toMatch(/\.home-shell \.hero \+ \.section \.section-heading\s*\{[^}]*margin-bottom:\s*8px/);
+    expect(stylesheet).toMatch(/\.home-shell \.hero-featured-product\s*\{[^}]*grid-template-columns:\s*38px minmax\(0,\s*1fr\) auto[^}]*min-height:\s*42px;\s*padding:\s*5px 0/);
+    expect(stylesheet).toMatch(/\.bottom-nav\s*\{[^}]*position:\s*fixed/);
     expect(stylesheet).toMatch(/\.home-shell \.category-grid\s*\{[^}]*display:\s*grid[^}]*overflow:\s*visible/);
     expect(stylesheet).toMatch(/\.home-shell \.hero-copy > h1\s*\{[^}]*line-height:\s*1\.2/);
     expect(stylesheet).toMatch(/\.home-shell \.popular-searches > a\s*\{[^}]*overflow-wrap:\s*anywhere/);
     expect(stylesheet).toMatch(/\.home-shell \.hero-featured-product\s*\{[^}]*grid-template-columns:\s*38px minmax\(0,\s*1fr\)/);
-    expect(stylesheet).toMatch(/\.home-shell \.hero-featured-price\s*\{[^}]*white-space:\s*normal/);
+    expect(stylesheet).toMatch(/\.home-shell \.hero-featured-price\s*\{[^}]*white-space:\s*nowrap/);
   });
 
   it('keeps Account member metadata and verified badge above AA on their light surfaces', () => {
