@@ -585,3 +585,36 @@
   .home-shell .category-card { padding-block: 8px; }
   .home-shell .category-icon { width: 32px; height: 32px; flex-basis: 32px; }
 }
+
+/* Make the home banner and footer span the viewport, even inside the capped page container. */
+.home-shell .hero {
+  width: 100vw;
+  max-width: none;
+  margin-inline: calc(50% - 50vw);
+  padding-inline: max(24px, calc((100vw - 1280px) / 2 + 24px));
+}
+
+.home-shell .site-footer {
+  width: 100vw;
+  margin-inline: calc(50% - 50vw) !important;
+  padding-inline: max(24px, calc((100vw - 1280px) / 2 + 24px)) !important;
+}
+
+@media (max-width: 760px) {
+  .home-shell .hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
+
+  .home-shell .hero-featured-card {
+    width: min(100%, 560px);
+    justify-self: start;
+  }
+}
+
+@media (max-width: 639px) {
+  .home-shell .hero {
+    gap: 8px;
+    padding-block: 12px 14px;
+  }
+}
