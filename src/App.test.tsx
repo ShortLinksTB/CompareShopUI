@@ -249,6 +249,20 @@ describe('browser storage failures', () => {
   });
 });
 
+describe('homepage responsive layout rules', () => {
+  it('breaks the hero out to viewport width while centering a bounded content grid', () => {
+    expect(stylesheet).toMatch(/\.home-shell \.hero\s*\{[^}]*width:\s*100vw[^}]*margin:\s*0 calc\(50% - 50vw\)[^}]*padding:\s*56px max\(24px, calc\(\(100vw - 1440px\) \/ 2 \+ 24px\)\)/);
+    expect(stylesheet).toMatch(/\.home-shell \.hero\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1\.4fr\) minmax\(320px, \.8fr\)/);
+    expect(stylesheet).toMatch(/@media \(max-width: 639px\)[\s\S]*?\.home-shell \.hero\s*\{[^}]*width:\s*100vw[^}]*grid-template-columns:\s*minmax\(0, 1fr\)[^}]*margin-inline:\s*calc\(50% - 50vw\)/);
+    expect(stylesheet).toMatch(/\.home-shell \.site-footer\s*\{[^}]*margin-inline:\s*calc\(50% - 50vw\)!important[^}]*padding-inline:\s*max\(24px,calc\(\(100vw - 1280px\)\/2 \+ 24px\)\)!important/);
+  });
+
+  it('keeps the featured products card in normal grid flow', () => {
+    expect(stylesheet).toMatch(/\.home-shell \.hero\s*\{[^}]*display:\s*grid/);
+    expect(stylesheet).not.toMatch(/\.home-shell \.hero-featured-card\s*\{[^}]*position:\s*(?:absolute|fixed)/);
+  });
+});
+
 describe('fixed route themes', () => {
   it.each([
     ['/', 'home-shell', 'light'],
