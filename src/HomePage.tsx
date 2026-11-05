@@ -12,18 +12,14 @@ const money = (value: number) => new Intl.NumberFormat('vi-VN', {
 
 function HomeProductCard({ product }: { product: HomeProduct }) {
   const { t } = useLanguage();
-  const { minPrice, offerCount } = product.offerSummary;
+  const { minPrice } = product.offerSummary;
 
   return <article className="product-card">
     <div className="product-image">{product.imageUrl ? <SafeImage src={product.imageUrl} alt={product.name} fallbackLabel={t('noImage')} /> : <div role="img" aria-label={t('noImage')}><span className="muted">{t('noImage')}</span></div>}</div>
     <div className="product-card-body">
       <Link to={`/product/${product.slug}`} className="product-name">{product.name}</Link>
-      <span className="muted">{product.brand}</span>
       {minPrice > 0 && <strong className="price">{t('from')} {money(minPrice)}</strong>}
-      {offerCount > 0 && <span className="offer-count"><span className="shop-dot"></span>{offerCount} {t('storesSelling')}</span>}
-      <div className="card-actions">
-        <Link className="button button-primary" to={`/product/${product.slug}`}>{t('viewPrice')}</Link>
-      </div>
+      <Link className="button button-primary product-cta" to={`/product/${product.slug}`}>{t('viewPrice')}</Link>
     </div>
   </article>;
 }
@@ -69,7 +65,7 @@ function CategoryIcon({ slug }: { slug: string }) {
 }
 
 export function HomePage({ partners, footer }: { partners: React.ReactNode; footer: React.ReactNode }) {
-  const { language, t } = useLanguage();
+  const { t } = useLanguage();
   const [categories, setCategories] = useState<HomeCategory[]>([]);
   const [products, setProducts] = useState<HomeProduct[]>([]);
   const [loading, setLoading] = useState(true);
@@ -89,10 +85,8 @@ export function HomePage({ partners, footer }: { partners: React.ReactNode; foot
 
   useEffect(() => { load(); }, []);
 
-  const computerProducts = products.filter(product => product.category.slug === 'computers').slice(0, 5);
+  const computerProducts = products.filter(product => product.category.slug === 'computers').slice(0, 15);
   const heroProducts = products.slice(0, 3);
-  const productCount = (count: number) => t(count === 1 ? 'oneProduct' : 'manyProducts')
-    .replace('{count}', count.toLocaleString(language));
   const submitHeroSearch = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const value = (event.currentTarget.elements.namedItem('q') as HTMLInputElement).value;
@@ -134,22 +128,18 @@ export function HomePage({ partners, footer }: { partners: React.ReactNode; foot
       {loading ? <p role="status">{t('loadingCategories')}</p> : error ? null : categories.length ? <div className="category-grid">
         {categories.map(category => <Link className="category-card" to={`/category/${category.slug}`} key={category.id}>
           <span className="category-icon"><CategoryIcon slug={category.slug} /></span>
-          <span className="category-copy">
-            <strong>{category.name}</strong>
-            <small>{productCount(category.productCount)}</small>
-          </span>
-          <span className="category-arrow" aria-hidden="true">→</span>
+          <span className="category-copy"><strong>{category.name}</strong></span>
         </Link>)}
       </div> : <div className="empty-state"><span>◇</span><h3>{t('noCategories')}</h3></div>}
     </section>
 
     <section className="section">
       <div className="section-heading">
-        <div><span className="eyebrow">{t('featuredEyebrow')}</span><h2>{t('featuredProducts')}</h2></div>
+        <div><h2>{t('featuredProducts')}</h2></div>
         <Link to="/search">{t('viewAll')} →</Link>
       </div>
       {loading ? <p role="status">{t('loadingProducts')}</p> : error ? null : products.length ? <div className="product-grid">
-        {products.slice(0, 5).map(product => <HomeProductCard key={product.id} product={product} />)}
+        {products.slice(0, 15).map(product => <HomeProductCard key={product.id} product={product} />)}
       </div> : <div className="empty-state"><span>⌕</span><h3>{t('noFeaturedProducts')}</h3></div>}
     </section>
 

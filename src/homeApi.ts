@@ -34,7 +34,7 @@ async function get<T>(path: string): Promise<T> {
 export async function getHomeData() {
   const categoryResponse = await get<{ items: Omit<HomeCategory, 'productCount'>[] }>('/categories');
   const [productResponse, ...categoryCounts] = await Promise.all([
-    get<PageDto<HomeProduct>>('/products?page=1&pageSize=10'),
+    get<PageDto<HomeProduct>>('/products?page=1&pageSize=15'),
     ...categoryResponse.items.map(category => get<PageDto<HomeProduct>>(`/products?categoryId=${category.id}&page=1&pageSize=1`)),
   ]);
   const categories = categoryResponse.items.map((category, index) => ({
