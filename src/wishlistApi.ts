@@ -42,7 +42,7 @@ export async function addWishlistItem(accessToken: string, productId: number): P
     },
     body: JSON.stringify({ productId, operation: 'add' }),
   });
-  if (!response.ok) throw new WishlistApiError(response.status);
+  if (response.status !== 204) throw new WishlistApiError(response.status);
 }
 
 export async function removeWishlistItem(accessToken: string, productId: number): Promise<void> {

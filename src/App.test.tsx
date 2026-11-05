@@ -911,41 +911,41 @@ const catalogPage = {
 
 describe('Search and Category API data', () => {
   it('adds a product to the authenticated wishlist through the API heart action', async () => {
-    authMock.getToken.mockResolvedValue('access-token');
+    authMock.getToken.mockResolvedValue('test-access-token');
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       if (url.endsWith('/categories')) return response({ items: [{ id: 42, slug: 'phones', name: 'Phones' }] });
-      if (url.endsWith('/wishlist') && init?.method !== 'POST') return response({ items: [] });
-      if (url.endsWith('/wishlist') && init?.method === 'POST') return init.body === JSON.stringify({ productId: 17, operation: 'remove' }) ? Promise.resolve({ ok: true, status: 204 } as Response) : response(null);
+      if (url.endsWith('/wishlist') && !init?.method) return response({ items: [] });
+      if (url.endsWith('/wishlist') && init?.method === 'POST') return Promise.resolve({ ok: true, status: 204 } as Response);
       return response(catalogPage);
     });
     vi.stubGlobal('fetch', fetchMock);
-    renderAppAt('/category/phones');
+    renderAppAt('/search?q=phones');
 
     const addButton = await screen.findByRole('button', { name: 'Thêm vào yêu thích' });
     await waitFor(() => expect(addButton.hasAttribute('disabled')).toBe(false));
+    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/wishlist', {
+      headers: { Authorization: 'Bearer test-access-token' },
+    });
     fireEvent.click(addButton);
     expect(await screen.findByRole('button', { name: 'Bỏ khỏi yêu thích' })).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/wishlist', {
-      headers: { Authorization: 'Bearer access-token' },
-    });
-    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/wishlist', {
-      method: 'POST', headers: { Authorization: 'Bearer access-token', 'Content-Type': 'application/json' }, body: JSON.stringify({ productId: 17, operation: 'add' }),
+      method: 'POST', headers: { Authorization: 'Bearer test-access-token', 'Content-Type': 'application/json' }, body: JSON.stringify({ productId: 17, operation: 'add' }),
     });
     fireEvent.click(await screen.findByRole('button', { name: 'Bỏ khỏi yêu thích' }));
     expect(await screen.findByRole('button', { name: 'Thêm vào yêu thích' })).toBeTruthy();
-    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/wishlist', {
-      method: 'POST', headers: { Authorization: 'Bearer access-token', 'Content-Type': 'application/json' }, body: JSON.stringify({ productId: 17, operation: 'remove' }),
+    expect(fetchMock).toHaveBeenLastCalledWith('https://api-compareshop-dev.giamha.online/api/v1/wishlist', {
+      method: 'POST', headers: { Authorization: 'Bearer test-access-token', 'Content-Type': 'application/json' }, body: JSON.stringify({ productId: 17, operation: 'remove' }),
     });
     expect(localStorage.getItem('wishlist-products')).toBeNull();
   });
 
   it('rolls back the optimistic heart state when a wishlist update fails', async () => {
-    authMock.getToken.mockResolvedValue('access-token');
+    authMock.getToken.mockResolvedValue('test-access-token');
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       if (url.endsWith('/categories')) return response({ items: [{ id: 42, slug: 'phones', name: 'Phones' }] });
-      if (url.endsWith('/wishlist') && init?.method !== 'POST') return response({ items: [] });
+      if (url.endsWith('/wishlist') && !init?.method) return response({ items: [] });
       if (url.endsWith('/wishlist') && init?.method === 'POST') return Promise.reject(new Error('offline'));
       return response(catalogPage);
     });
@@ -957,18 +957,19 @@ describe('Search and Category API data', () => {
     expect(await screen.findByRole('button', { name: 'Thêm vào yêu thích' })).toBeTruthy();
   });
 
-  it('starts sign-in when a signed-out user saves a product', async () => {
+  it('starts OIDC sign-in with the current Search URL when a signed-out user saves a product', async () => {
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       if (url.endsWith('/categories')) return response({ items: [{ id: 42, slug: 'phones', name: 'Phones' }] });
       return response(catalogPage);
     });
     vi.stubGlobal('fetch', fetchMock);
-    renderAppAt('/category/phones');
+    renderAppAt('/search?q=phones');
 
     fireEvent.click(await screen.findByRole('button', { name: 'Thêm vào yêu thích' }));
-    await waitFor(() => expect(authMock.signIn).toHaveBeenCalledWith('/category/phones'));
+    await waitFor(() => expect(authMock.signIn).toHaveBeenCalledWith('/search?q=phones'));
     expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/wishlist'))).toBe(false);
+    expect(await screen.findByRole('button', { name: 'Thêm vào yêu thích' })).toBeTruthy();
   });
 
   it('resolves a category slug to its numeric ID before requesting its products', async () => {

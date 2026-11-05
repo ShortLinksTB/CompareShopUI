@@ -23,8 +23,8 @@ function PriceFilters({ minPrice, maxPrice, setPrice }: { minPrice?: number; max
 
 export function SearchPage() {
   const { language } = useLanguage();
-  const location = useLocation();
   const { slug } = useParams();
+  const location = useLocation();
   const [params, setParams] = useSearchParams();
   const query = params.get('q') || '';
   const categoryQuery = params.get('category') || '';
@@ -46,19 +46,19 @@ export function SearchPage() {
 
   useEffect(() => {
     let active = true;
-    getAuthenticatedAccessToken().then(token => {
+    getAuthenticatedAccessToken().then(async token => {
       if (!active) return;
+      if (!token) return;
       setAccessToken(token);
-      if (!token) { setWishlistIds([]); return; }
-      return getWishlist(token).then(items => {
-        if (active) setWishlistIds(items.map(item => item.productId));
-      });
+      const items = await getWishlist(token);
+      if (active) setWishlistIds(items.map(item => item.productId));
     }).catch(async reason => {
       if (!active) return;
-      setWishlistIds([]);
-      if (reason instanceof WishlistApiError && reason.status === 401) {
+      if (reason instanceof WishlistApiError && (reason.status === 401 || reason.status === 403)) {
         await clearAuthenticatedSession().catch(() => undefined);
-        if (active) { setAccessToken(null); setWishlistError('unauthenticated'); }
+        if (!active) return;
+        setAccessToken(null);
+        setWishlistError('unauthenticated');
       } else {
         setWishlistError('request');
       }
@@ -68,27 +68,24 @@ export function SearchPage() {
 
   const toggleWishlist = async (productId: number) => {
     if (wishlistLoading || wishlistBusyIds.includes(productId)) return;
-    if (!accessToken) {
-      try { await startSignIn(`${location.pathname}${location.search}${location.hash}`); }
-      catch { setWishlistError('request'); }
-      return;
-    }
     const adding = !wishlistIds.includes(productId);
     setWishlistError(null);
     setWishlistBusyIds(ids => [...ids, productId]);
+    if (!accessToken) {
+      startSignIn(`${location.pathname}${location.search}${location.hash}`).catch(() => setWishlistBusyIds(ids => ids.filter(id => id !== productId)));
+      return;
+    }
     setWishlistIds(ids => adding ? [...ids, productId] : ids.filter(id => id !== productId));
     try {
       if (adding) await addWishlistItem(accessToken, productId);
       else await removeWishlistItem(accessToken, productId);
     } catch (reason) {
       setWishlistIds(ids => adding ? ids.filter(id => id !== productId) : [...ids, productId]);
-      if (reason instanceof WishlistApiError && reason.status === 401) {
+      if (reason instanceof WishlistApiError && (reason.status === 401 || reason.status === 403)) {
         await clearAuthenticatedSession().catch(() => undefined);
         setAccessToken(null);
         setWishlistError('unauthenticated');
-      } else {
-        setWishlistError('request');
-      }
+      } else setWishlistError('request');
     } finally {
       setWishlistBusyIds(ids => ids.filter(id => id !== productId));
     }
