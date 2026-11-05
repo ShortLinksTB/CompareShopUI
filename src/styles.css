@@ -618,3 +618,9 @@
     padding-block: 12px 14px;
   }
 }
+
+.home-shell .hero-featured-image,
+.compare-image-placeholder,
+.wishlist-page .wishlist-item > .safe-image-fallback {
+  object-fit: cover;
+}
