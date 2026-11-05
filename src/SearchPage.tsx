@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLanguage } from './i18n';
 import { uiText } from './uiCopy';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { getCategories, getProducts, type ProductPage, type SearchCategory } from './searchApi';
 import { SafeImage } from './components/SafeImage';
+import { clearAuthenticatedSession, getAuthenticatedAccessToken, startSignIn } from './auth/authClient';
+import { addWishlistItem, getWishlist, removeWishlistItem, WishlistApiError } from './wishlistApi';
 
 const PAGE_SIZE = 12;
-const WISHLIST_API = 'https://api-compareshop-dev.giamha.online/api/v1/wishlist';
 const money = (value: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(value);
 
 function ProductCard({ product, liked, busy, onToggle }: { product: ProductPage['items'][number]; liked: boolean; busy: boolean; onToggle: (id: number) => void }) {
@@ -22,6 +23,7 @@ function PriceFilters({ minPrice, maxPrice, setPrice }: { minPrice?: number; max
 
 export function SearchPage() {
   const { language } = useLanguage();
+  const location = useLocation();
   const { slug } = useParams();
   const [params, setParams] = useSearchParams();
   const query = params.get('q') || '';
@@ -40,33 +42,53 @@ export function SearchPage() {
   const [wishlistLoading, setWishlistLoading] = useState(true);
   const [wishlistBusyIds, setWishlistBusyIds] = useState<number[]>([]);
   const [wishlistError, setWishlistError] = useState<'unauthenticated' | 'request' | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
-    fetch(WISHLIST_API).then(async response => {
-      if (response.status === 401 || response.status === 403) throw new Error('unauthenticated');
-      if (!response.ok) throw new Error('wishlist request failed');
-      const result = await response.json() as { items?: Array<{ productId?: number }> };
-      if (active) setWishlistIds(Array.isArray(result.items) ? result.items.flatMap(item => Number.isInteger(item.productId) ? [item.productId as number] : []) : []);
-    }).catch(reason => { if (active) { setWishlistIds([]); if (reason instanceof Error && reason.message === 'unauthenticated') setWishlistError('unauthenticated'); } }).finally(() => { if (active) setWishlistLoading(false); });
+    getAuthenticatedAccessToken().then(token => {
+      if (!active) return;
+      setAccessToken(token);
+      if (!token) { setWishlistIds([]); return; }
+      return getWishlist(token).then(items => {
+        if (active) setWishlistIds(items.map(item => item.productId));
+      });
+    }).catch(async reason => {
+      if (!active) return;
+      setWishlistIds([]);
+      if (reason instanceof WishlistApiError && reason.status === 401) {
+        await clearAuthenticatedSession().catch(() => undefined);
+        if (active) { setAccessToken(null); setWishlistError('unauthenticated'); }
+      } else {
+        setWishlistError('request');
+      }
+    }).finally(() => { if (active) setWishlistLoading(false); });
     return () => { active = false; };
   }, []);
 
   const toggleWishlist = async (productId: number) => {
     if (wishlistLoading || wishlistBusyIds.includes(productId)) return;
+    if (!accessToken) {
+      try { await startSignIn(`${location.pathname}${location.search}${location.hash}`); }
+      catch { setWishlistError('request'); }
+      return;
+    }
     const adding = !wishlistIds.includes(productId);
     setWishlistError(null);
     setWishlistBusyIds(ids => [...ids, productId]);
     setWishlistIds(ids => adding ? [...ids, productId] : ids.filter(id => id !== productId));
     try {
-      const response = await fetch(adding ? WISHLIST_API : `${WISHLIST_API}/${productId}`, adding
-        ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ productId, operation: 'add' }) }
-        : { method: 'DELETE' });
-      if (response.status === 401 || response.status === 403) throw new Error('unauthenticated');
-      if (!response.ok) throw new Error('wishlist update failed');
+      if (adding) await addWishlistItem(accessToken, productId);
+      else await removeWishlistItem(accessToken, productId);
     } catch (reason) {
       setWishlistIds(ids => adding ? ids.filter(id => id !== productId) : [...ids, productId]);
-      setWishlistError(reason instanceof Error && reason.message === 'unauthenticated' ? 'unauthenticated' : 'request');
+      if (reason instanceof WishlistApiError && reason.status === 401) {
+        await clearAuthenticatedSession().catch(() => undefined);
+        setAccessToken(null);
+        setWishlistError('unauthenticated');
+      } else {
+        setWishlistError('request');
+      }
     } finally {
       setWishlistBusyIds(ids => ids.filter(id => id !== productId));
     }
