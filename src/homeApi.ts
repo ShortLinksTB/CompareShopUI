@@ -33,13 +33,17 @@ async function get<T>(path: string): Promise<T> {
 
 export async function getHomeData() {
   const categoryResponse = await get<{ items: Omit<HomeCategory, 'productCount'>[] }>('/categories');
-  const [productResponse, ...categoryCounts] = await Promise.all([
+  const computerCategory = categoryResponse.items.find(category => category.slug === 'computers');
+  const [productResponse, computerResponse, ...categoryCounts] = await Promise.all([
     get<PageDto<HomeProduct>>('/products?page=1&pageSize=15'),
+    computerCategory
+      ? get<PageDto<HomeProduct>>(`/products?categoryId=${computerCategory.id}&page=1&pageSize=15`)
+      : Promise.resolve({ items: [], page: 1, pageSize: 15, totalItems: 0, totalPages: 0 }),
     ...categoryResponse.items.map(category => get<PageDto<HomeProduct>>(`/products?categoryId=${category.id}&page=1&pageSize=1`)),
   ]);
   const categories = categoryResponse.items.map((category, index) => ({
     ...category,
     productCount: categoryCounts[index].totalItems,
   }));
-  return { categories, products: productResponse.items };
+  return { categories, products: productResponse.items, computerProducts: computerResponse.items };
 }

@@ -68,6 +68,7 @@ export function HomePage({ partners, footer }: { partners: React.ReactNode; foot
   const { t } = useLanguage();
   const [categories, setCategories] = useState<HomeCategory[]>([]);
   const [products, setProducts] = useState<HomeProduct[]>([]);
+  const [computerProducts, setComputerProducts] = useState<HomeProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -78,6 +79,7 @@ export function HomePage({ partners, footer }: { partners: React.ReactNode; foot
       .then(data => {
         setCategories(data.categories);
         setProducts(data.products);
+        setComputerProducts(data.computerProducts);
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
@@ -85,7 +87,6 @@ export function HomePage({ partners, footer }: { partners: React.ReactNode; foot
 
   useEffect(() => { load(); }, []);
 
-  const computerProducts = products.filter(product => product.category.slug === 'computers').slice(0, 15);
   const heroProducts = products.slice(0, 3);
   const submitHeroSearch = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();

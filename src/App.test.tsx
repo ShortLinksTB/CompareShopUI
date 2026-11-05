@@ -468,22 +468,39 @@ describe('Home API data', () => {
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes('featured'))).toBe(false);
   });
 
-  it('renders up to fifteen products in each grid with the four approved card fields', async () => {
-    const items = Array.from({ length: 16 }, (_, index) => ({
-      ...products.items[0], id: index + 1, slug: `computer-${index + 1}`, name: `Computer ${index + 1}`,
-      category: { ...products.items[0].category, slug: 'computers' },
+  it('loads up to fifteen computers independently from a mixed catalog', async () => {
+    const mixedCatalog = Array.from({ length: 15 }, (_, index) => {
+      const isComputer = index % 5 === 0;
+      return {
+        ...products.items[0], id: index + 1, slug: `catalog-product-${index + 1}`, name: `Catalog product ${index + 1}`,
+        category: { id: isComputer ? 2 : 1, slug: isComputer ? 'computers' : 'phones', name: isComputer ? 'Computers' : 'Phones' },
+      };
+    });
+    const computers = Array.from({ length: 15 }, (_, index) => ({
+      ...products.items[0], id: index + 101, slug: `computer-${index + 1}`, name: `Computer ${index + 1}`,
+      category: { id: 2, slug: 'computers', name: 'Computers' },
     }));
-    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
-      if (url.endsWith('/categories')) return response({ items: [] });
-      if (url.endsWith('/products?page=1&pageSize=15')) return response({ ...products, items });
+      if (url.endsWith('/categories')) return response({ items: [
+        { id: 1, slug: 'phones', name: 'Phones' }, { id: 2, slug: 'computers', name: 'Computers' },
+      ] });
+      if (url.endsWith('/products?page=1&pageSize=15')) return response({ ...products, items: mixedCatalog });
+      if (url.endsWith('/products?categoryId=2&page=1&pageSize=15')) return response({ ...products, items: computers });
       return response({ ...products, items: [], totalItems: 0 });
-    }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
     renderAppAt('/');
 
     await waitFor(() => expect(document.querySelectorAll('.product-grid').length).toBe(2));
     const grids = Array.from(document.querySelectorAll('.product-grid'));
     expect(grids.map(grid => grid.querySelectorAll('.product-card').length)).toEqual([15, 15]);
+    expect(grids[0].querySelectorAll('.product-name')).toHaveLength(15);
+    expect(grids[1].querySelectorAll('.product-name')).toHaveLength(15);
+    expect(Array.from(grids[1].querySelectorAll('.product-name')).map(node => node.textContent)).toEqual(
+      Array.from({ length: 15 }, (_, index) => `Computer ${index + 1}`),
+    );
+    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products?categoryId=2&page=1&pageSize=15');
     expect(grids[0].querySelector('.product-card')?.querySelectorAll('.product-card-body > *')).toHaveLength(3);
     expect(grids[0].querySelector('.product-card')?.querySelector('.product-name')).toBeTruthy();
     expect(grids[0].querySelector('.product-card')?.querySelector('.price')).toBeTruthy();
