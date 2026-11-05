@@ -4,6 +4,7 @@ export interface ProductDetail {
   id: number;
   slug: string;
   name: string;
+  imageUrl: string | null;
   brand: string | null;
   description: string | null;
   category: { id: number; slug: string; name: string };
@@ -31,6 +32,7 @@ export interface RelatedProduct {
   id: number;
   slug: string;
   name: string;
+  imageUrl: string | null;
   brand: string | null;
   category: { id: number; slug: string; name: string };
   offerSummary: { minPrice: number | null; maxPrice: number | null; offerCount: number };

@@ -10,6 +10,7 @@ export interface SearchProduct {
   id: number;
   slug: string;
   name: string;
+  imageUrl: string | null;
   brand: string | null;
   category: { id: number; slug: string; name: string };
   offerSummary: { minPrice: number | null; maxPrice: number | null; offerCount: number };
