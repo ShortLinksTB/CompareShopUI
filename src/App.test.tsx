@@ -291,10 +291,12 @@ describe('fixed route themes', () => {
   });
 
   it('keeps popular category cards in a contained mobile grid', () => {
-    expect(stylesheet).toMatch(/@media\s*\(max-width:\s*639px\)[\s\S]*?\.home-shell \.category-grid\s*\{[^}]*width:\s*100%;\s*grid-template-columns:\s*minmax\(0,\s*1fr\)/);
+    expect(stylesheet).toMatch(/\.home-shell \.category-grid\s*\{[^}]*grid-template-columns:\s*repeat\(8,\s*minmax\(0,\s*1fr\)\)/);
+    expect(stylesheet).toMatch(/@media\s*\(min-width:\s*640px\) and \(max-width:\s*980px\)[\s\S]*?\.home-shell \.category-grid\s*\{[^}]*repeat\(4,\s*minmax\(0,\s*1fr\)\)/);
+    expect(stylesheet).toMatch(/@media\s*\(max-width:\s*639px\)[\s\S]*?\.home-shell \.category-grid\s*\{[^}]*display:\s*flex[^}]*overflow-x:\s*auto/);
     expect(stylesheet).toMatch(/\.home-shell \.category-card\s*\{[^}]*min-width:\s*0/);
     expect(stylesheet).toContain('.home-shell .category-icon');
-    expect(stylesheet).toContain('.home-shell .category-arrow');
+    expect(stylesheet).toMatch(/\.home-shell \.category-arrow\s*\{\s*display:\s*none/);
   });
 
   it('keeps mobile home content clear of the bottom nav and wraps hero content', () => {
@@ -304,7 +306,7 @@ describe('fixed route themes', () => {
     expect(stylesheet).toMatch(/\.home-shell \.hero \+ \.section \.section-heading\s*\{[^}]*margin-bottom:\s*8px/);
     expect(stylesheet).toMatch(/\.home-shell \.hero-featured-product\s*\{[^}]*grid-template-columns:\s*38px minmax\(0,\s*1fr\) auto[^}]*min-height:\s*42px;\s*padding:\s*5px 0/);
     expect(stylesheet).toMatch(/\.bottom-nav\s*\{[^}]*position:\s*fixed/);
-    expect(stylesheet).toMatch(/\.home-shell \.category-grid\s*\{[^}]*display:\s*grid[^}]*overflow:\s*visible/);
+    expect(stylesheet).toMatch(/\.home-shell \.category-grid\s*\{[^}]*display:\s*flex[^}]*overflow-x:\s*auto/);
     expect(stylesheet).toMatch(/\.home-shell \.hero-copy > h1\s*\{[^}]*line-height:\s*1\.2/);
     expect(stylesheet).toMatch(/\.home-shell \.popular-searches > a\s*\{[^}]*overflow-wrap:\s*anywhere/);
     expect(stylesheet).toMatch(/\.home-shell \.hero-featured-product\s*\{[^}]*grid-template-columns:\s*38px minmax\(0,\s*1fr\)/);
@@ -361,7 +363,6 @@ describe('Home API data', () => {
     expect(screen.getByText('Shop smarter')).toBeTruthy();
     expect(screen.getByText('Compare prices, buy better,')).toBeTruthy();
     expect(screen.getByText('Popular categories')).toBeTruthy();
-    expect(screen.getByText('1 product')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'See price' })).toBeTruthy();
     expect(screen.getByText('No products in this category yet')).toBeTruthy();
     expect(screen.getByText('Our partners')).toBeTruthy();
@@ -369,7 +370,8 @@ describe('Home API data', () => {
     expect(document.querySelector('.bottom-nav')?.textContent).toContain('Home');
     expect(document.querySelector('.bottom-nav')?.textContent).toContain('Categories');
     expect(document.querySelector('.bottom-nav')?.textContent).not.toContain('Trang chủ');
-    expect(screen.getByRole('textbox', { name: 'Enter your email address' })).toBeTruthy();
+    expect(document.querySelector('.footer-newsletter')).toBeNull();
+    expect(document.querySelectorAll('.footer-main > div')).toHaveLength(4);
     expect(screen.getByText(/All rights reserved\./)).toBeTruthy();
     expect(screen.queryByText('Danh mục phổ biến')).toBeNull();
     expect(screen.queryByText('Đang tải danh mục...')).toBeNull();
@@ -400,15 +402,14 @@ describe('Home API data', () => {
     expect(screen.getAllByRole('status').length).toBeGreaterThan(0);
     expect((await screen.findAllByRole('link', { name: 'Phones' })).some(link => link.getAttribute('href') === '/category/phones')).toBe(true);
     expect(await screen.findByRole('link', { name: 'Sample Phone' })).toBeTruthy();
-    expect(screen.getByText('42 sản phẩm')).toBeTruthy();
     expect(screen.getByText(/Từ 1\.200\.000/)).toBeTruthy();
-    expect(screen.getByText('2 cửa hàng đang bán')).toBeTruthy();
+    expect(screen.queryByText('2 cửa hàng đang bán')).toBeNull();
     expect(screen.getAllByText('Chưa có hình ảnh').length).toBeGreaterThan(0);
     expect(screen.getAllByRole('img', { name: 'Chưa có hình ảnh' }).length).toBeGreaterThan(0);
     expect(screen.queryByText('Apple')).toBeNull();
     expect(screen.queryByText(/★/)).toBeNull();
     expect(fetchMock).toHaveBeenNthCalledWith(1, 'https://api-compareshop-dev.giamha.online/api/v1/categories');
-    expect(fetchMock).toHaveBeenNthCalledWith(2, 'https://api-compareshop-dev.giamha.online/api/v1/products?page=1&pageSize=10');
+    expect(fetchMock).toHaveBeenNthCalledWith(2, 'https://api-compareshop-dev.giamha.online/api/v1/products?page=1&pageSize=15');
     expect(fetchMock).toHaveBeenNthCalledWith(3, 'https://api-compareshop-dev.giamha.online/api/v1/products?categoryId=1&page=1&pageSize=1');
   });
 
@@ -417,7 +418,7 @@ describe('Home API data', () => {
     vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
       if (url.endsWith('/categories')) return response(categories);
-      if (url.endsWith('/products?page=1&pageSize=10')) return response({ ...products, items: [withImage] });
+      if (url.endsWith('/products?page=1&pageSize=15')) return response({ ...products, items: [withImage] });
       return response({ items: [], page: 1, pageSize: 1, totalItems: 0, totalPages: 0 });
     }));
     renderAppAt('/');
@@ -428,7 +429,7 @@ describe('Home API data', () => {
     expect(screen.queryByText('Chưa có hình ảnh')).toBeNull();
   });
 
-  it('renders the first three loaded products and wireframe category cards with existing counts', async () => {
+  it('renders the first three hero products and vertical wireframe category cards', async () => {
     const featuredItems = [1, 2, 3, 4].map(id => ({
       ...products.items[0],
       id,
@@ -444,7 +445,7 @@ describe('Home API data', () => {
         { id: 3, slug: 'computers', name: 'Computers' },
         { id: 4, slug: 'home-goods', name: 'Home goods' },
       ] });
-      if (url.endsWith('/products?page=1&pageSize=10')) return response({ ...products, items: featuredItems });
+      if (url.endsWith('/products?page=1&pageSize=15')) return response({ ...products, items: featuredItems });
       if (url.includes('categoryId=1')) return response({ ...products, items: [], totalItems: 0 });
       if (url.includes('categoryId=2')) return response({ ...products, items: [], totalItems: 7 });
       if (url.includes('categoryId=')) return response({ ...products, items: [], totalItems: 3 });
@@ -461,11 +462,53 @@ describe('Home API data', () => {
     expect(Array.from(featuredCard.querySelectorAll('.hero-featured-name')).some(name => name.textContent === 'Sample Phone 4')).toBe(false);
     expect(featuredCard.querySelectorAll('.hero-featured-image')).toHaveLength(3);
     expect(featuredCard.querySelectorAll('.hero-featured-product')[1].querySelector('.hero-featured-price')).toBeNull();
-    expect((await screen.findAllByRole('link', { name: 'Phones 0 sản phẩm' })).length).toBeGreaterThan(0);
-    expect(screen.getAllByText('7 sản phẩm').length).toBeGreaterThan(0);
+    expect((await screen.findAllByRole('link', { name: 'Phones' })).length).toBeGreaterThan(0);
     const categoryIcons = Array.from(document.querySelectorAll('.category-card svg')).map(icon => icon.getAttribute('data-category-icon'));
     expect(categoryIcons).toEqual(['phone', 'audio', 'computer', 'category']);
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes('featured'))).toBe(false);
+  });
+
+  it('loads up to fifteen computers independently from a mixed catalog', async () => {
+    const mixedCatalog = Array.from({ length: 15 }, (_, index) => {
+      const isComputer = index % 5 === 0;
+      return {
+        ...products.items[0], id: index + 1, slug: `catalog-product-${index + 1}`, name: `Catalog product ${index + 1}`,
+        category: { id: isComputer ? 2 : 1, slug: isComputer ? 'computers' : 'phones', name: isComputer ? 'Computers' : 'Phones' },
+      };
+    });
+    const computers = Array.from({ length: 15 }, (_, index) => ({
+      ...products.items[0], id: index + 101, slug: `computer-${index + 1}`, name: `Computer ${index + 1}`,
+      category: { id: 2, slug: 'computers', name: 'Computers' },
+    }));
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith('/categories')) return response({ items: [
+        { id: 1, slug: 'phones', name: 'Phones' }, { id: 2, slug: 'computers', name: 'Computers' },
+      ] });
+      if (url.endsWith('/products?page=1&pageSize=15')) return response({ ...products, items: mixedCatalog });
+      if (url.endsWith('/products?categoryId=2&page=1&pageSize=15')) return response({ ...products, items: computers });
+      return response({ ...products, items: [], totalItems: 0 });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderAppAt('/');
+
+    await waitFor(() => expect(document.querySelectorAll('.product-grid').length).toBe(2));
+    const grids = Array.from(document.querySelectorAll('.product-grid'));
+    expect(grids.map(grid => grid.querySelectorAll('.product-card').length)).toEqual([15, 15]);
+    expect(grids[0].querySelectorAll('.product-name')).toHaveLength(15);
+    expect(grids[1].querySelectorAll('.product-name')).toHaveLength(15);
+    expect(Array.from(grids[1].querySelectorAll('.product-name')).map(node => node.textContent)).toEqual(
+      Array.from({ length: 15 }, (_, index) => `Computer ${index + 1}`),
+    );
+    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products?categoryId=2&page=1&pageSize=15');
+    expect(grids[0].querySelector('.product-card')?.querySelectorAll('.product-card-body > *')).toHaveLength(3);
+    expect(grids[0].querySelector('.product-card')?.querySelector('.product-name')).toBeTruthy();
+    expect(grids[0].querySelector('.product-card')?.querySelector('.price')).toBeTruthy();
+    expect(grids[0].querySelector('.product-card')?.querySelector('.product-cta')).toBeTruthy();
+    const featuredHeading = screen.getByRole('heading', { name: 'Sản phẩm nổi bật' });
+    expect(featuredHeading.parentElement?.querySelector('.eyebrow')).toBeNull();
+    expect(document.querySelectorAll('.partner-card')).toHaveLength(12);
+    expect(document.querySelectorAll('.trust-card')).toHaveLength(4);
   });
 
   it('shows empty states when both API collections are empty', async () => {
@@ -491,7 +534,7 @@ describe('Home API data', () => {
           ? Promise.reject(new Error('offline'))
           : response(categories);
       }
-      if (url.endsWith('/products?page=1&pageSize=10')) return response(products);
+      if (url.endsWith('/products?page=1&pageSize=15')) return response(products);
       if (url.endsWith('/products?categoryId=1&page=1&pageSize=1')) {
         return response({ items: [], page: 1, pageSize: 1, totalItems: 42, totalPages: 42 });
       }
@@ -507,7 +550,7 @@ describe('Home API data', () => {
     expect(await screen.findByRole('link', { name: 'Sample Phone' })).toBeTruthy();
     const requestedUrls = fetchMock.mock.calls.map(([url]) => String(url));
     expect(requestedUrls.filter(url => url.endsWith('/categories')).length).toBeGreaterThanOrEqual(2);
-    expect(requestedUrls).toContain('https://api-compareshop-dev.giamha.online/api/v1/products?page=1&pageSize=10');
+    expect(requestedUrls).toContain('https://api-compareshop-dev.giamha.online/api/v1/products?page=1&pageSize=15');
     expect(requestedUrls).toContain('https://api-compareshop-dev.giamha.online/api/v1/products?categoryId=1&page=1&pageSize=1');
   });
 });
@@ -1146,7 +1189,7 @@ describe('Product Detail API data', () => {
       const url = String(input);
       if (url.endsWith('/categories')) return response({ items: [{ id: 7, slug: 'phones', name: 'Phones' }] });
       if (url.includes('/products?categoryId=7')) return response({ items: [product], page: 1, pageSize: 10, totalItems: 1, totalPages: 1 });
-      if (url.includes('/products?page=1&pageSize=10')) return response({ items: [product], page: 1, pageSize: 10, totalItems: 1, totalPages: 1 });
+      if (url.includes('/products?page=1&pageSize=15')) return response({ items: [product], page: 1, pageSize: 15, totalItems: 1, totalPages: 1 });
       if (url.endsWith('/products/sample-product-01')) return response(detail);
       if (url.endsWith('/products/1/offers')) return response({ items: [] });
       if (url.includes('/products/1/price-history')) return response({ items: [] });
@@ -1168,7 +1211,7 @@ describe('Product Detail API data', () => {
       const url = String(input);
       if (url.endsWith('/categories')) return response({ items: [{ id: 7, slug: 'phones', name: 'Phones' }] });
       if (url.includes('/products?categoryId=7')) return response({ items: [product], page: 1, pageSize: 10, totalItems: 1, totalPages: 1 });
-      if (url.includes('/products?page=1&pageSize=10')) return response({ items: [product], page: 1, pageSize: 10, totalItems: 1, totalPages: 1 });
+      if (url.includes('/products?page=1&pageSize=15')) return response({ items: [product], page: 1, pageSize: 15, totalItems: 1, totalPages: 1 });
       if (url.endsWith('/products/sample-product-01')) return response(detail);
       if (url.endsWith('/products/1/offers')) return response({ items: [] });
       if (url.includes('/products/1/price-history')) return response({ items: [] });
