@@ -4,6 +4,7 @@ import { uiText } from './uiCopy';
 import { Link } from 'react-router-dom';
 import { clearAuthenticatedSession, getAuthenticatedAccessToken, startSignIn } from './auth/authClient';
 import { getWishlist, removeWishlistItem, WishlistApiError, type WishlistItemDto } from './wishlistApi';
+import { SafeImage } from './components/SafeImage';
 
 type WishlistState = 'loading' | 'signed-out' | 'loaded' | 'load-error';
 
@@ -92,7 +93,7 @@ export function WishlistPage() {
     </>}
     {state === 'load-error' && <div className="empty-state" role="alert"><h3>{uiText(language, 'Không thể tải sản phẩm yêu thích')}</h3><p>{uiText(language, 'Vui lòng thử lại.')}</p><button className="button button-primary" type="button" onClick={() => setLoadRetry(value => value + 1)}>{uiText(language, 'Thử lại')}</button></div>}
     {state === 'loaded' && (items.length ? <div className="wishlist-list">{items.map(item => <div className="wishlist-item" key={item.productId}>
-      <div className="safe-image-fallback" role="img" aria-label={item.name}><span>{uiText(language, 'Chưa có hình ảnh')}</span></div>
+      {item.imageUrl ? <SafeImage className="safe-image-fallback" src={item.imageUrl} alt={item.name} fallbackLabel={uiText(language, 'Chưa có hình ảnh')} /> : <div className="safe-image-fallback" role="img" aria-label={item.name}><span>{uiText(language, 'Chưa có hình ảnh')}</span></div>}
       <div><Link to={`/product/${item.slug}`}><strong>{item.name}</strong></Link><span className="price">{uiText(language, 'Giá hiện tại chưa có dữ liệu')}</span></div>
       <button className="button button-ghost" type="button" onClick={() => void remove(item)} disabled={removing === item.productId} aria-label={`${uiText(language, 'Xóa')} ${item.name}`}>{removing === item.productId ? '…' : '×'}</button>
     </div>)}</div> : <div className="empty-state"><span>♡</span><h3>{uiText(language, 'Chưa có sản phẩm yêu thích')}</h3><p>{uiText(language, 'Nhấn biểu tượng trái tim trên sản phẩm để lưu lại.')}</p><Link className="button button-primary" to="/search">{uiText(language, 'Khám phá sản phẩm')}</Link></div>)}

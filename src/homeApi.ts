@@ -11,6 +11,7 @@ export interface HomeProduct {
   id: number;
   slug: string;
   name: string;
+  imageUrl: string | null;
   brand: string;
   category: { id: number; slug: string; name: string };
   offerSummary: { minPrice: number; maxPrice: number; offerCount: number };

@@ -8,7 +8,7 @@ import { ComparePage } from './ComparePage';
 import stylesheet from './styles.css?inline';
 
 const product = (slug: string, name: string) => ({
-  id: slug.length, slug, name, brand: null, description: null,
+  id: slug.length, slug, name, imageUrl: 'https://cdn.example/compare.jpg', brand: null, description: null,
   category: { id: 1, slug: 'electronics', name: 'Điện tử' },
   offerSummary: { minPrice: 1200000, maxPrice: 1500000, offerCount: 2 },
   specificationGroups: [{ name: 'Cấu hình', items: [{ name: 'Dung lượng', value: '128 GB' }] }],
@@ -30,6 +30,7 @@ describe('Compare page', () => {
     expect(screen.getByRole('status').textContent).toContain('Đang tải');
     expect(await screen.findByText('Product phone-one')).toBeTruthy();
     expect(screen.getByText('Product phone-two')).toBeTruthy();
+    expect(screen.getAllByRole('img', { name: /Product phone-/ }).every(image => (image as HTMLImageElement).src === 'https://cdn.example/compare.jpg')).toBe(true);
     expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products/phone-one');
     expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products?page=1&pageSize=20');

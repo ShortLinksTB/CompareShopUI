@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getHomeData, type HomeCategory, type HomeProduct } from './homeApi';
 import { useLanguage } from './i18n';
+import { SafeImage } from './components/SafeImage';
 
 const money = (value: number) => new Intl.NumberFormat('vi-VN', {
   style: 'currency',
@@ -14,9 +15,7 @@ function HomeProductCard({ product }: { product: HomeProduct }) {
   const { minPrice, offerCount } = product.offerSummary;
 
   return <article className="product-card">
-    <div className="product-image" role="img" aria-label={t('noImage')}>
-      <span className="muted">{t('noImage')}</span>
-    </div>
+    <div className="product-image">{product.imageUrl ? <SafeImage src={product.imageUrl} alt={product.name} fallbackLabel={t('noImage')} /> : <div role="img" aria-label={t('noImage')}><span className="muted">{t('noImage')}</span></div>}</div>
     <div className="product-card-body">
       <Link to={`/product/${product.slug}`} className="product-name">{product.name}</Link>
       <span className="muted">{product.brand}</span>
@@ -34,7 +33,7 @@ function HeroFeaturedProduct({ product }: { product: HomeProduct }) {
   const { minPrice } = product.offerSummary;
 
   return <div className="hero-featured-product">
-    <span className="hero-featured-image" role="img" aria-label={t('noImage')}><span>{t('noImage')}</span></span>
+    {product.imageUrl ? <SafeImage className="hero-featured-image" src={product.imageUrl} alt={product.name} fallbackLabel={t('noImage')} /> : <span className="hero-featured-image" role="img" aria-label={t('noImage')}><span>{t('noImage')}</span></span>}
     <span className="hero-featured-name">{product.name}</span>
     {minPrice > 0 && <strong className="hero-featured-price">{money(minPrice)}</strong>}
   </div>;
