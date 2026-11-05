@@ -2,6 +2,7 @@ export interface WishlistItemDto {
   productId: number;
   slug: string;
   name: string;
+  imageUrl: string | null;
   createdAtUtc: string;
 }
 
@@ -18,7 +19,7 @@ function mapItem(value: unknown): WishlistItemDto | null {
   if (!value || typeof value !== 'object') return null;
   const item = value as Partial<WishlistItemDto>;
   if (!Number.isInteger(item.productId) || typeof item.slug !== 'string' || typeof item.name !== 'string' || typeof item.createdAtUtc !== 'string') return null;
-  return { productId: item.productId!, slug: item.slug, name: item.name, createdAtUtc: item.createdAtUtc };
+  return { productId: item.productId!, slug: item.slug, name: item.name, imageUrl: typeof item.imageUrl === 'string' ? item.imageUrl : null, createdAtUtc: item.createdAtUtc };
 }
 
 export async function getWishlist(accessToken: string): Promise<WishlistItemDto[]> {

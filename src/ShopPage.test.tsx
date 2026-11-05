@@ -11,7 +11,7 @@ import './styles.css';
 
 const api = 'https://api-compareshop-dev.giamha.online/api/v1';
 const shop = { id: 24, slug: 'sample-shop', name: 'Sample Shop', logoUrl: null, websiteUrl: null };
-const product = { id: 91, slug: 'sample-product', name: 'Sample Product', brand: 'Example', category: { id: 4, slug: 'phones', name: 'Phones' }, offerSummary: { minPrice: 1200000, maxPrice: 1400000, offerCount: 3 } };
+const product = { id: 91, slug: 'sample-product', name: 'Sample Product', imageUrl: 'https://cdn.example/shop-product.jpg', brand: 'Example', category: { id: 4, slug: 'phones', name: 'Phones' }, offerSummary: { minPrice: 1200000, maxPrice: 1400000, offerCount: 3 } };
 const laptop = { id: 92, slug: 'sample-laptop', name: 'Sample Laptop', brand: null, category: { id: 5, slug: 'laptops', name: 'Laptops' }, offerSummary: { minPrice: null, maxPrice: null, offerCount: 0 } };
 
 function response(body: unknown, ok = true) {
@@ -56,6 +56,7 @@ describe('Partner Shop API data', () => {
     expect(screen.getByText(/Cửa hàng đối tác · Trạng thái chưa được cung cấp/)).toBeTruthy();
     expect((screen.getByRole('button', { name: 'Xem website ↗' }) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByRole('link', { name: 'Sample Product' }).getAttribute('href')).toBe('/product/sample-product');
+    expect((screen.getByRole('img', { name: 'Sample Product' }) as HTMLImageElement).src).toBe('https://cdn.example/shop-product.jpg');
     expect(screen.getByText((_content, element) => element?.className === 'price' && element.textContent?.includes('1.200.000') === true)).toBeTruthy();
     expect(screen.queryByText(/1\.3M/)).toBeNull();
     expect(fetchMock).toHaveBeenNthCalledWith(1, `${api}/shops/sample-shop`);

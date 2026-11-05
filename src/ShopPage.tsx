@@ -3,6 +3,7 @@ import { useLanguage } from './i18n';
 import { uiText } from './uiCopy';
 import { Link, useParams } from 'react-router-dom';
 import { getShop, getShopProducts, type Shop, type ShopProduct, type ShopProductPage } from './shopApi';
+import { SafeImage } from './components/SafeImage';
 
 const money = (value: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(value);
 
@@ -10,7 +11,7 @@ function ShopProductCard({ product }: { product: ShopProduct }) {
   const { language } = useLanguage();
   const minPrice = product.offerSummary.minPrice;
   return <article className="product-card">
-    <div className="product-image"><span className="muted" role="img" aria-label={uiText(language, 'Chưa có hình ảnh')}>{uiText(language, 'Chưa có hình ảnh')}</span></div>
+    <div className="product-image">{product.imageUrl ? <SafeImage src={product.imageUrl} alt={product.name} fallbackLabel={uiText(language, 'Chưa có hình ảnh')} /> : <span className="muted" role="img" aria-label={uiText(language, 'Chưa có hình ảnh')}>{uiText(language, 'Chưa có hình ảnh')}</span>}</div>
     <div className="product-card-body">
       <Link to={`/product/${product.slug}`} className="product-name">{product.name}</Link>
       {product.brand && <span className="muted">{product.brand}</span>}

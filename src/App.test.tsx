@@ -412,6 +412,22 @@ describe('Home API data', () => {
     expect(fetchMock).toHaveBeenNthCalledWith(3, 'https://api-compareshop-dev.giamha.online/api/v1/products?categoryId=1&page=1&pageSize=1');
   });
 
+  it('renders API product images in both homepage featured surfaces', async () => {
+    const withImage = { ...products.items[0], imageUrl: 'https://cdn.example/phone.jpg' };
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith('/categories')) return response(categories);
+      if (url.endsWith('/products?page=1&pageSize=10')) return response({ ...products, items: [withImage] });
+      return response({ items: [], page: 1, pageSize: 1, totalItems: 0, totalPages: 0 });
+    }));
+    renderAppAt('/');
+
+    const images = await screen.findAllByRole('img', { name: 'Sample Phone' });
+    expect(images).toHaveLength(2);
+    expect(images.every(image => image instanceof HTMLImageElement && image.src === 'https://cdn.example/phone.jpg')).toBe(true);
+    expect(screen.queryByText('Chưa có hình ảnh')).toBeNull();
+  });
+
   it('renders the first three loaded products and wireframe category cards with existing counts', async () => {
     const featuredItems = [1, 2, 3, 4].map(id => ({
       ...products.items[0],
@@ -663,6 +679,20 @@ it('renders product-object suggestions without crashing the search route', async
   expect(await screen.findByRole('option', { name: 'Sample Product 03' })).toBeTruthy();
   expect(screen.getByRole('heading', { name: 'Tất cả sản phẩm' })).toBeTruthy();
   expect(container.textContent).toContain('Tất cả sản phẩm');
+});
+
+it('renders the catalog image in search results', async () => {
+  const imageUrl = 'https://cdn.example/search-result.jpg';
+  vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url.endsWith('/categories')) return response(categories);
+    if (url.endsWith('/wishlist')) return response({ items: [] });
+    if (url.includes('/products?')) return response({ ...products, items: [{ ...products.items[0], imageUrl }] });
+    return response({ items: [] });
+  }));
+  renderAppAt('/search');
+
+  expect((await screen.findByRole('img', { name: 'Sample Phone' }) as HTMLImageElement).src).toBe(imageUrl);
 });
 
 const articlePage = {
@@ -1004,10 +1034,10 @@ const detail = {
   specificationGroups: [{ name: 'Main', items: [{ name: 'Storage', value: '128 GB' }] }],
 };
 
-function detailFetch({ offers = [{ id: 9, price: 1200000, url: null, updatedAt: '2026-10-19T08:00:00Z', shopId: 2, shopSlug: 'shop-two', shopName: 'Shop Two' }], history = [{ date: '2026-09-01T00:00:00Z', minPrice: 1300000, shopId: 2 }], related = [] } = {}) {
+function detailFetch({ productResponse = detail, offers = [{ id: 9, price: 1200000, url: null, updatedAt: '2026-10-19T08:00:00Z', shopId: 2, shopSlug: 'shop-two', shopName: 'Shop Two' }], history = [{ date: '2026-09-01T00:00:00Z', minPrice: 1300000, shopId: 2 }], related = [] }: { productResponse?: unknown; offers?: unknown[]; history?: unknown[]; related?: unknown[] } = {}) {
   return vi.fn((input: RequestInfo | URL) => {
     const url = String(input);
-    if (url.endsWith('/products/sample-product-01')) return response(detail);
+    if (url.endsWith('/products/sample-product-01')) return response(productResponse);
     if (url.endsWith('/products/1/offers')) return response({ items: offers });
     if (url.includes('/products/1/price-history')) return response({ items: history });
     if (url.includes('/products?categoryId=7')) return response({ items: related });
@@ -1016,6 +1046,19 @@ function detailFetch({ offers = [{ id: 9, price: 1200000, url: null, updatedAt: 
 }
 
 describe('Product Detail API data', () => {
+  it('renders the product and related product API images', async () => {
+    const productImage = 'https://cdn.example/product-detail.jpg';
+    const relatedImage = 'https://cdn.example/related.jpg';
+    vi.stubGlobal('fetch', detailFetch({
+      productResponse: { ...detail, imageUrl: productImage },
+      related: [{ ...detail, id: 2, slug: 'related-product', name: 'Related Product', imageUrl: relatedImage }],
+    }));
+    renderAppAt('/product/sample-product-01');
+
+    expect((await screen.findByRole('img', { name: 'Sample Product 01' }) as HTMLImageElement).src).toBe(productImage);
+    expect((screen.getByRole('img', { name: 'Related Product' }) as HTMLImageElement).src).toBe(relatedImage);
+  });
+
   it.each(['light', 'dark'] as const)('applies fixed light Product Detail shell for direct navigation in %s OS preference', async theme => {
     setColorScheme(theme);
     vi.stubGlobal('fetch', detailFetch());

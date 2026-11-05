@@ -3,6 +3,7 @@ import { useLanguage } from './i18n';
 import { uiText } from './uiCopy';
 import { Link } from 'react-router-dom';
 import { getCompareCandidates, getCompareProduct, type CompareProduct } from './compareApi';
+import { SafeImage } from './components/SafeImage';
 
 const STORAGE_KEY = 'compare-products';
 const money = (value: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(value);
@@ -73,7 +74,7 @@ export function ComparePage() {
     {!loading && error && <div className="empty-state" role="alert"><h3>{uiText(language, 'Không thể tải sản phẩm so sánh')}</h3><p>{uiText(language, 'Vui lòng kiểm tra kết nối rồi thử lại.')}</p><button className="button button-primary" onClick={load}>{uiText(language, 'Thử lại')}</button></div>}
     {!loading && !error && slugs.length === 0 && <div className="empty-state compare-empty-state"><span>⇄</span><h3>{uiText(language, 'Chưa có sản phẩm để so sánh')}</h3><p>{uiText(language, 'Thêm sản phẩm từ danh sách để bắt đầu so sánh.')}</p><Link className="button button-primary compare-empty-state__cta" to="/search">{uiText(language, 'Khám phá sản phẩm')}</Link></div>}
     {!loading && !error && slugs.length > 0 && products.length === 0 && <div className="empty-state"><h3>{uiText(language, 'Không tìm thấy sản phẩm đã lưu')}</h3><p>{uiText(language, 'Hãy xóa sản phẩm không còn khả dụng hoặc thử lại.')}</p><button className="button button-primary" onClick={load}>{uiText(language, 'Thử lại')}</button></div>}
-    {!loading && !error && products.length > 0 && <div className="compare-table"><div className="compare-row compare-head"><div>{uiText(language, 'Thông tin')}</div>{products.map(product => <div key={product.slug}><button onClick={() => remove(product.slug)} aria-label={`${uiText(language, 'Xóa')} ${product.name}`}>×</button><div className="compare-image-placeholder" role="img" aria-label={uiText(language, 'Chưa có hình ảnh')}>{uiText(language, 'Ảnh chưa có')}</div><strong>{product.name}</strong><small>{product.brand || uiText(language, 'Chưa có thương hiệu')}</small></div>)}</div>
+    {!loading && !error && products.length > 0 && <div className="compare-table"><div className="compare-row compare-head"><div>{uiText(language, 'Thông tin')}</div>{products.map(product => <div key={product.slug}><button onClick={() => remove(product.slug)} aria-label={`${uiText(language, 'Xóa')} ${product.name}`}>×</button>{product.imageUrl ? <SafeImage className="compare-image-placeholder" src={product.imageUrl} alt={product.name} fallbackLabel={uiText(language, 'Chưa có hình ảnh')} /> : <div className="compare-image-placeholder" role="img" aria-label={uiText(language, 'Chưa có hình ảnh')}>{uiText(language, 'Ảnh chưa có')}</div>}<strong>{product.name}</strong><small>{product.brand || uiText(language, 'Chưa có thương hiệu')}</small></div>)}</div>
       {[
         [uiText(language, 'Giá tốt nhất'), ...products.map(product => product.offerSummary.minPrice === null ? uiText(language, 'Chưa có giá') : money(product.offerSummary.minPrice))],
         [uiText(language, 'Số cửa hàng'), ...products.map(product => `${product.offerSummary.offerCount} ${uiText(language, 'cửa hàng')}`)],

@@ -4,6 +4,7 @@ export interface CompareProduct {
   id: number;
   slug: string;
   name: string;
+  imageUrl: string | null;
   brand: string | null;
   description: string | null;
   category: { id: number; slug: string; name: string };
