@@ -952,7 +952,9 @@ describe('Search and Category API data', () => {
     vi.stubGlobal('fetch', fetchMock);
     renderAppAt('/category/phones');
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Thêm vào yêu thích' }));
+    const heart = await screen.findByRole('button', { name: 'Thêm vào yêu thích' });
+    await waitFor(() => expect(heart.hasAttribute('disabled')).toBe(false));
+    fireEvent.click(heart);
     expect(await screen.findByRole('alert')).toBeTruthy();
     expect(await screen.findByRole('button', { name: 'Thêm vào yêu thích' })).toBeTruthy();
   });
@@ -966,9 +968,53 @@ describe('Search and Category API data', () => {
     vi.stubGlobal('fetch', fetchMock);
     renderAppAt('/category/phones');
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Thêm vào yêu thích' }));
+    const heart = await screen.findByRole('button', { name: 'Thêm vào yêu thích' });
+    await waitFor(() => expect(heart.hasAttribute('disabled')).toBe(false));
+    fireEvent.click(heart);
     await waitFor(() => expect(authMock.signIn).toHaveBeenCalledWith('/category/phones'));
     expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/wishlist'))).toBe(false);
+  });
+
+  it('clears a rejected session before enabling the heart and never posts without a token', async () => {
+    authMock.getToken.mockResolvedValue('revoked-token');
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith('/categories')) return response({ items: [{ id: 42, slug: 'phones', name: 'Phones' }] });
+      if (url.endsWith('/wishlist')) return Promise.resolve({ ok: false, status: 401, json: () => Promise.resolve({}) } as Response);
+      return response(catalogPage);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderAppAt('/category/phones');
+
+    const heart = await screen.findByRole('button', { name: 'Thêm vào yêu thích' });
+    await waitFor(() => expect(heart.hasAttribute('disabled')).toBe(false));
+    fireEvent.click(heart);
+
+    await waitFor(() => expect(authMock.signIn).toHaveBeenCalledWith('/category/phones'));
+    expect(authMock.clear).toHaveBeenCalled();
+    expect(fetchMock.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(0);
+  });
+
+  it('starts sign-in immediately when a wishlist write rejects the current session', async () => {
+    authMock.getToken.mockResolvedValue('revoked-token');
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith('/categories')) return response({ items: [{ id: 42, slug: 'phones', name: 'Phones' }] });
+      if (url.endsWith('/wishlist') && init?.method === 'POST') return Promise.resolve({ ok: false, status: 401 } as Response);
+      if (url.endsWith('/wishlist')) return response({ items: [] });
+      return response(catalogPage);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderAppAt('/category/phones');
+
+    const heart = await screen.findByRole('button', { name: 'Thêm vào yêu thích' });
+    await waitFor(() => expect(heart.hasAttribute('disabled')).toBe(false));
+    fireEvent.click(heart);
+    await waitFor(() => expect(authMock.signIn).toHaveBeenCalledWith('/category/phones'));
+    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/wishlist', {
+      method: 'POST', headers: { Authorization: 'Bearer revoked-token', 'Content-Type': 'application/json' }, body: JSON.stringify({ productId: 17, operation: 'add' }),
+    });
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('resolves a category slug to its numeric ID before requesting its products', async () => {

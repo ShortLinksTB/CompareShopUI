@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLanguage } from './i18n';
 import { uiText } from './uiCopy';
 import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
@@ -42,13 +42,15 @@ export function SearchPage() {
   const [wishlistLoading, setWishlistLoading] = useState(true);
   const [wishlistBusyIds, setWishlistBusyIds] = useState<number[]>([]);
   const [wishlistError, setWishlistError] = useState<'unauthenticated' | 'request' | null>(null);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [signInStarting, setSignInStarting] = useState(false);
+  const accessTokenRef = useRef<string | null>(null);
+  const signInStartingRef = useRef(false);
 
   useEffect(() => {
     let active = true;
     getAuthenticatedAccessToken().then(token => {
       if (!active) return;
-      setAccessToken(token);
+      accessTokenRef.current = token;
       if (!token) { setWishlistIds([]); return; }
       return getWishlist(token).then(items => {
         if (active) setWishlistIds(items.map(item => item.productId));
@@ -57,8 +59,9 @@ export function SearchPage() {
       if (!active) return;
       setWishlistIds([]);
       if (reason instanceof WishlistApiError && reason.status === 401) {
+        accessTokenRef.current = null;
         await clearAuthenticatedSession().catch(() => undefined);
-        if (active) { setAccessToken(null); setWishlistError('unauthenticated'); }
+        if (active) setWishlistError('unauthenticated');
       } else {
         setWishlistError('request');
       }
@@ -66,11 +69,20 @@ export function SearchPage() {
     return () => { active = false; };
   }, []);
 
+  const startSearchSignIn = async () => {
+    if (signInStartingRef.current) return;
+    signInStartingRef.current = true;
+    setSignInStarting(true);
+    setWishlistError(null);
+    try { await startSignIn(`${location.pathname}${location.search}${location.hash}`); }
+    catch { signInStartingRef.current = false; setSignInStarting(false); setWishlistError('request'); }
+  };
+
   const toggleWishlist = async (productId: number) => {
     if (wishlistLoading || wishlistBusyIds.includes(productId)) return;
+    const accessToken = accessTokenRef.current;
     if (!accessToken) {
-      try { await startSignIn(`${location.pathname}${location.search}${location.hash}`); }
-      catch { setWishlistError('request'); }
+      await startSearchSignIn();
       return;
     }
     const adding = !wishlistIds.includes(productId);
@@ -83,9 +95,10 @@ export function SearchPage() {
     } catch (reason) {
       setWishlistIds(ids => adding ? ids.filter(id => id !== productId) : [...ids, productId]);
       if (reason instanceof WishlistApiError && reason.status === 401) {
+        accessTokenRef.current = null;
+        setWishlistError(null);
         await clearAuthenticatedSession().catch(() => undefined);
-        setAccessToken(null);
-        setWishlistError('unauthenticated');
+        await startSearchSignIn();
       } else {
         setWishlistError('request');
       }
@@ -145,7 +158,7 @@ export function SearchPage() {
     <div className="category-pills"><Link className={!selectedCategory ? 'active' : ''} to={query ? `/search?q=${encodeURIComponent(query)}` : '/search'}>{uiText(language, 'Tất cả')}</Link>{categories.map(category => <Link className={selectedCategory?.id === category.id ? 'active' : ''} key={category.id} to={`/category/${category.slug}${query ? `?q=${encodeURIComponent(query)}` : ''}`}>{category.name}</Link>)}</div>
     <div className="catalog-layout"><PriceFilters {...filterProps} /><div className="catalog-results"><div className="results-toolbar"><span>{data?.totalItems || 0} {uiText(language, 'sản phẩm')} · {uiText(language, 'Trang')} {page}/{totalPages}</span><button className="filter-mobile-button" onClick={() => setMobileFiltersOpen(true)}>{uiText(language, '☷ Bộ lọc')}</button><span className="view-toggle">▦ ▦</span></div>
       {wishlistError === 'unauthenticated' ? <p className="suggestion-error" role="alert">{uiText(language, 'Đăng nhập để lưu sản phẩm yêu thích.')}<Link to="/login">{uiText(language, 'Đăng nhập')}</Link></p> : wishlistError === 'request' && <p className="suggestion-error" role="alert">{uiText(language, 'Không thể cập nhật sản phẩm yêu thích. Vui lòng thử lại.')}</p>}
-      {loading ? <p className="detail-state" role="status">{uiText(language, 'Đang tải sản phẩm...')}</p> : error || categoryError ? <div className="empty-state" role="alert"><h3>{uiText(language, 'Không thể tải dữ liệu tìm kiếm')}</h3><p>{uiText(language, 'Vui lòng thử lại.')}</p><button className="button button-primary" onClick={retry}>{uiText(language, 'Thử lại')}</button></div> : data?.items.length ? <div className="product-grid">{data.items.map(product => <ProductCard key={product.id} product={product} liked={wishlistIds.includes(product.id)} busy={wishlistLoading || wishlistBusyIds.includes(product.id)} onToggle={toggleWishlist} />)}</div> : <div className="empty-state"><span>⌕</span><h3>{uiText(language, slug && !selectedCategory ? 'Không tìm thấy danh mục' : 'Không tìm thấy sản phẩm')}</h3><p>{uiText(language, 'Thử thay đổi từ khóa hoặc bộ lọc của bạn.')}</p></div>}
+      {loading ? <p className="detail-state" role="status">{uiText(language, 'Đang tải sản phẩm...')}</p> : error || categoryError ? <div className="empty-state" role="alert"><h3>{uiText(language, 'Không thể tải dữ liệu tìm kiếm')}</h3><p>{uiText(language, 'Vui lòng thử lại.')}</p><button className="button button-primary" onClick={retry}>{uiText(language, 'Thử lại')}</button></div> : data?.items.length ? <div className="product-grid">{data.items.map(product => <ProductCard key={product.id} product={product} liked={wishlistIds.includes(product.id)} busy={wishlistLoading || signInStarting || wishlistBusyIds.includes(product.id)} onToggle={toggleWishlist} />)}</div> : <div className="empty-state"><span>⌕</span><h3>{uiText(language, slug && !selectedCategory ? 'Không tìm thấy danh mục' : 'Không tìm thấy sản phẩm')}</h3><p>{uiText(language, 'Thử thay đổi từ khóa hoặc bộ lọc của bạn.')}</p></div>}
       {data && !loading && !error && totalPages > 1 && <nav className="pagination" aria-label={uiText(language, 'Phân trang sản phẩm')}><button disabled={page === 1} onClick={() => setPage(page - 1)} aria-label={uiText(language, 'Trang trước')}>←</button>{Array.from({ length: totalPages }, (_, index) => index + 1).map(item => <button className={item === page ? 'active' : ''} key={item} onClick={() => setPage(item)} aria-current={item === page ? 'page' : undefined}>{item}</button>)}<button disabled={page === totalPages} onClick={() => setPage(page + 1)} aria-label={uiText(language, 'Trang sau')}>→</button></nav>}
     </div></div>
     {mobileFiltersOpen && <div className="mobile-filter-drawer"><div className="mobile-filter-header"><strong>{uiText(language, 'Bộ lọc')}</strong><button aria-label={uiText(language, 'Đóng bộ lọc')} onClick={() => setMobileFiltersOpen(false)}>×</button></div><PriceFilters {...filterProps} /><button className="button button-primary mobile-filter-apply" onClick={() => setMobileFiltersOpen(false)}>{uiText(language, 'Xem kết quả')}</button></div>}
