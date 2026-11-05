@@ -33,6 +33,18 @@ export async function getWishlist(accessToken: string): Promise<WishlistItemDto[
   return payload.items.map(mapItem).filter((item): item is WishlistItemDto => item !== null);
 }
 
+export async function addWishlistItem(accessToken: string, productId: number): Promise<void> {
+  const response = await fetch(WISHLIST_API, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ productId, operation: 'add' }),
+  });
+  if (!response.ok) throw new WishlistApiError(response.status);
+}
+
 export async function removeWishlistItem(accessToken: string, productId: number): Promise<void> {
   const response = await fetch(WISHLIST_API, {
     method: 'POST',
