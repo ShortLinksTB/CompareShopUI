@@ -68,7 +68,19 @@ export function SearchPage() {
 
   const toggleWishlist = async (productId: number) => {
     if (wishlistLoading || wishlistBusyIds.includes(productId)) return;
-    if (!accessToken) {
+    let currentToken: string | null;
+    try {
+      // Read the session at click time so a token cleared or expired since the
+      // initial wishlist load can never authorize an unauthenticated request.
+      currentToken = await getAuthenticatedAccessToken();
+      setAccessToken(currentToken);
+    } catch {
+      setWishlistError('request');
+      return;
+    }
+    if (!currentToken) {
+      setAccessToken(null);
+      setWishlistIds([]);
       try { await startSignIn(`${location.pathname}${location.search}${location.hash}`); }
       catch { setWishlistError('request'); }
       return;
@@ -78,14 +90,15 @@ export function SearchPage() {
     setWishlistBusyIds(ids => [...ids, productId]);
     setWishlistIds(ids => adding ? [...ids, productId] : ids.filter(id => id !== productId));
     try {
-      if (adding) await addWishlistItem(accessToken, productId);
-      else await removeWishlistItem(accessToken, productId);
+      if (adding) await addWishlistItem(currentToken, productId);
+      else await removeWishlistItem(currentToken, productId);
     } catch (reason) {
       setWishlistIds(ids => adding ? ids.filter(id => id !== productId) : [...ids, productId]);
       if (reason instanceof WishlistApiError && reason.status === 401) {
         await clearAuthenticatedSession().catch(() => undefined);
         setAccessToken(null);
         setWishlistError('unauthenticated');
+        await startSignIn(`${location.pathname}${location.search}${location.hash}`).catch(() => undefined);
       } else {
         setWishlistError('request');
       }
