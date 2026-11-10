@@ -562,7 +562,7 @@ describe('English route copy', () => {
     ['/product/unknown-product', 'Could not load product details'],
     ['/compare', 'No products to compare yet'],
     ['/blog', 'News and advice'],
-    ['/blog/unknown-article', 'Could not load the article'],
+    ['/blog/unknown-article', 'Article not found'],
     ['/shops/unknown-shop', 'Could not load shop details'],
     ['/wishlist', 'Sign in to view saved products'],
     ['/login', 'Sign in for a better experience'],
