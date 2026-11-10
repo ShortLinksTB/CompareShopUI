@@ -1,57 +1,77 @@
-import { Link, useParams } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
 import { useLanguage } from './i18n';
 import { uiText } from './uiCopy';
-import { blogArticles, type BlogArticle } from './blogMockData';
-import { formatBlogDate } from './blogFormatting';
-import { BlogImage } from './components/BlogImage';
+import { Link, useParams } from 'react-router-dom';
+import { getArticle, type PublicArticle } from './blogApi';
+import { SafeImage } from './components/SafeImage';
 
-export function BlogDetailPage({ articles = blogArticles }: { articles?: BlogArticle[] }) {
+const formatPublishedDate = (value: string, language: string) => {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : new Intl.DateTimeFormat(language === 'en' ? 'en-US' : language === 'id' ? 'id-ID' : 'vi-VN', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+  }).format(date);
+};
+
+function getContentBlocks(content: string) {
+  return content.split(/\n\s*\n/).map((text, index) => {
+    const heading = text.trim().match(/^(#{1,3})\s+(.+)$/);
+    return heading
+      ? { id: `article-section-${index}`, heading: heading[2], level: heading[1].length as 1 | 2 | 3 }
+      : { text: text.trim() };
+  }).filter(block => ('heading' in block ? block.heading : block.text));
+}
+
+export function BlogDetailPage() {
   const { language } = useLanguage();
-  const { slug = '' } = useParams();
-  const article = articles.find(item => item.slug === slug);
+  const { id: slug = '' } = useParams();
+  const [article, setArticle] = useState<PublicArticle | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const [loadedSlug, setLoadedSlug] = useState('');
+  const contentBlocks = useMemo(() => article ? getContentBlocks(article.content) : [], [article]);
+  const headings = contentBlocks.filter((block): block is { id: string; heading: string; level: 1 | 2 | 3 } => 'heading' in block);
 
-  if (!article) return <div className="empty-state blog-not-found-state" role="status">
-    <h1>{uiText(language, 'Không tìm thấy bài viết')}</h1>
-    <p>{uiText(language, 'Bài viết này không tồn tại hoặc chưa được xuất bản.')}</p>
-    <Link className="button button-primary" to="/blog">{uiText(language, 'Quay lại Blog')}</Link>
-  </div>;
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setError(false);
+    setArticle(null);
+    setLoadedSlug('');
+    getArticle(slug)
+      .then(result => { if (active) setArticle(result); })
+      .catch(() => { if (active) setError(true); })
+      .finally(() => { if (active) { setLoading(false); setLoadedSlug(slug); } });
+    return () => { active = false; };
+  }, [slug, attempt]);
 
-  const relatedArticles = articles.filter(item => item.slug !== article.slug).slice(0, 3);
-  return <>
-    <div className="blog-breadcrumbs"><Link to="/">{uiText(language, 'Trang chủ')}</Link><span>/</span><Link to="/blog">Blog</Link><span>/</span><Link to="/blog" className="blog-breadcrumb-category">{uiText(language, article.category)}</Link><span>/</span><strong>{article.title}</strong></div>
-    <article className="blog-article">
-      <span className="blog-category-chip">{uiText(language, article.category)}</span>
+  if (loading || loadedSlug !== slug) return <p className="detail-state" role="status">{uiText(language, 'Đang tải bài viết...')}</p>;
+  if (error) return <div className="empty-state" role="alert"><h1>{uiText(language, 'Không thể tải bài viết')}</h1><p>{uiText(language, 'Vui lòng thử lại sau.')}</p><button className="button button-primary" onClick={() => setAttempt(value => value + 1)}>{uiText(language, 'Thử lại')}</button></div>;
+  if (!article) return <div className="empty-state blog-not-found-state" role="status"><h1>{uiText(language, 'Không tìm thấy bài viết')}</h1><p>{uiText(language, 'Bài viết này không tồn tại hoặc chưa được xuất bản.')}</p><Link className="button button-primary" to="/blog">{uiText(language, 'Quay lại Blog')}</Link></div>;
+
+  const publishedDate = formatPublishedDate(article.publishedAtUtc, language);
+  const hasRelatedProducts = Array.isArray(article.relatedProductIds) && article.relatedProductIds.length > 0;
+  return <article className="article-page">
+    <div className="article-main">
+      <div className="breadcrumbs"><Link to="/">{uiText(language, 'Trang chủ')}</Link><span>/</span><Link to="/blog">Blog</Link><span>/</span><strong>{article.title}</strong></div>
+      <span className="article-category">{uiText(language, 'Bài viết')}</span>
       <h1>{article.title}</h1>
-      <div className="blog-byline">
-        <span className="blog-avatar blog-byline-avatar" aria-hidden="true">{article.initials}</span>
-        <div><strong>{article.author}</strong><small><time dateTime={article.publishedAt}>{formatBlogDate(article.publishedAt, language)}</time><span aria-hidden="true"> · </span>{article.readingMinutes} {uiText(language, 'phút đọc')}</small></div>
+      {article.excerpt && <p className="article-lead">{article.excerpt}</p>}
+      <div className="author-row">
+        {article.authorAvatarUrl ? <SafeImage className="author-avatar-image" src={article.authorAvatarUrl} alt={article.authorName || uiText(language, 'Tác giả')} fallbackLabel="" /> : <span className="author-avatar" aria-hidden="true">{(article.authorName || '').trim().charAt(0).toLocaleUpperCase() || '•'}</span>}
+        <span><strong>{article.authorName || uiText(language, 'Tác giả chưa cập nhật')}</strong><small>{[publishedDate, Number.isFinite(article.readingMinutes) && article.readingMinutes > 0 ? `${article.readingMinutes} ${uiText(language, 'phút đọc')}` : uiText(language, 'Thời gian đọc chưa có dữ liệu')].filter(Boolean).join(' · ')}</small></span>
       </div>
-      <BlogImage title={article.title} className="blog-cover-image" />
-      <div className="blog-article-content">
-        {article.content.map((block, index) => {
-          if (block.type === 'heading') return <h2 key={`${block.type}-${index}`}>{block.text}</h2>;
-          if (block.type === 'image') return <figure key={`${block.type}-${index}`}><BlogImage title={block.caption} className="blog-inline-image" /><figcaption>{block.caption}</figcaption></figure>;
-          if (block.type === 'quote') return <blockquote key={`${block.type}-${index}`}>{block.text}</blockquote>;
-          return <p key={`${block.type}-${index}`}>{block.text}</p>;
-        })}
+      {article.coverImageUrl ? <SafeImage className="article-cover" src={article.coverImageUrl} alt={article.title} fallbackLabel={uiText(language, 'Chưa có hình ảnh')} /> : <div className="article-cover safe-image-fallback" role="img" aria-label={uiText(language, 'Chưa có hình ảnh')}><span>{uiText(language, 'Chưa có hình ảnh')}</span></div>}
+      <div className="article-content">
+        {contentBlocks.length ? contentBlocks.map((block, index) => 'heading' in block
+          ? block.level === 1 ? <h2 id={block.id} key={block.id}>{block.heading}</h2> : <h3 id={block.id} key={block.id}>{block.heading}</h3>
+          : <p key={index}>{block.text}</p>)
+          : <p>{uiText(language, 'Nội dung bài viết chưa có sẵn.')}</p>}
       </div>
-      <div className="blog-tag-row" aria-label={uiText(language, 'Thẻ bài viết')}>
-        {article.tags.map(tag => <span className="blog-tag" key={tag}>#{tag}</span>)}
-      </div>
-      <section className="blog-newsletter" aria-labelledby="blog-newsletter-title">
-        <div><h2 id="blog-newsletter-title">{uiText(language, 'Nhận bài viết mới qua email')}</h2><p>{uiText(language, 'Mẹo mua sắm và đánh giá sản phẩm, gửi hàng tuần.')}</p></div>
-        <button className="button button-primary" type="button">{uiText(language, 'Đăng ký')}</button>
-      </section>
-    </article>
-
-    <section className="blog-related" aria-labelledby="blog-related-title">
-      <h2 className="blog-section-title" id="blog-related-title">{uiText(language, 'Bài viết liên quan')}</h2>
-      <div className="blog-related-grid">
-        {relatedArticles.map(related => <Link className="blog-post-card" to={`/blog/${encodeURIComponent(related.slug)}`} key={related.slug}>
-          <BlogImage title={related.title} className="blog-related-image" />
-          <div className="blog-post-body"><span className="blog-category-chip">{uiText(language, related.category)}</span><h3>{related.title}</h3><div className="blog-post-meta"><span>{related.author}</span><span aria-hidden="true">·</span><time dateTime={related.publishedAt}>{formatBlogDate(related.publishedAt, language)}</time></div></div>
-        </Link>)}
-      </div>
-    </section>
-  </>;
+    </div>
+    <aside className="article-sidebar">
+      {headings.length > 0 && <div className="info-card"><strong>{uiText(language, 'Mục lục bài viết')}</strong><ol>{headings.map(heading => <li key={heading.id}><a href={`#${heading.id}`}>{heading.heading}</a></li>)}</ol></div>}
+      {hasRelatedProducts && <div className="info-card"><strong>{uiText(language, 'Sản phẩm được nhắc đến')}</strong><p>{article.relatedProductIds.length} {uiText(language, 'sản phẩm liên quan')}</p></div>}
+    </aside>
+  </article>;
 }

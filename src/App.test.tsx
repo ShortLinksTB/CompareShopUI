@@ -562,7 +562,7 @@ describe('English route copy', () => {
     ['/product/unknown-product', 'Could not load product details'],
     ['/compare', 'No products to compare yet'],
     ['/blog', 'News and advice'],
-    ['/blog/unknown-article', 'Article not found'],
+    ['/blog/unknown-article', 'Could not load the article'],
     ['/shops/unknown-shop', 'Could not load shop details'],
     ['/wishlist', 'Sign in to view saved products'],
     ['/login', 'Sign in for a better experience'],
@@ -738,60 +738,26 @@ it('renders the catalog image in search results', async () => {
   expect((await screen.findByRole('img', { name: 'Sample Phone' }) as HTMLImageElement).src).toBe(imageUrl);
 });
 
-describe('Blog static mock routes', () => {
-  it.each(['light', 'dark'] as const)('keeps Blog Detail fixed light regardless of %s OS preference', theme => {
-    setColorScheme(theme);
-    renderAppAt('/blog/10-meo-so-sanh-gia');
-
-    expect(screen.getByRole('heading', { name: /10 mẹo so sánh giá giúp bạn tiết kiệm/ })).toBeTruthy();
-    expect(document.querySelector('.blog-shell')).toBeTruthy();
-    expect(shellColorScheme('blog-shell')).toBe('light');
-    expect(stylesheet).toContain('.blog-shell');
-    expect(stylesheet).toContain('.blog-related-grid');
-    expect(stylesheet).toMatch(/@media\s*\(prefers-color-scheme:\s*dark\)[\s\S]*?\.blog-shell\s*\{background:#15171c;color:#eef0f3\}/);
-    expect(contrastRatio('#d1d5db', '#15171c')).toBeGreaterThanOrEqual(4.5);
-  });
-
-  it('renders the article content with readable contrast at a mobile viewport', () => {
-    setColorScheme('dark');
-    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 });
-    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 844 });
-    renderAppAt('/blog/10-meo-so-sanh-gia');
-
-    const paragraph = screen.getByText(/Mua sắm online ngày càng phổ biến/);
-    expect([window.innerWidth, window.innerHeight]).toEqual([390, 844]);
-    expect(paragraph.closest('.blog-article')).toBeTruthy();
-    expect(contrastRatio('#4b5563', '#ffffff')).toBeGreaterThanOrEqual(4.5);
-  });
-
-  it('navigates a listing card to its fixture slug and renders the full article layout', () => {
+describe('Blog listing route', () => {
+  it('renders the listing with slug links and no Blog API request', () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
     renderAppAt('/blog');
 
-    fireEvent.click(screen.getByRole('link', { name: /Nổi bật.*10 mẹo so sánh giá/ }));
-
-    expect(window.location.pathname).toBe('/blog/10-meo-so-sanh-gia');
-    expect(screen.getByText('Minh Anh')).toBeTruthy();
-    expect(screen.getByText('6 phút đọc')).toBeTruthy();
-    expect(screen.getByText('1. Theo dõi lịch sử giá trước khi mua')).toBeTruthy();
-    expect(screen.getByText('Biểu đồ lịch sử giá giúp nhận biết thời điểm mua tốt nhất.')).toBeTruthy();
-    expect(screen.getByText(/Tiết kiệm không nằm ở việc mua rẻ nhất/)).toBeTruthy();
-    expect(screen.getAllByText(/so-sánh-giá|mua-sắm-thông-minh|tiết-kiệm/).length).toBe(3);
-    expect(screen.getByRole('heading', { name: 'Nhận bài viết mới qua email' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Đăng ký' })).toBeTruthy();
-    expect(document.querySelectorAll('.blog-related-grid .blog-post-card')).toHaveLength(3);
+    expect(screen.getByRole('heading', { name: 'Tin tức & kinh nghiệm' })).toBeTruthy();
+    expect(document.querySelector('.desktop-nav a[aria-current="page"]')?.textContent).toContain('Blog');
+    expect(screen.getByRole('link', { name: /Nổi bật.*10 mẹo so sánh giá/ }).getAttribute('href')).toBe('/blog/10-meo-so-sanh-gia');
+    expect(document.querySelectorAll('.blog-post-grid .blog-post-card')).toHaveLength(12);
+    expect((document.querySelector('.blog-post-grid .blog-post-card') as HTMLAnchorElement).getAttribute('href')).toMatch(/^\/blog\//);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('shows a not-found state for unknown static slugs and links back to the listing', () => {
-    const fetchMock = vi.fn();
-    vi.stubGlobal('fetch', fetchMock);
-    renderAppAt('/blog/unknown-slug');
-
-    expect(screen.getByRole('heading', { name: 'Không tìm thấy bài viết' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Quay lại Blog' }).getAttribute('href')).toBe('/blog');
-    expect(fetchMock).not.toHaveBeenCalled();
+  it('keeps the listing readable at mobile widths and in both color schemes', () => {
+    expect(stylesheet).toMatch(/\.blog-post-grid\s*\{[^}]*grid-template-columns:\s*repeat\(4,minmax\(0,1fr\)\)/);
+    expect(stylesheet).toMatch(/@media\(max-width:760px\)[\s\S]*?\.blog-post-grid\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+    expect(stylesheet).toMatch(/@media\(max-width:520px\)[\s\S]*?\.blog-post-grid\{grid-template-columns:1fr\}/);
+    expect(stylesheet).toMatch(/@media\(prefers-color-scheme:dark\)[\s\S]*?\.blog-shell\s*\{background:#15171c;color:#eef0f3\}/);
+    expect(contrastRatio('#d1d5db', '#15171c')).toBeGreaterThanOrEqual(4.5);
   });
 });
 

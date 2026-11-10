@@ -16,7 +16,7 @@ function renderBlog(articles = blogArticles) {
 
 function LanguageControl() {
   const { setLanguage } = useLanguage();
-  return <><button onClick={() => setLanguage('en')}>Select English</button><button onClick={() => setLanguage('vi')}>Select Vietnamese</button></>;
+  return <><button onClick={() => setLanguage('en')}>Select English</button><button onClick={() => setLanguage('id')}>Select Indonesian</button><button onClick={() => setLanguage('vi')}>Select Vietnamese</button></>;
 }
 
 it('renders the featured post and 12 latest posts from local fixtures without fetching', () => {
@@ -25,16 +25,21 @@ it('renders the featured post and 12 latest posts from local fixtures without fe
   renderBlog();
 
   expect(screen.getByRole('heading', { name: 'Tin tức & kinh nghiệm' })).toBeTruthy();
-  expect(screen.getByRole('link', { name: /Nổi bật.*10 mẹo so sánh giá/ }).getAttribute('href')).toBe('/blog/10-meo-so-sanh-gia');
+  const featuredHref = screen.getByRole('link', { name: /Nổi bật.*10 mẹo so sánh giá/ }).getAttribute('href');
+  expect(featuredHref).toBe('/blog/10-meo-so-sanh-gia');
   expect(document.querySelectorAll('.blog-post-grid .blog-post-card')).toHaveLength(12);
+  expect(Array.from(document.querySelectorAll('.blog-post-grid .blog-post-card')).some(card => (card as HTMLAnchorElement).getAttribute('href') === featuredHref)).toBe(false);
   expect(screen.getByRole('navigation', { name: 'Phân trang' })).toBeTruthy();
   expect(fetchMock).not.toHaveBeenCalled();
 });
 
 it('filters categories and resets pagination to the first page', () => {
   renderBlog();
+  fireEvent.click(screen.getByRole('button', { name: '3' }));
+  expect(document.querySelectorAll('.blog-post-grid .blog-post-card')).toHaveLength(1);
+  fireEvent.click(screen.getByRole('button', { name: '2' }));
   fireEvent.click(screen.getByRole('button', { name: 'Trang sau' }));
-  expect(screen.getByRole('button', { name: '2' }).getAttribute('aria-current')).toBe('page');
+  expect(screen.getByRole('button', { name: '3' }).getAttribute('aria-current')).toBe('page');
 
   fireEvent.click(screen.getByRole('button', { name: 'Đánh giá sản phẩm' }));
 
@@ -62,6 +67,8 @@ it('updates the document title for the selected language and restores it after l
 
   fireEvent.click(screen.getByRole('button', { name: 'Select English' }));
   expect(document.title).toBe('GiaTot - Smart Price Comparison');
+  fireEvent.click(screen.getByRole('button', { name: 'Select Indonesian' }));
+  expect(document.title).toBe('GiaTot - Perbandingan harga cerdas');
   fireEvent.click(screen.getByRole('button', { name: 'Select Vietnamese' }));
   fireEvent.click(screen.getByRole('link', { name: 'Leave blog' }));
   expect(screen.getByText('Home')).toBeTruthy();
