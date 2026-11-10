@@ -18,7 +18,7 @@ export interface PublicArticle extends PublicArticleSummary {
   relatedProductIds: number[];
 }
 
-interface ArticlePage {
+export interface ArticlePage {
   items: PublicArticleSummary[];
   page: number;
   pageSize: number;
@@ -26,13 +26,13 @@ interface ArticlePage {
   totalPages: number;
 }
 
-export async function getArticles(page = 1, pageSize = 10): Promise<PublicArticleSummary[]> {
-  const response = await fetch(`${API_BASE_URL}/articles?page=${page}&pageSize=${pageSize}`);
+export async function getArticles(page = 1, pageSize = 12, signal?: AbortSignal): Promise<ArticlePage> {
+  const response = await fetch(`${API_BASE_URL}/articles?page=${page}&pageSize=${pageSize}`, { signal });
   if (!response.ok) throw new Error(`Articles request failed (${response.status})`);
 
   const result = await response.json() as ArticlePage;
-  if (!result || !Array.isArray(result.items)) throw new Error('Invalid articles response');
-  return result.items;
+  if (!result || !Array.isArray(result.items) || typeof result.totalPages !== 'number') throw new Error('Invalid articles response');
+  return result;
 }
 
 export async function getArticle(slug: string): Promise<PublicArticle | null> {

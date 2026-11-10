@@ -739,17 +739,18 @@ it('renders the catalog image in search results', async () => {
 });
 
 describe('Blog listing route', () => {
-  it('renders the listing with slug links and no Blog API request', () => {
-    const fetchMock = vi.fn();
+  it('renders the listing with slug links from GET /articles', async () => {
+    const items = Array.from({ length: 12 }, (_, i) => ({ slug: `bai-${i + 1}`, title: `Bài viết ${i + 1}`, excerpt: 'Tóm tắt', coverImageUrl: null, authorName: 'Minh Anh', readingMinutes: 5, publishedAtUtc: '2026-11-12T00:00:00Z' }));
+    const fetchMock = vi.fn().mockResolvedValue(response({ items, page: 1, pageSize: 12, totalItems: 12, totalPages: 1 }));
     vi.stubGlobal('fetch', fetchMock);
     renderAppAt('/blog');
 
     expect(screen.getByRole('heading', { name: 'Tin tức & kinh nghiệm' })).toBeTruthy();
     expect(document.querySelector('.desktop-nav a[aria-current="page"]')?.textContent).toContain('Blog');
-    expect(screen.getByRole('link', { name: /Nổi bật.*10 mẹo so sánh giá/ }).getAttribute('href')).toBe('/blog/10-meo-so-sanh-gia');
-    expect(document.querySelectorAll('.blog-post-grid .blog-post-card')).toHaveLength(12);
-    expect((document.querySelector('.blog-post-grid .blog-post-card') as HTMLAnchorElement).getAttribute('href')).toMatch(/^\/blog\//);
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect((await screen.findByRole('link', { name: /Nổi bật.*Bài viết 1/ })).getAttribute('href')).toBe('/blog/bai-1');
+    expect(document.querySelectorAll('.blog-post-grid .blog-post-card')).toHaveLength(11);
+    expect((document.querySelector('.blog-post-grid .blog-post-card') as HTMLAnchorElement).getAttribute('href')).toBe('/blog/bai-2');
+    expect(String(fetchMock.mock.calls[0][0])).toContain('/articles?page=1&pageSize=12');
   });
 
   it('keeps the listing readable at mobile widths and light in OS dark mode', () => {

@@ -1,16 +1,19 @@
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { Link, MemoryRouter, Route, Routes } from 'react-router-dom';
 import { BlogPage } from './BlogPage';
 import { LanguageProvider, useLanguage } from './i18n';
-import { blogArticles } from './blogMockData';
 
 afterEach(() => { cleanup(); localStorage.clear(); vi.unstubAllGlobals(); });
 
-function renderBlog(articles = blogArticles) {
+const article = (n: number) => ({ slug: `bai-${n}`, title: `Bài viết ${n}`, excerpt: `Tóm tắt ${n}`, coverImageUrl: n === 1 ? 'https://cdn.test/cover.png' : null, authorName: 'Minh Anh', readingMinutes: 6, publishedAtUtc: '2026-11-12T00:00:00Z' });
+const pageOf = (page: number, count: number, totalPages: number) => ({ items: Array.from({ length: count }, (_, i) => article((page - 1) * 12 + i + 1)), page, pageSize: 12, totalItems: totalPages * 12, totalPages });
+const respond = (body: unknown, ok = true) => Promise.resolve({ ok, status: ok ? 200 : 500, json: () => Promise.resolve(body) });
+
+function renderBlog() {
   return render(<LanguageProvider><MemoryRouter initialEntries={['/blog']}>
-    <Routes><Route path="/blog" element={<BlogPage articles={articles} />} /></Routes>
+    <Routes><Route path="/blog" element={<BlogPage />} /></Routes>
   </MemoryRouter></LanguageProvider>);
 }
 
@@ -19,46 +22,76 @@ function LanguageControl() {
   return <><button onClick={() => setLanguage('en')}>Select English</button><button onClick={() => setLanguage('id')}>Select Indonesian</button><button onClick={() => setLanguage('vi')}>Select Vietnamese</button></>;
 }
 
-it('renders the featured post and 12 latest posts from local fixtures without fetching', () => {
-  const fetchMock = vi.fn();
+it('shows loading, then the featured post and latest posts from GET /articles', async () => {
+  const fetchMock = vi.fn(() => respond(pageOf(1, 12, 2)));
   vi.stubGlobal('fetch', fetchMock);
   renderBlog();
 
-  expect(screen.getByRole('heading', { name: 'Tin tức & kinh nghiệm' })).toBeTruthy();
-  const featuredHref = screen.getByRole('link', { name: /Nổi bật.*10 mẹo so sánh giá/ }).getAttribute('href');
-  expect(featuredHref).toBe('/blog/10-meo-so-sanh-gia');
-  expect(document.querySelectorAll('.blog-post-grid .blog-post-card')).toHaveLength(12);
-  expect(Array.from(document.querySelectorAll('.blog-post-grid .blog-post-card')).some(card => (card as HTMLAnchorElement).getAttribute('href') === featuredHref)).toBe(false);
-  expect(screen.getByRole('navigation', { name: 'Phân trang' })).toBeTruthy();
-  expect(fetchMock).not.toHaveBeenCalled();
+  expect(screen.getByRole('status').textContent).toContain('Đang tải bài viết');
+  expect(document.querySelector('.blog-featured-card')).toBeNull();
+  await screen.findByRole('heading', { name: 'Bài viết mới nhất' });
+
+  expect(String((fetchMock.mock.calls as unknown[][])[0][0])).toContain('/articles?page=1&pageSize=12');
+  expect(screen.queryByRole('status')).toBeNull();
+  const featured = document.querySelector('.blog-featured-card') as HTMLAnchorElement;
+  expect(featured.getAttribute('href')).toBe('/blog/bai-1');
+  expect(featured.querySelector('img')?.getAttribute('src')).toBe('https://cdn.test/cover.png');
+  expect(featured.textContent).toContain('6 phút đọc');
+  expect(document.querySelectorAll('.blog-post-grid .blog-post-card')).toHaveLength(11);
+  expect(document.querySelector('.blog-post-grid .blog-post-card')?.getAttribute('href')).toBe('/blog/bai-2');
+  expect(document.querySelector('.blog-category-chip')).toBeNull();
 });
 
-it('filters categories and resets pagination to the first page', () => {
+it('requests the next server page and drops the featured card after page 1', async () => {
+  const fetchMock = vi.fn((url: string) => respond(url.includes('page=2') ? pageOf(2, 3, 2) : pageOf(1, 12, 2)));
+  vi.stubGlobal('fetch', fetchMock);
   renderBlog();
-  fireEvent.click(screen.getByRole('button', { name: '3' }));
-  expect(document.querySelectorAll('.blog-post-grid .blog-post-card')).toHaveLength(1);
-  fireEvent.click(screen.getByRole('button', { name: '2' }));
+  await screen.findByRole('navigation', { name: 'Phân trang' });
+
   fireEvent.click(screen.getByRole('button', { name: 'Trang sau' }));
-  expect(screen.getByRole('button', { name: '3' }).getAttribute('aria-current')).toBe('page');
+  await waitFor(() => expect(document.querySelectorAll('.blog-post-grid .blog-post-card')).toHaveLength(3));
 
-  fireEvent.click(screen.getByRole('button', { name: 'Đánh giá sản phẩm' }));
-
-  expect(screen.getByRole('button', { name: 'Đánh giá sản phẩm' }).getAttribute('aria-pressed')).toBe('true');
-  expect(document.querySelector('.blog-pagination')).toBeNull();
-  const cards = Array.from(document.querySelectorAll('.blog-post-grid .blog-post-card'));
-  expect(cards.length).toBeGreaterThan(0);
-  for (const card of cards) expect(within(card as HTMLElement).getByText('Đánh giá sản phẩm')).toBeTruthy();
+  expect(String((fetchMock.mock.calls as unknown[][])[1][0])).toContain('page=2&pageSize=12');
+  expect(document.querySelector('.blog-featured-card')).toBeNull();
+  expect(screen.getByRole('button', { name: '2' }).getAttribute('aria-current')).toBe('page');
+  expect(screen.getByRole('button', { name: 'Trang sau' }).hasAttribute('disabled')).toBe(true);
 });
 
-it('shows the existing empty state when the mock list is empty', () => {
-  renderBlog([]);
+it('hides pagination when there is a single page', async () => {
+  vi.stubGlobal('fetch', vi.fn(() => respond(pageOf(1, 4, 1))));
+  renderBlog();
+  await screen.findByRole('heading', { name: 'Bài viết mới nhất' });
+  expect(document.querySelector('.blog-pagination')).toBeNull();
+});
 
-  expect(screen.getByRole('heading', { name: 'Chưa có bài viết' })).toBeTruthy();
+it('shows the empty state when the API returns no published articles', async () => {
+  vi.stubGlobal('fetch', vi.fn(() => respond({ items: [], page: 1, pageSize: 12, totalItems: 0, totalPages: 0 })));
+  renderBlog();
+
+  expect(await screen.findByRole('heading', { name: 'Chưa có bài viết' })).toBeTruthy();
   expect(document.querySelector('.blog-featured-card')).toBeNull();
   expect(document.querySelector('.blog-post-grid')).toBeNull();
 });
 
+it('shows an error state without any mock fallback and retries on demand', async () => {
+  const fetchMock = vi.fn()
+    .mockImplementationOnce(() => respond({}, false))
+    .mockImplementation(() => respond(pageOf(1, 2, 1)));
+  vi.stubGlobal('fetch', fetchMock);
+  renderBlog();
+
+  expect((await screen.findByRole('alert')).textContent).toContain('Không thể tải bài viết');
+  expect(document.querySelector('.blog-featured-card')).toBeNull();
+  expect(document.querySelector('.blog-post-grid')).toBeNull();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Thử lại' }));
+  await screen.findByRole('heading', { name: 'Bài viết mới nhất' });
+  expect(screen.queryByRole('alert')).toBeNull();
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+});
+
 it('updates the document title for the selected language and restores it after leaving Blog', () => {
+  vi.stubGlobal('fetch', vi.fn(() => respond(pageOf(1, 1, 1))));
   render(<LanguageProvider><MemoryRouter initialEntries={['/blog']}>
     <LanguageControl />
     <Link to="/home">Leave blog</Link>
