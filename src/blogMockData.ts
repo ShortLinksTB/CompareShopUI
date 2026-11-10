@@ -1,7 +1,12 @@
-export const BLOG_CATEGORIES = ['Kinh nghiệm mua sắm', 'Đánh giá sản phẩm', 'Xu hướng thị trường'] as const;
-export type BlogCategory = typeof BLOG_CATEGORIES[number];
+export type BlogCategory = 'Kinh nghiệm mua sắm' | 'Đánh giá sản phẩm' | 'Xu hướng thị trường';
 
-export interface BlogPost {
+export type BlogContentBlock =
+  | { type: 'paragraph'; text: string }
+  | { type: 'heading'; text: string }
+  | { type: 'image'; caption: string }
+  | { type: 'quote'; text: string };
+
+export interface BlogArticle {
   slug: string;
   title: string;
   excerpt: string;
@@ -10,70 +15,71 @@ export interface BlogPost {
   initials: string;
   publishedAt: string;
   readingMinutes: number;
+  featured?: boolean;
   tags: string[];
-  content: Array<{ type: 'paragraph' | 'heading' | 'image' | 'quote'; text: string }>;
+  content: BlogContentBlock[];
 }
 
-const titles = [
-  ['So sánh tai nghe không dây tầm giá dưới 2 triệu: đâu là lựa chọn đáng tiền nhất?', 'Đánh giá chi tiết 5 mẫu tai nghe phổ biến về chất âm, pin và độ bền.', 'Đánh giá sản phẩm'],
-  ['Giá laptop văn phòng biến động ra sao trong quý cuối năm 2026?', 'Phân tích xu hướng giá theo dữ liệu thu thập từ hơn 20 cửa hàng.', 'Xu hướng thị trường'],
-  ['5 sai lầm thường gặp khiến bạn mua hớ khi săn sale cuối năm', 'Nhận biết khuyến mãi ảo và chọn đúng thời điểm mua sắm.', 'Kinh nghiệm mua sắm'],
-  ['Smartphone tầm trung 2026: đâu là chiếc máy đáng mua nhất?', 'So sánh camera, hiệu năng và pin trong tầm giá phổ biến.', 'Đánh giá sản phẩm'],
-  ['10 mẹo so sánh giá giúp bạn tiết kiệm đến 30% khi mua sắm online', 'Tổng hợp những nguyên tắc so sánh giá đơn giản nhưng hiệu quả, từ lịch sử giá đến chọn đúng thời điểm săn khuyến mãi.', 'Kinh nghiệm mua sắm'],
-  ['Thị trường điện máy trước mùa mua sắm cuối năm', 'Những thay đổi đáng chú ý về giá và nhu cầu tiêu dùng.', 'Xu hướng thị trường'],
-  ['Chọn máy lọc không khí phù hợp với diện tích căn hộ', 'Các thông số cần xem trước khi quyết định mua thiết bị.', 'Đánh giá sản phẩm'],
-  ['Mẹo tìm mã giảm giá và cộng dồn ưu đãi hiệu quả', 'Tối ưu ưu đãi từ sàn, cửa hàng và chương trình thành viên.', 'Kinh nghiệm mua sắm'],
-  ['Xu hướng thiết bị gia dụng thông minh năm 2026', 'Các sản phẩm kết nối đang thay đổi thói quen trong gia đình.', 'Xu hướng thị trường'],
-  ['Đánh giá pin dự phòng nhỏ gọn cho chuyến đi dài ngày', 'So sánh tốc độ sạc, dung lượng thực tế và độ tiện dụng.', 'Đánh giá sản phẩm'],
-  ['Lập ngân sách mua sắm để tránh chi tiêu quá tay', 'Một kế hoạch đơn giản giúp cân bằng nhu cầu và chi phí.', 'Kinh nghiệm mua sắm'],
-  ['Thời điểm nào trong năm mua điện thoại có giá tốt?', 'Nhìn lại chu kỳ ra mắt và các đợt giảm giá lớn.', 'Xu hướng thị trường'],
-  ['So sánh robot hút bụi phổ thông trong tầm giá 5 triệu', 'Những khác biệt về điều hướng, lực hút và bảo trì.', 'Đánh giá sản phẩm'],
-  ['Kiểm tra bảo hành và đổi trả trước khi đặt hàng online', 'Danh sách điều cần xác nhận để mua sắm an tâm hơn.', 'Kinh nghiệm mua sắm'],
-  ['Laptop AI và tác động đến lựa chọn máy tính cá nhân', 'Những thay đổi sản phẩm người mua có thể thấy trong năm nay.', 'Xu hướng thị trường'],
-  ['Chọn màn hình làm việc tại nhà theo nhu cầu thực tế', 'Kích thước, độ phân giải và kết nối cần ưu tiên.', 'Đánh giá sản phẩm'],
-  ['So sánh tổng chi phí thay vì chỉ nhìn giá niêm yết', 'Phí vận chuyển, quà tặng và bảo hành cũng ảnh hưởng giá trị.', 'Kinh nghiệm mua sắm'],
-  ['Thị trường smartphone gập đang tiến đến đâu?', 'Cập nhật thiết kế, giá bán và mức độ phổ biến của dòng máy.', 'Xu hướng thị trường'],
-  ['Đánh giá bàn phím cơ không dây cho góc làm việc', 'Cảm giác gõ, kết nối và thời lượng pin qua trải nghiệm.', 'Đánh giá sản phẩm'],
-  ['Bí quyết chọn cửa hàng online uy tín', 'Tìm hiểu đánh giá, chính sách và thông tin người bán.', 'Kinh nghiệm mua sắm'],
-  ['Các hãng điều chỉnh giá sản phẩm công nghệ dịp cuối năm', 'Tổng quan các chương trình ra mắt và kích cầu tiêu dùng.', 'Xu hướng thị trường'],
-  ['Máy tính bảng học tập: những điểm cần so sánh', 'Màn hình, bút cảm ứng và hệ sinh thái ứng dụng.', 'Đánh giá sản phẩm'],
-  ['Tạo danh sách theo dõi để không bỏ lỡ giá tốt', 'Theo dõi món hàng cần mua giúp bạn tránh quyết định vội vàng.', 'Kinh nghiệm mua sắm'],
-  ['Thiết bị đeo thông minh ngày càng chú trọng sức khỏe', 'Các tính năng theo dõi và lựa chọn theo lối sống.', 'Xu hướng thị trường'],
-] as const;
-
-export const BLOG_POSTS: BlogPost[] = [
-  ...titles.map(([title, excerpt, category], index): BlogPost => {
-    const slug = `blog-${index + 1}`;
-    const author = ['Minh Anh', 'Thanh Hà', 'Đức Khang', 'Lan Ngọc'][index % 4];
-    return {
-      slug, title, excerpt, category: category as BlogCategory, author,
-      initials: author.split(' ').map(part => part[0]).join(''),
-      publishedAt: new Date(Date.UTC(2026, 10, 12 - index)).toISOString(),
-      readingMinutes: 4 + index % 5,
-      tags: ['so-sánh-giá', 'mua-sắm-thông-minh', 'tiết-kiệm'],
-      content: [
-        { type: 'paragraph', text: excerpt },
-        { type: 'heading', text: 'Tìm hiểu trước khi lựa chọn' },
-        { type: 'paragraph', text: 'So sánh các lựa chọn dựa trên nhu cầu thực tế, mức giá ở nhiều cửa hàng và chính sách hậu mãi. Chuẩn bị thông tin trước sẽ giúp bạn chọn được sản phẩm phù hợp.' },
-        { type: 'image', text: 'Minh họa cách so sánh lựa chọn và lịch sử giá.' },
-        { type: 'quote', text: 'Mua sắm thông minh bắt đầu từ việc hiểu rõ điều mình cần.' },
-        { type: 'heading', text: 'Chọn đúng thời điểm mua' },
-        { type: 'paragraph', text: 'Theo dõi biến động giá và cân nhắc các ưu đãi đi kèm. Đừng quên đọc kỹ điều kiện giao hàng, đổi trả và bảo hành trước khi đặt mua.' },
-      ],
-    };
-  }),
+const articleSeeds: Array<Pick<BlogArticle, 'title' | 'excerpt' | 'category' | 'author' | 'initials' | 'readingMinutes' | 'tags'>> = [
+  { title: '10 mẹo so sánh giá giúp bạn tiết kiệm đến 30% khi mua sắm online', excerpt: 'Tổng hợp những nguyên tắc so sánh giá đơn giản nhưng hiệu quả, từ việc theo dõi lịch sử giá đến chọn đúng thời điểm săn khuyến mãi.', category: 'Kinh nghiệm mua sắm', author: 'Minh Anh', initials: 'AN', readingMinutes: 6, tags: ['so-sánh-giá', 'mua-sắm-thông-minh', 'tiết-kiệm'] },
+  { title: 'So sánh tai nghe không dây tầm giá dưới 2 triệu', excerpt: 'Đánh giá pin, chất âm và khả năng chống ồn để tìm mẫu tai nghe đáng tiền trong tầm giá phổ thông.', category: 'Đánh giá sản phẩm', author: 'Thanh Hà', initials: 'TH', readingMinutes: 5, tags: ['tai-nghe', 'đánh-giá'] },
+  { title: '5 sai lầm thường gặp khiến bạn mua hớ khi săn sale cuối năm', excerpt: 'Nhận biết các chiêu giảm giá ảo và kiểm tra giá trước khi quyết định mua.', category: 'Kinh nghiệm mua sắm', author: 'Lan Ngọc', initials: 'LN', readingMinutes: 4, tags: ['săn-sale', 'kinh-nghiệm'] },
+  { title: 'Smartphone tầm trung 2026: đâu là chiếc máy đáng mua nhất?', excerpt: 'So sánh camera, hiệu năng và thời lượng pin của những mẫu smartphone nổi bật.', category: 'Đánh giá sản phẩm', author: 'Việt Hùng', initials: 'VH', readingMinutes: 7, tags: ['smartphone', 'đánh-giá'] },
+  { title: 'Cách đọc lịch sử giá để biết khi nào nên xuống tiền', excerpt: 'Dùng biểu đồ lịch sử giá để phân biệt mức giảm thật và chọn thời điểm mua hợp lý.', category: 'Kinh nghiệm mua sắm', author: 'Phương Thảo', initials: 'PT', readingMinutes: 5, tags: ['lịch-sử-giá', 'tiết-kiệm'] },
+  { title: 'Thương mại điện tử Việt Nam: những xu hướng đáng chú ý', excerpt: 'Nhìn lại những thay đổi trong thói quen mua sắm trực tuyến và các nhóm hàng tăng trưởng.', category: 'Xu hướng thị trường', author: 'Gia Tốt', initials: 'GT', readingMinutes: 6, tags: ['thương-mại-điện-tử', 'xu-hướng'] },
+  { title: 'Nồi chiên không dầu nào bền và dễ vệ sinh?', excerpt: 'Đặt các mẫu nồi phổ biến cạnh nhau để so sánh dung tích, công suất và cách vệ sinh.', category: 'Đánh giá sản phẩm', author: 'Hoài My', initials: 'HM', readingMinutes: 8, tags: ['đồ-gia-dụng', 'đánh-giá'] },
+  { title: 'Mua hàng trả góp 0%: cần đọc kỹ điều khoản nào?', excerpt: 'Những khoản phí và điều kiện thường bị bỏ qua trong hợp đồng trả góp.', category: 'Kinh nghiệm mua sắm', author: 'Quang Tuấn', initials: 'QT', readingMinutes: 4, tags: ['trả-góp', 'kinh-nghiệm'] },
+  { title: 'TV 55 inch dịp cuối năm: nên mua ngay hay chờ Tết?', excerpt: 'So sánh chu kỳ giảm giá để chọn thời điểm mua TV phù hợp với nhu cầu.', category: 'Xu hướng thị trường', author: 'Bảo Trâm', initials: 'BT', readingMinutes: 5, tags: ['tivi', 'xu-hướng'] },
+  { title: 'Máy lọc không khí có thực sự cần thiết?', excerpt: 'So sánh các phân khúc và những tính năng hữu ích theo diện tích phòng.', category: 'Đánh giá sản phẩm', author: 'Ngọc Hân', initials: 'NH', readingMinutes: 6, tags: ['máy-lọc-không-khí', 'đánh-giá'] },
+  { title: 'Cách kiểm tra shop uy tín trước khi đặt hàng online', excerpt: 'Năm dấu hiệu nhận biết cửa hàng đáng tin và cách đọc đánh giá khách hàng.', category: 'Kinh nghiệm mua sắm', author: 'Trọng Lâm', initials: 'TL', readingMinutes: 4, tags: ['cửa-hàng', 'kinh-nghiệm'] },
+  { title: 'Laptop học tập và làm việc: chọn cấu hình nào vừa đủ?', excerpt: 'Các tiêu chí cần cân nhắc để chọn laptop phù hợp mà không chi quá ngân sách.', category: 'Đánh giá sản phẩm', author: 'Mai Linh', initials: 'ML', readingMinutes: 7, tags: ['laptop', 'tư-vấn'] },
+  { title: 'Mua sắm đa kênh đang thay đổi trải nghiệm khách hàng ra sao?', excerpt: 'Người mua kết hợp cửa hàng trực tuyến và trực tiếp để tìm giá tốt như thế nào.', category: 'Xu hướng thị trường', author: 'Đức Anh', initials: 'DA', readingMinutes: 5, tags: ['bán-lẻ', 'xu-hướng'] },
+  { title: 'Máy tính bảng cho sinh viên: chọn màn hình và dung lượng ra sao?', excerpt: 'Gợi ý cấu hình máy tính bảng phục vụ ghi chú, học trực tuyến và giải trí.', category: 'Đánh giá sản phẩm', author: 'Khánh Vy', initials: 'KV', readingMinutes: 6, tags: ['máy-tính-bảng', 'tư-vấn'] },
+  { title: 'Mua hàng chính hãng trên sàn: kiểm tra những thông tin nào?', excerpt: 'Cách kiểm tra nhãn hàng, nhà bán và chính sách đổi trả trước khi thanh toán.', category: 'Kinh nghiệm mua sắm', author: 'Hải Nam', initials: 'HN', readingMinutes: 4, tags: ['chính-hãng', 'kinh-nghiệm'] },
+  { title: 'Người Việt ưu tiên tiêu chí nào khi chọn điện thoại mới?', excerpt: 'Camera, pin và giá bán tiếp tục định hình lựa chọn smartphone của người dùng.', category: 'Xu hướng thị trường', author: 'Thu Hà', initials: 'TH', readingMinutes: 5, tags: ['smartphone', 'thị-trường'] },
+  { title: 'Máy hút bụi không dây: so sánh lực hút và thời lượng pin', excerpt: 'Những khác biệt quan trọng giữa các dòng máy hút bụi phổ biến hiện nay.', category: 'Đánh giá sản phẩm', author: 'Bảo Ngọc', initials: 'BN', readingMinutes: 7, tags: ['đồ-gia-dụng', 'đánh-giá'] },
+  { title: 'Lập ngân sách mua sắm để tránh chi tiêu ngoài kế hoạch', excerpt: 'Một vài bước đơn giản giúp bạn theo dõi nhu cầu và kiểm soát khoản mua online.', category: 'Kinh nghiệm mua sắm', author: 'Tuấn Kiệt', initials: 'TK', readingMinutes: 4, tags: ['ngân-sách', 'tiết-kiệm'] },
+  { title: 'Các thương hiệu điện máy mở rộng ưu đãi trực tuyến', excerpt: 'Chương trình bán hàng đa kênh mang đến thêm lựa chọn cho người mua.', category: 'Xu hướng thị trường', author: 'Hồng Phúc', initials: 'HP', readingMinutes: 5, tags: ['điện-máy', 'xu-hướng'] },
+  { title: 'Bàn phím cơ cho dân văn phòng: cảm giác gõ nào phù hợp?', excerpt: 'So sánh thiết kế, switch và độ ồn để tìm bàn phím hợp với không gian làm việc.', category: 'Đánh giá sản phẩm', author: 'Gia Bảo', initials: 'GB', readingMinutes: 6, tags: ['bàn-phím', 'đánh-giá'] },
+  { title: 'Săn mã giảm giá hiệu quả mà không mua thêm món không cần thiết', excerpt: 'Kết hợp mã ưu đãi với danh sách mua sắm để tiết kiệm đúng mục tiêu.', category: 'Kinh nghiệm mua sắm', author: 'Thảo Nhi', initials: 'TN', readingMinutes: 4, tags: ['mã-giảm-giá', 'kinh-nghiệm'] },
+  { title: 'Thiết bị nhà thông minh ngày càng phổ biến trong gia đình trẻ', excerpt: 'Các sản phẩm kết nối đang trở nên dễ tiếp cận hơn với nhiều mức giá.', category: 'Xu hướng thị trường', author: 'Minh Khoa', initials: 'MK', readingMinutes: 5, tags: ['nhà-thông-minh', 'xu-hướng'] },
+  { title: 'Camera an ninh gia đình: ba mẫu dễ lắp đặt đáng cân nhắc', excerpt: 'So sánh chất lượng hình ảnh, góc quan sát và lưu trữ của camera trong nhà.', category: 'Đánh giá sản phẩm', author: 'Ngọc Mai', initials: 'NM', readingMinutes: 6, tags: ['camera', 'đánh-giá'] },
+  { title: 'Đổi trả hàng online: lưu lại bằng chứng và theo dõi tiến độ', excerpt: 'Chuẩn bị thông tin cần thiết để yêu cầu hỗ trợ đổi trả thuận tiện hơn.', category: 'Kinh nghiệm mua sắm', author: 'Quốc Bảo', initials: 'QB', readingMinutes: 4, tags: ['đổi-trả', 'kinh-nghiệm'] },
 ];
 
-export const FEATURED_POST = {
-  ...BLOG_POSTS[4],
-  slug: BLOG_POSTS[4].slug,
-  title: '10 mẹo so sánh giá giúp bạn tiết kiệm đến 30% khi mua sắm online',
-  excerpt: 'Tổng hợp những nguyên tắc so sánh giá đơn giản nhưng hiệu quả, từ việc theo dõi lịch sử giá đến chọn đúng thời điểm săn khuyến mãi.',
-  author: 'Minh Anh', initials: 'AN', readingMinutes: 6,
+const makeContent = (title: string, excerpt: string): BlogContentBlock[] => [
+  { type: 'paragraph', text: excerpt },
+  { type: 'heading', text: 'Điều cần biết trước khi lựa chọn' },
+  { type: 'paragraph', text: `Khi tìm hiểu ${title.toLocaleLowerCase('vi')}, hãy bắt đầu từ nhu cầu sử dụng và mức ngân sách phù hợp. Đối chiếu thông tin từ nhiều nguồn giúp bạn có góc nhìn rõ ràng hơn.` },
+  { type: 'image', caption: 'So sánh thông tin trước khi đưa ra quyết định mua sắm.' },
+  { type: 'heading', text: 'So sánh để chọn đúng giá trị' },
+  { type: 'paragraph', text: 'Đừng chỉ nhìn vào giá niêm yết. Chính sách bảo hành, phí giao hàng và uy tín cửa hàng cũng ảnh hưởng đến giá trị thực tế của mỗi lựa chọn.' },
+  { type: 'quote', text: 'Một lựa chọn tốt là lựa chọn phù hợp với nhu cầu và ngân sách của bạn.' },
+  { type: 'heading', text: 'Kết luận' },
+  { type: 'paragraph', text: 'Dành thêm thời gian kiểm tra giá và thông tin sản phẩm sẽ giúp bạn mua sắm tự tin, tiết kiệm hơn.' },
+];
+
+const createArticle = (seed: typeof articleSeeds[number], index: number): BlogArticle => {
+  const isFeatured = index === 0;
+  return {
+    ...seed,
+    slug: isFeatured ? '10-meo-so-sanh-gia' : `${seed.title.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}-${index + 1}`,
+    publishedAt: new Date(Date.UTC(2026, 10, 12 - index)).toISOString(),
+    featured: isFeatured,
+    content: isFeatured ? [
+      { type: 'paragraph', text: 'Mua sắm online ngày càng phổ biến, nhưng không phải ai cũng biết cách so sánh giá để chọn được mức tốt nhất. Dưới đây là những mẹo đơn giản giúp bạn tiết kiệm đáng kể mỗi lần xuống tiền.' },
+      { type: 'heading', text: '1. Theo dõi lịch sử giá trước khi mua' },
+      { type: 'paragraph', text: 'Đừng vội mua ngay khi thấy biển giảm giá. Dùng công cụ theo dõi lịch sử giá để biết đâu là mức giá thực sự tốt.' },
+      { type: 'image', caption: 'Biểu đồ lịch sử giá giúp nhận biết thời điểm mua tốt nhất.' },
+      { type: 'heading', text: '2. So sánh giá giữa nhiều cửa hàng' },
+      { type: 'paragraph', text: 'Cùng một sản phẩm nhưng mỗi cửa hàng có thể có mức giá khác nhau. Hãy kiểm tra nhiều nguồn, đồng thời xem kỹ phí giao hàng và chính sách bảo hành.' },
+      { type: 'quote', text: 'Tiết kiệm không nằm ở việc mua rẻ nhất, mà ở việc mua đúng giá trị tại đúng thời điểm.' },
+      { type: 'heading', text: '3. Tận dụng các đợt sale theo mùa' },
+      { type: 'paragraph', text: 'Lên danh sách sản phẩm cần mua từ sớm và đặt cảnh báo giá để chủ động hơn trong các đợt khuyến mãi lớn.' },
+    ] : makeContent(seed.title, seed.excerpt),
+  };
 };
 
-export function formatBlogDate(value: string) {
-  return new Intl.DateTimeFormat('vi-VN', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(value));
-}
-
-export function getBlogPosts() { return BLOG_POSTS; }
+export const blogArticles: BlogArticle[] = Array.from({ length: 26 }, (_, index) => createArticle(articleSeeds[index % articleSeeds.length], index));
+export const blogCategories = ['Tất cả', 'Kinh nghiệm mua sắm', 'Đánh giá sản phẩm', 'Xu hướng thị trường'] as const;
+export const blogPageSize = 12;

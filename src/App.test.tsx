@@ -561,7 +561,7 @@ describe('English route copy', () => {
     ['/category/unknown-category', 'Category not found'],
     ['/product/unknown-product', 'Could not load product details'],
     ['/compare', 'No products to compare yet'],
-    ['/blog', 'Tin tức & kinh nghiệm'],
+    ['/blog', 'News and advice'],
     ['/blog/unknown-article', 'Article not found'],
     ['/shops/unknown-shop', 'Could not load shop details'],
     ['/wishlist', 'Sign in to view saved products'],
@@ -738,42 +738,62 @@ it('renders the catalog image in search results', async () => {
   expect((await screen.findByRole('img', { name: 'Sample Phone' }) as HTMLImageElement).src).toBe(imageUrl);
 });
 
-const articlePage = {
-  items: [{
-    slug: 'buying-a-laptop',
-    title: 'Chọn laptop phù hợp',
-    excerpt: 'Một số kinh nghiệm chọn laptop.',
-    coverImageUrl: 'https://cdn.example.test/laptop.jpg',
-    authorName: 'GiaTot Editorial',
-    readingMinutes: 6,
-    publishedAtUtc: '2025-03-04T00:00:00Z',
-  }],
-  page: 1,
-  pageSize: 10,
-  totalItems: 1,
-  totalPages: 1,
-};
+describe('Blog static mock routes', () => {
+  it.each(['light', 'dark'] as const)('keeps Blog Detail fixed light regardless of %s OS preference', theme => {
+    setColorScheme(theme);
+    renderAppAt('/blog/10-meo-so-sanh-gia');
 
-const articleDetail = {
-  slug: 'buying-a-laptop',
-  title: 'Chọn laptop phù hợp',
-  excerpt: 'Kinh nghiệm chọn laptop từ dữ liệu thực tế.',
-  coverImageUrl: 'https://cdn.example.test/laptop.jpg',
-  authorName: 'GiaTot Editorial',
-  authorAvatarUrl: null,
-  readingMinutes: 6,
-  content: '# Chọn theo nhu cầu\n\nHãy cân nhắc cách bạn sẽ sử dụng máy.\n\n## Kiểm tra ngân sách\n\nSo sánh giá trước khi mua.',
-  seo: { title: null, description: null, canonicalUrl: null, ogImage: null, index: true },
-  publishedAtUtc: '2025-03-04T00:00:00Z',
-  updatedAtUtc: '2025-03-04T00:00:00Z',
-  relatedProductIds: [17, 18],
-};
+    expect(screen.getByRole('heading', { name: /10 mẹo so sánh giá giúp bạn tiết kiệm/ })).toBeTruthy();
+    expect(document.querySelector('.blog-shell')).toBeTruthy();
+    expect(shellColorScheme('blog-shell')).toBe('light');
+    expect(stylesheet).toContain('.blog-shell');
+    expect(stylesheet).toContain('.blog-related-grid');
+    expect(stylesheet).toMatch(/@media\s*\(prefers-color-scheme:\s*dark\)[\s\S]*?\.blog-shell\s*\{background:#15171c;color:#eef0f3\}/);
+    expect(contrastRatio('#d1d5db', '#15171c')).toBeGreaterThanOrEqual(4.5);
+  });
 
-function renderBlog() {
-  window.history.pushState({}, '', '/blog');
-  return renderApp();
-}
+  it('renders the article content with readable contrast at a mobile viewport', () => {
+    setColorScheme('dark');
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 844 });
+    renderAppAt('/blog/10-meo-so-sanh-gia');
 
+    const paragraph = screen.getByText(/Mua sắm online ngày càng phổ biến/);
+    expect([window.innerWidth, window.innerHeight]).toEqual([390, 844]);
+    expect(paragraph.closest('.blog-article')).toBeTruthy();
+    expect(contrastRatio('#4b5563', '#ffffff')).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('navigates a listing card to its fixture slug and renders the full article layout', () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    renderAppAt('/blog');
+
+    fireEvent.click(screen.getByRole('link', { name: /Nổi bật.*10 mẹo so sánh giá/ }));
+
+    expect(window.location.pathname).toBe('/blog/10-meo-so-sanh-gia');
+    expect(screen.getByText('Minh Anh')).toBeTruthy();
+    expect(screen.getByText('6 phút đọc')).toBeTruthy();
+    expect(screen.getByText('1. Theo dõi lịch sử giá trước khi mua')).toBeTruthy();
+    expect(screen.getByText('Biểu đồ lịch sử giá giúp nhận biết thời điểm mua tốt nhất.')).toBeTruthy();
+    expect(screen.getByText(/Tiết kiệm không nằm ở việc mua rẻ nhất/)).toBeTruthy();
+    expect(screen.getAllByText(/so-sánh-giá|mua-sắm-thông-minh|tiết-kiệm/).length).toBe(3);
+    expect(screen.getByRole('heading', { name: 'Nhận bài viết mới qua email' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Đăng ký' })).toBeTruthy();
+    expect(document.querySelectorAll('.blog-related-grid .blog-post-card')).toHaveLength(3);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('shows a not-found state for unknown static slugs and links back to the listing', () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    renderAppAt('/blog/unknown-slug');
+
+    expect(screen.getByRole('heading', { name: 'Không tìm thấy bài viết' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Quay lại Blog' }).getAttribute('href')).toBe('/blog');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
 
 const catalogPage = {
   items: [{ id: 17, slug: 'api-phone', name: 'API Phone', brand: 'Real Brand', category: { id: 42, slug: 'phones', name: 'Phones' }, offerSummary: { minPrice: 1200000, maxPrice: 1600000, offerCount: 3 } }],
