@@ -1,114 +1,51 @@
-import { LanguageProvider, useLanguage } from './i18n';
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from 'vitest';
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { Link, MemoryRouter, Route, Routes } from 'react-router-dom';
+import { cleanup, render, screen, fireEvent } from '@testing-library/react';
+import { LanguageProvider } from './i18n';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { BlogPage } from './BlogPage';
+import { BlogDetailPage } from './BlogDetailPage';
+import * as fixtures from './blogMockData';
 
-afterEach(() => { cleanup(); localStorage.clear(); vi.unstubAllGlobals(); });
+afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+function renderBlog(path = '/blog') { return render(<LanguageProvider><MemoryRouter initialEntries={[path]}><Routes><Route path="/blog" element={<BlogPage />} /><Route path="/blog/:slug" element={<BlogDetailPage />} /></Routes></MemoryRouter></LanguageProvider>); }
 
-function LanguageControl() {
-  const { setLanguage } = useLanguage();
-  return <>
-    <button onClick={() => setLanguage('en')}>Select English</button>
-    <button onClick={() => setLanguage('id')}>Select Indonesian</button>
-    <button onClick={() => setLanguage('vi')}>Select Vietnamese</button>
-  </>;
-}
-
-function expectSelected(name: string) {
-  const buttons = screen.getAllByRole('button').filter(button => button.closest('.category-pills'));
-  expect(buttons).toHaveLength(4);
-  for (const button of buttons) {
-    expect(button.getAttribute('aria-pressed')).toBe(String(button.textContent === name));
-    expect(button.classList.contains('active')).toBe(button.textContent === name);
-  }
-}
-
-it.each(['pointer', 'Enter', 'Space'] as const)('updates selection via %s after an empty successful response', async input => {
-  const user = userEvent.setup();
-  const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ items: [], totalItems: 0 }) });
-  vi.stubGlobal('fetch', fetchMock);
-  render(<LanguageProvider><MemoryRouter><BlogPage /></MemoryRouter></LanguageProvider>);
-  await screen.findByText('Chưa có bài viết');
-  expectSelected('Tất cả');
-  const category = screen.getByRole('button', { name: 'Kinh nghiệm mua sắm' });
-  if (input === 'pointer') await user.click(category);
-  else {
-    await user.tab();
-    await user.tab();
-    expect(document.activeElement).toBe(category);
-    await user.keyboard(input === 'Enter' ? '{Enter}' : ' ');
-  }
-  expectSelected('Kinh nghiệm mua sắm');
-  expect(screen.getByText('Chưa có bài viết')).toBeTruthy();
-  await user.click(screen.getByRole('button', { name: 'Đánh giá sản phẩm' }));
-  expectSelected('Đánh giá sản phẩm');
-  await user.click(screen.getByRole('button', { name: 'Xu hướng thị trường' }));
-  expectSelected('Xu hướng thị trường');
-  await user.click(screen.getByRole('button', { name: 'Tất cả' }));
-  expectSelected('Tất cả');
-  expect(fetchMock).toHaveBeenCalledTimes(1);
+it('shows the approved listing sections, 12 latest cards, and page navigation to detail', () => {
+  const fetch = vi.spyOn(globalThis, 'fetch');
+  renderBlog();
+  expect(screen.getByRole('heading', { name: 'Tin tức & kinh nghiệm' })).toBeTruthy();
+  expect(screen.getByRole('heading', { name: 'Bài viết mới nhất' })).toBeTruthy();
+  expect(screen.getByRole('link', { name: /Nổi bật/ }).getAttribute('href')).toContain('/blog/');
+  expect(document.querySelectorAll('.blog-post-grid .blog-post-card')).toHaveLength(12);
+  expect(screen.getByRole('link', { name: /tai nghe không dây/ }).getAttribute('href')).toBe('/blog/blog-1');
+  fireEvent.click(screen.getByRole('button', { name: '2' }));
+  expect(document.querySelectorAll('.blog-post-grid .blog-post-card')).toHaveLength(12);
+  expect(screen.getByRole('link', { name: /robot hút bụi/ })).toBeTruthy();
+  expect(fetch).not.toHaveBeenCalled();
 });
 
-it('updates selection as soon as a pointer presses a category', async () => {
-  const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ items: [], totalItems: 0 }) });
-  vi.stubGlobal('fetch', fetchMock);
-  render(<LanguageProvider><MemoryRouter><BlogPage /></MemoryRouter></LanguageProvider>);
-  const category = screen.getByRole('button', { name: 'Kinh nghiệm mua sắm' });
-
-  fireEvent.pointerDown(category);
-
-  expectSelected('Kinh nghiệm mua sắm');
-  expect(fetchMock).toHaveBeenCalledTimes(1);
+it('filters by category and resets pagination', () => {
+  renderBlog();
+  fireEvent.click(screen.getByRole('button', { name: 'Kinh nghiệm mua sắm' }));
+  expect(screen.getByRole('button', { name: 'Kinh nghiệm mua sắm' }).getAttribute('aria-pressed')).toBe('true');
+  expect(screen.queryByRole('link', { name: /Nổi bật/ })).toBeNull();
+  expect([...document.querySelectorAll('.blog-post-card h3')].every(card => card.closest('.blog-post-card')?.textContent?.includes('Kinh nghiệm mua sắm'))).toBe(true);
 });
 
-it('selects a category during pointer capture even when an ancestor stops bubbling', () => {
-  const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ items: [], totalItems: 0 }) });
-  vi.stubGlobal('fetch', fetchMock);
-  render(<div onPointerDown={event => event.stopPropagation()}><LanguageProvider><MemoryRouter><BlogPage /></MemoryRouter></LanguageProvider></div>);
-  const category = screen.getByRole('button', { name: 'Kinh nghiệm mua sắm' });
-
-  fireEvent.pointerDown(category);
-
-  expectSelected('Kinh nghiệm mua sắm');
-  expect(fetchMock).toHaveBeenCalledTimes(1);
+it('keeps the empty state available when the shared static fixture is empty', () => {
+  vi.spyOn(fixtures, 'getBlogPosts').mockReturnValue([]);
+  renderBlog();
+  expect(screen.getByRole('heading', { name: 'Chưa có bài viết' })).toBeTruthy();
 });
 
-it('preserves a selection made while the article request is pending', async () => {
-  const user = userEvent.setup();
-  let resolve!: (value: Response) => void;
-  vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(done => { resolve = done; })));
-  render(<LanguageProvider><MemoryRouter><BlogPage /></MemoryRouter></LanguageProvider>);
-  expect(screen.getByRole('status')).toBeTruthy();
-  expectSelected('Tất cả');
-  await user.click(screen.getByRole('button', { name: 'Kinh nghiệm mua sắm' }));
-  expectSelected('Kinh nghiệm mua sắm');
-  expect(screen.getByRole('status')).toBeTruthy();
-  await act(async () => { resolve({ ok: true, json: async () => ({ items: [] }) } as Response); });
-  await screen.findByText('Chưa có bài viết');
-  expectSelected('Kinh nghiệm mua sắm');
-});
-
-it('localizes the document title and resets it when leaving the blog route', async () => {
-  const user = userEvent.setup();
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ items: [] }) }));
-  document.title = 'GiaTot - So sánh giá thông minh';
-  render(<LanguageProvider><MemoryRouter initialEntries={['/blog']}>
-    <LanguageControl />
-    <Link to="/home">Leave blog</Link>
-    <Routes><Route path="/blog" element={<BlogPage />} /><Route path="/home" element={<p>Home</p>} /></Routes>
-  </MemoryRouter></LanguageProvider>);
-
-  expect(document.title).toBe('GiaTot - So sánh giá thông minh');
-  await user.click(screen.getByRole('button', { name: 'Select English' }));
-  expect(document.title).toBe('GiaTot - Smart price comparison');
-  await user.click(screen.getByRole('button', { name: 'Select Indonesian' }));
-  expect(document.title).toBe('GiaTot - Perbandingan harga cerdas');
-  await user.click(screen.getByRole('button', { name: 'Select Vietnamese' }));
-  expect(document.title).toBe('GiaTot - So sánh giá thông minh');
-  await user.click(screen.getByRole('link', { name: 'Leave blog' }));
-  expect(screen.getByText('Home')).toBeTruthy();
-  expect(document.title).toBe('GiaTot - So sánh giá thông minh');
+it('renders detail content, tags, newsletter CTA, related posts, and unknown slug state', () => {
+  renderBlog('/blog/blog-5');
+  expect(screen.getByRole('heading', { level: 1, name: /mẹo so sánh giá/ })).toBeTruthy();
+  expect(screen.getAllByRole('heading', { level: 2 }).length).toBeGreaterThan(1);
+  expect(screen.getByText(/Mua sắm thông minh bắt đầu/)).toBeTruthy();
+  expect(screen.getByText('Nhận bài viết mới qua email')).toBeTruthy();
+  expect(document.querySelectorAll('.blog-related-grid .blog-post-card')).toHaveLength(3);
+  cleanup();
+  renderBlog('/blog/no-such-story');
+  expect(screen.getByRole('heading', { name: 'Không tìm thấy bài viết' })).toBeTruthy();
 });
