@@ -349,6 +349,7 @@
   .blog-shell .blog-detail-tags span{border-color:#30343d;color:#eef0f3}
   .blog-shell .blog-detail-subscribe{background:#2a1b12}
   .blog-shell .blog-detail-subscribe h2{color:#eef0f3}
+  .blog-shell .blog-detail-subscribe p{color:#d1d5db}
   .blog-shell .blog-detail-prose blockquote{color:#c2c7d1}
 }
 .country-suggestion button:hover{border-color:var(--primary)}
@@ -376,7 +377,7 @@
 .blog-detail-prose blockquote{margin:28px 0;padding:4px 0 4px 20px;border-left:3px solid #ff5a00;color:#6b7280;font-size:17px;font-style:italic}
 .blog-detail-tags{display:flex;flex-wrap:wrap;gap:8px;margin:34px 0}.blog-detail-tags span{padding:7px 13px;border:1px solid var(--border);border-radius:999px;font-size:12px;font-weight:700}
 .blog-detail-subscribe{display:flex;align-items:center;justify-content:space-between;gap:22px;margin:8px 0 48px;padding:26px 30px;border-radius:16px;background:#fff3eb}
-.blog-detail-subscribe h2{margin:0;color:#171b24;font-size:16px}.blog-detail-subscribe p{margin:5px 0 0;color:var(--muted);font-size:13px}.blog-detail-subscribe .button{flex:none;border-radius:999px;padding:11px 20px}
+.blog-detail-subscribe h2{margin:0;color:#171b24;font-size:16px}.blog-detail-subscribe p{margin:5px 0 0;color:#595959;font-size:13px}.blog-detail-subscribe .button{flex:none;border-radius:999px;padding:11px 20px}
 .blog-detail-related{max-width:1200px;margin:0 auto;padding:0 24px 58px}.blog-detail-related>h2{margin:0 0 20px;font-size:23px;letter-spacing:-.03em}
 .blog-detail-related-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px}.blog-detail-related-image{width:100%;aspect-ratio:2.2}
 .blog-detail-related .blog-post-card{color:inherit}.blog-detail-related .blog-post-body h3{margin:9px 0;font-size:15px;line-height:1.4}
