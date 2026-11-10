@@ -7,7 +7,7 @@ import { LanguageProvider, useLanguage } from './i18n';
 
 afterEach(() => { cleanup(); localStorage.clear(); vi.unstubAllGlobals(); });
 
-const article = (n: number) => ({ slug: `bai-${n}`, title: `Bài viết ${n}`, excerpt: `Tóm tắt ${n}`, coverImageUrl: n === 1 ? 'https://cdn.test/cover.png' : null, authorName: 'Minh Anh', readingMinutes: 6, publishedAtUtc: '2026-11-12T00:00:00Z' });
+const article = (n: number) => ({ slug: `bai-${n}`, title: `Bài viết ${n}`, category: 'product-reviews', excerptText: `Tóm tắt ${n}`, coverFileId: n === 1 ? 'file-1' : null, tags: [], authorName: 'Minh Anh', totalViews: 3, publishedAtUtc: '2026-11-12T00:00:00Z' });
 const pageOf = (page: number, count: number, totalPages: number) => ({ items: Array.from({ length: count }, (_, i) => article((page - 1) * 12 + i + 1)), page, pageSize: 12, totalItems: totalPages * 12, totalPages });
 const respond = (body: unknown, ok = true) => Promise.resolve({ ok, status: ok ? 200 : 500, json: () => Promise.resolve(body) });
 
@@ -35,11 +35,30 @@ it('shows loading, then the featured post and latest posts from GET /articles', 
   expect(screen.queryByRole('status')).toBeNull();
   const featured = document.querySelector('.blog-featured-card') as HTMLAnchorElement;
   expect(featured.getAttribute('href')).toBe('/blog/bai-1');
-  expect(featured.querySelector('img')?.getAttribute('src')).toBe('https://cdn.test/cover.png');
-  expect(featured.textContent).toContain('6 phút đọc');
+  expect(featured.querySelector('img')?.getAttribute('src')).toBe('https://api-compareshop-dev.giamha.online/api/v1/files/file-1');
+  expect(featured.querySelector('.blog-category-chip')?.textContent).toBe('Đánh giá sản phẩm');
+  expect(document.querySelector('.blog-post-card .blog-category-chip')?.textContent).toBe('Đánh giá sản phẩm');
   expect(document.querySelectorAll('.blog-post-grid .blog-post-card')).toHaveLength(11);
   expect(document.querySelector('.blog-post-grid .blog-post-card')?.getAttribute('href')).toBe('/blog/bai-2');
-  expect(document.querySelector('.blog-category-chip')).toBeNull();
+});
+
+it('filters by category on the server and resets to page 1', async () => {
+  const fetchMock = vi.fn((url: string) => respond(url.includes('page=2') ? pageOf(2, 3, 2) : pageOf(1, 12, 2)));
+  vi.stubGlobal('fetch', fetchMock);
+  renderBlog();
+  await screen.findByRole('navigation', { name: 'Phân trang' });
+  expect(screen.getByRole('button', { name: 'Tất cả' }).getAttribute('aria-pressed')).toBe('true');
+  fireEvent.click(screen.getByRole('button', { name: 'Trang sau' }));
+  await waitFor(() => expect(document.querySelector('.blog-featured-card')).toBeNull());
+
+  fireEvent.click(screen.getByRole('button', { name: 'Xu hướng thị trường' }));
+  await waitFor(() => expect(document.querySelector('.blog-featured-card')).not.toBeNull());
+
+  const urls = (fetchMock.mock.calls as unknown[][]).map(call => String(call[0]));
+  expect(urls.at(-1)).toContain('page=1&pageSize=12&category=market-trends');
+  expect(urls.slice(0, -1).some(url => url.includes('category='))).toBe(false);
+  expect(screen.getByRole('button', { name: 'Xu hướng thị trường' }).getAttribute('aria-pressed')).toBe('true');
+  expect(screen.getAllByRole('button', { name: 'Tất cả' })[0].getAttribute('aria-pressed')).toBe('false');
 });
 
 it('requests the next server page and drops the featured card after page 1', async () => {

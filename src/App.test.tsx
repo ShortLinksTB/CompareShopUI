@@ -740,7 +740,7 @@ it('renders the catalog image in search results', async () => {
 
 describe('Blog listing route', () => {
   it('renders the listing with slug links from GET /articles', async () => {
-    const items = Array.from({ length: 12 }, (_, i) => ({ slug: `bai-${i + 1}`, title: `Bài viết ${i + 1}`, excerpt: 'Tóm tắt', coverImageUrl: null, authorName: 'Minh Anh', readingMinutes: 5, publishedAtUtc: '2026-11-12T00:00:00Z' }));
+    const items = Array.from({ length: 12 }, (_, i) => ({ slug: `bai-${i + 1}`, title: `Bài viết ${i + 1}`, category: 'shopping-tips', excerptText: 'Tóm tắt', coverFileId: null, tags: [], authorName: 'Minh Anh', totalViews: 0, publishedAtUtc: '2026-11-12T00:00:00Z' }));
     const fetchMock = vi.fn().mockResolvedValue(response({ items, page: 1, pageSize: 12, totalItems: 12, totalPages: 1 }));
     vi.stubGlobal('fetch', fetchMock);
     renderAppAt('/blog');

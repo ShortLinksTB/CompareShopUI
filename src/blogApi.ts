@@ -1,22 +1,25 @@
 const API_BASE_URL = 'https://api-compareshop-dev.giamha.online/api/v1';
 
+export type ArticleCategory = 'shopping-tips' | 'product-reviews' | 'market-trends';
+
 export interface PublicArticleSummary {
   slug: string;
   title: string;
-  excerpt: string;
-  coverImageUrl: string | null;
+  category: ArticleCategory;
+  excerptText: string;
+  coverFileId: string | null;
+  tags: string[];
   authorName: string;
-  readingMinutes: number;
   publishedAtUtc: string;
+  totalViews: number;
 }
 
 export interface PublicArticle extends PublicArticleSummary {
-  authorAvatarUrl: string | null;
-  content: string;
-  seo: { title: string | null; description: string | null; canonicalUrl: string | null; ogImage: string | null; index: boolean };
+  contentMarkdown: string;
   updatedAtUtc: string;
-  relatedProductIds: number[];
 }
+
+export const articleCoverUrl = (fileId: string | null) => fileId ? `${API_BASE_URL}/files/${encodeURIComponent(fileId)}` : null;
 
 export interface ArticlePage {
   items: PublicArticleSummary[];
@@ -26,8 +29,10 @@ export interface ArticlePage {
   totalPages: number;
 }
 
-export async function getArticles(page = 1, pageSize = 12, signal?: AbortSignal): Promise<ArticlePage> {
-  const response = await fetch(`${API_BASE_URL}/articles?page=${page}&pageSize=${pageSize}`, { signal });
+export async function getArticles(page = 1, pageSize = 12, category?: ArticleCategory, signal?: AbortSignal): Promise<ArticlePage> {
+  const query = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+  if (category) query.set('category', category);
+  const response = await fetch(`${API_BASE_URL}/articles?${query}`, { signal });
   if (!response.ok) throw new Error(`Articles request failed (${response.status})`);
 
   const result = await response.json() as ArticlePage;
@@ -41,7 +46,7 @@ export async function getArticle(slug: string): Promise<PublicArticle | null> {
   if (!response.ok) throw new Error(`Article request failed (${response.status})`);
 
   const article = await response.json() as PublicArticle;
-  if (!article || typeof article.slug !== 'string' || typeof article.title !== 'string' || typeof article.content !== 'string') {
+  if (!article || typeof article.slug !== 'string' || typeof article.title !== 'string' || typeof article.contentMarkdown !== 'string') {
     throw new Error('Invalid article response');
   }
   return article;
