@@ -9,7 +9,7 @@ afterEach(() => { cleanup(); sessionStorage.clear(); vi.unstubAllGlobals(); });
 
 const article = {
   slug: 'real-article', title: 'A real article', category: 'shopping-tips', excerptText: 'A real excerpt',
-  coverFileId: 'cover-1', tags: ['saving'], authorName: 'Minh Anh', publishedAtUtc: '2026-11-12T00:00:00Z',
+  coverFileId: '6f9619ff-8b86-d011-b42d-00cf4fc964ff', tags: ['saving'], authorName: 'Minh Anh', publishedAtUtc: '2026-11-12T00:00:00Z',
   totalViews: 0, contentMarkdown: '# Safe content\n\nA **bold** idea with [a link](https://example.com).\n\n> A useful quote.\n\n<script>alert(1)</script>\n\n![Chart](javascript:alert(1))', updatedAtUtc: '2026-11-12T00:00:00Z',
 };
 
@@ -36,7 +36,7 @@ it('loads real public content, related posts, and records one view for the sessi
 
   expect(await screen.findByRole('heading', { level: 1, name: 'A real article' })).toBeTruthy();
   expect(screen.getByRole('navigation', { name: 'Điều hướng' })).toBeTruthy();
-  expect(document.querySelector('img.blog-detail-cover')?.getAttribute('src')).toContain('/files/cover-1');
+  expect(document.querySelector('img.blog-detail-cover')?.getAttribute('src')).toBe('https://api-compareshop-dev.giamha.online/api/v1/files/6f9619ff-8b86-d011-b42d-00cf4fc964ff');
   fireEvent.error(document.querySelector('img.blog-detail-cover')!);
   expect(document.querySelector('.blog-detail-cover.blog-image-placeholder')?.getAttribute('aria-label')).toBe('A real article');
   expect(screen.getByText('Safe content')).toBeTruthy();
