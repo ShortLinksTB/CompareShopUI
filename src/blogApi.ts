@@ -40,8 +40,8 @@ export async function getArticles(page = 1, pageSize = 12, category?: ArticleCat
   return result;
 }
 
-export async function getArticle(slug: string): Promise<PublicArticle | null> {
-  const response = await fetch(`${API_BASE_URL}/articles/${encodeURIComponent(slug)}`);
+export async function getArticle(slug: string, signal?: AbortSignal): Promise<PublicArticle | null> {
+  const response = await fetch(`${API_BASE_URL}/articles/${encodeURIComponent(slug)}`, { signal });
   if (response.status === 404) return null;
   if (!response.ok) throw new Error(`Article request failed (${response.status})`);
 
@@ -50,4 +50,9 @@ export async function getArticle(slug: string): Promise<PublicArticle | null> {
     throw new Error('Invalid article response');
   }
   return article;
+}
+
+export async function recordArticleView(slug: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/articles/${encodeURIComponent(slug)}/view`, { method: 'POST' });
+  if (!response.ok) throw new Error(`Article view request failed (${response.status})`);
 }
