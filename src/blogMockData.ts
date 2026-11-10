@@ -10,7 +10,15 @@ export interface BlogArticle {
   publishedAt: string;
   readingMinutes: number;
   featured?: boolean;
+  tags?: string[];
+  content?: BlogContentBlock[];
 }
+
+export type BlogContentBlock =
+  | { type: 'paragraph'; text: string }
+  | { type: 'heading'; text: string }
+  | { type: 'image'; caption: string }
+  | { type: 'quote'; text: string };
 
 const articleSeeds: Array<Pick<BlogArticle, 'title' | 'excerpt' | 'category' | 'author' | 'initials' | 'readingMinutes'>> = [
   { title: '10 mẹo so sánh giá giúp bạn tiết kiệm đến 30% khi mua sắm online', excerpt: 'Tổng hợp những nguyên tắc so sánh giá đơn giản nhưng hiệu quả, từ việc theo dõi lịch sử giá đến chọn đúng thời điểm săn khuyến mãi.', category: 'Kinh nghiệm mua sắm', author: 'Minh Anh', initials: 'AN', readingMinutes: 6 },
@@ -46,6 +54,23 @@ const createArticle = (seed: typeof articleSeeds[number], index: number): BlogAr
   featured: index === 0,
 });
 
-export const blogArticles: BlogArticle[] = Array.from({ length: 26 }, (_, index) => createArticle(articleSeeds[index % articleSeeds.length], index));
+export const blogArticles: BlogArticle[] = Array.from({ length: 26 }, (_, index) => {
+  const article = createArticle(articleSeeds[index % articleSeeds.length], index);
+  return {
+    ...article,
+    tags: [article.category.toLocaleLowerCase('vi-VN').replaceAll(' ', '-'), 'mua-sắm-thông-minh', 'tiết-kiệm'],
+    content: [
+      { type: 'paragraph', text: `${article.excerpt} Trong bài viết này, ${article.author} chia sẻ những điểm quan trọng giúp bạn đưa ra lựa chọn phù hợp với nhu cầu và ngân sách.` },
+      { type: 'heading', text: 'Bắt đầu từ nhu cầu của bạn' },
+      { type: 'paragraph', text: 'Hãy xác định điều mình cần trước khi xem các lựa chọn. Ghi lại những tiêu chí quan trọng, mức giá dự kiến và các tính năng bạn sẽ thật sự sử dụng.' },
+      { type: 'image', caption: 'So sánh thông tin giúp bạn tự tin hơn trước khi quyết định.' },
+      { type: 'heading', text: 'Đối chiếu lựa chọn và giá bán' },
+      { type: 'paragraph', text: 'Kiểm tra thông tin từ nhiều cửa hàng, xem kỹ chính sách giao hàng và đổi trả. Một mức giá tốt cần đi cùng sản phẩm phù hợp và điều kiện mua rõ ràng.' },
+      { type: 'quote', text: 'Lựa chọn tốt là lựa chọn phù hợp với nhu cầu và giá trị bạn nhận được.' },
+      { type: 'heading', text: 'Đưa ra quyết định đúng thời điểm' },
+      { type: 'paragraph', text: 'Khi đã có đủ thông tin, hãy so sánh lần cuối và chọn thời điểm mua phù hợp. Một kế hoạch đơn giản sẽ giúp bạn tiết kiệm thời gian và tránh những khoản chi không cần thiết.' },
+    ],
+  };
+});
 export const blogCategories = ['Tất cả', 'Kinh nghiệm mua sắm', 'Đánh giá sản phẩm', 'Xu hướng thị trường'] as const;
 export const blogPageSize = 12;
