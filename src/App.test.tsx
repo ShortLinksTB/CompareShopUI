@@ -752,12 +752,28 @@ describe('Blog listing route', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('keeps the listing readable at mobile widths and in both color schemes', () => {
+  it('keeps the listing readable at mobile widths and light in OS dark mode', () => {
+    setColorScheme('dark');
+    renderAppAt('/blog');
+
     expect(stylesheet).toMatch(/\.blog-post-grid\s*\{[^}]*grid-template-columns:\s*repeat\(4,minmax\(0,1fr\)\)/);
     expect(stylesheet).toMatch(/@media\(max-width:760px\)[\s\S]*?\.blog-post-grid\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
     expect(stylesheet).toMatch(/@media\(max-width:520px\)[\s\S]*?\.blog-post-grid\{grid-template-columns:1fr\}/);
-    expect(stylesheet).toMatch(/@media\(prefers-color-scheme:dark\)[\s\S]*?\.blog-shell\s*\{background:#15171c;color:#eef0f3\}/);
-    expect(contrastRatio('#d1d5db', '#15171c')).toBeGreaterThanOrEqual(4.5);
+    expect(document.querySelector('.blog-shell')).toBeTruthy();
+    expect(stylesheet).toMatch(/:root\{[^}]*color:#171b24;background:#fff/);
+    expect(stylesheet).toMatch(/body\{[^}]*background:#fff/);
+    expect(shellColorScheme('blog-shell')).toBe('light');
+    expect(stylesheet).not.toMatch(/@media\s*\(prefers-color-scheme:\s*dark\)[^{]*\{[^}]*\.blog-shell/);
+    expect(stylesheet).toMatch(/\.blog-list-heading h1\{[^}]*color:#171b24/);
+    expect(stylesheet).toMatch(/\.blog-detail-subscribe\{[^}]*background:#fff3eb/);
+    expect(contrastRatio('#595959', '#fff3eb')).toBeGreaterThanOrEqual(4.5);
+    expect(stylesheet).toMatch(/@media \(prefers-color-scheme: dark\)[\s\S]*?\.site-header \{/);
+
+    cleanup();
+    renderAppAt('/blog/10-meo-so-sanh-gia');
+    expect(document.querySelector('.blog-shell')).toBeTruthy();
+    expect(shellColorScheme('blog-shell')).toBe('light');
+    expect(screen.getByRole('heading', { name: /10 mẹo so sánh giá/ })).toBeTruthy();
   });
 });
 
