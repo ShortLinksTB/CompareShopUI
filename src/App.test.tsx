@@ -69,8 +69,8 @@ function contrastRatio(foreground: string, background: string) {
   return (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05);
 }
 
-function response(body: unknown, ok = true) {
-  return Promise.resolve({ ok, status: ok ? 200 : 500, json: () => Promise.resolve(body) } as Response);
+function response(body: unknown, ok = true, status = ok ? 200 : 500) {
+  return Promise.resolve({ ok, status, json: () => Promise.resolve(body) } as Response);
 }
 
 function cleanupTestEnvironment() {
@@ -569,7 +569,9 @@ describe('English route copy', () => {
     ['/account', 'Personal account'],
   ])('%s renders English application copy', async (path, expectedCopy) => {
     localStorage.setItem('giatot-language', 'en');
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ items: [] })));
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => String(input).endsWith('/articles/unknown-article')
+      ? response(null, false, 404)
+      : response({ items: [] })));
     renderAppAt(path);
 
     expect(await screen.findByText(expectedCopy)).toBeTruthy();
@@ -753,7 +755,7 @@ describe('Blog listing route', () => {
     expect(String(fetchMock.mock.calls[0][0])).toContain('/articles?page=1&pageSize=12');
   });
 
-  it('keeps the listing readable at mobile widths and light in OS dark mode', () => {
+  it('keeps the listing readable at mobile widths and light in OS dark mode', async () => {
     setColorScheme('dark');
     renderAppAt('/blog');
 
@@ -771,10 +773,14 @@ describe('Blog listing route', () => {
     expect(stylesheet).toMatch(/@media \(prefers-color-scheme: dark\)[\s\S]*?\.site-header \{/);
 
     cleanup();
+    const article = { slug: '10-meo-so-sanh-gia', title: 'A real published article', category: 'shopping-tips', excerptText: 'Excerpt', coverFileId: null, tags: [], authorName: 'Minh Anh', publishedAtUtc: '2026-11-12T00:00:00Z', totalViews: 0, contentMarkdown: 'Published content', updatedAtUtc: '2026-11-12T00:00:00Z' };
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => String(input).endsWith('/articles/10-meo-so-sanh-gia')
+      ? response(article)
+      : response({ items: [] })));
     renderAppAt('/blog/10-meo-so-sanh-gia');
     expect(document.querySelector('.blog-shell')).toBeTruthy();
     expect(shellColorScheme('blog-shell')).toBe('light');
-    expect(screen.getByRole('heading', { name: /10 mẹo so sánh giá/ })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: 'A real published article' })).toBeTruthy();
   });
 });
 
