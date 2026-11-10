@@ -328,30 +328,6 @@
 @media(max-width:1024px){.blog-post-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.blog-featured-body{padding:24px}}
 @media(max-width:760px){.blog-list-heading{padding-top:34px}.blog-list-heading h1{font-size:30px}.blog-featured-card{grid-template-columns:1fr;margin-bottom:32px}.blog-featured-image{min-height:0;aspect-ratio:16/9}.blog-featured-body{padding:22px}.blog-featured-body h2{font-size:22px}.blog-post-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.blog-post-body{padding:13px}}
 @media(max-width:520px){.blog-list-heading h1{font-size:27px}.blog-list-heading p{font-size:13px}.blog-category-pills{margin-bottom:22px}.blog-post-grid{grid-template-columns:1fr}.blog-post-image{aspect-ratio:16/9}.blog-post-body h3{font-size:15px}.blog-pagination{gap:5px}.blog-pagination button{min-width:33px;height:34px}}
-@media(prefers-color-scheme:dark){
-  .blog-shell{background:#15171c;color:#eef0f3}
-  .blog-shell .blog-list-heading h1,.blog-shell .blog-section-title,.blog-shell .blog-featured-body h2,.blog-shell .blog-post-body h3{color:#eef0f3}
-  .blog-shell .blog-list-heading p,.blog-shell .blog-featured-body>p,.blog-shell .blog-post-body>p,.blog-shell .blog-post-meta{color:#a3a8b4}
-  .blog-shell .blog-featured-card,.blog-shell .blog-post-card{border-color:#30343d;background:#1c1f26}
-  .blog-shell .blog-category-pills button{border-color:#30343d;background:#1c1f26;color:#eef0f3}
-  .blog-shell .blog-category-pills button.active,.blog-shell .blog-category-pills button:hover{border-color:#ff7a33;background:#2a1b12;color:#ff9259}
-  .blog-shell .blog-image-placeholder{background:linear-gradient(135deg,#292d36,#20232b);color:#a3a8b4}
-  .blog-shell .blog-category-chip{background:#2a1b12;color:#ff9259}
-  .blog-shell .blog-featured-label{color:#ff9259}
-  .blog-shell .blog-avatar{background:#2a2d34;color:#ff9259}
-  .blog-shell .blog-pagination button{border-color:#30343d;background:#1c1f26;color:#eef0f3}
-  .blog-shell .blog-pagination button:hover:not(:disabled),.blog-shell .blog-pagination button.active{border-color:#ff7a33;background:#ff7a33;color:#fff}
-  .blog-shell .blog-empty-state h2{color:#eef0f3}
-  .blog-shell .blog-empty-state{color:#a3a8b4}
-  .blog-shell .blog-detail-breadcrumb,.blog-shell .blog-detail-lead,.blog-shell .blog-detail-byline small,.blog-shell .blog-detail-prose,.blog-shell .blog-detail-prose figcaption,.blog-shell .blog-detail-related .blog-post-meta{color:#a3a8b4}
-  .blog-shell .blog-detail-breadcrumb [aria-current],.blog-shell .blog-detail-article h1,.blog-shell .blog-detail-prose h2,.blog-shell .blog-detail-related>h2,.blog-shell .blog-detail-byline strong,.blog-shell .blog-detail-related .blog-post-body h3{color:#eef0f3}
-  .blog-shell .blog-detail-byline{border-color:#30343d}
-  .blog-shell .blog-detail-tags span{border-color:#30343d;color:#eef0f3}
-  .blog-shell .blog-detail-subscribe{background:#2a1b12}
-  .blog-shell .blog-detail-subscribe h2{color:#eef0f3}
-  .blog-shell .blog-detail-subscribe p{color:#d1d5db}
-  .blog-shell .blog-detail-prose blockquote{color:#c2c7d1}
-}
 .country-suggestion button:hover{border-color:var(--primary)}
 @media(max-width:639px){.header-inner{gap:10px}.header-links{display:flex;gap:0;margin-left:auto}.header-links>a{display:none}.country-switcher{max-width:104px;padding:6px 5px;font-size:9px}.country-suggestion{position:fixed;top:66px;right:12px;width:min(270px,calc(100vw - 24px))}.mobile-search{margin-left:0}}
 

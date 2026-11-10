@@ -752,12 +752,21 @@ describe('Blog listing route', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('keeps the listing readable at mobile widths and in both color schemes', () => {
+  it.each(['/blog', '/blog/article-1'])('keeps the Blog shell light at %s when the OS prefers dark mode', (path) => {
+    setColorScheme('dark');
+    renderAppAt(path);
+
+    expect(document.querySelector('.blog-shell')).toBeTruthy();
+    expect(shellColorScheme('blog-shell')).toBe('light');
+    expect(stylesheet).toMatch(/:root\s*\{[^}]*background:#fff/);
+    expect(stylesheet).not.toMatch(/@media\s*\(prefers-color-scheme:\s*dark\)[\s\S]*?\.blog-shell/);
+    expect(stylesheet).toMatch(/@media\s*\(prefers-color-scheme:\s*dark\)\s*\{\s*\.site-header/);
+  });
+
+  it('keeps the listing responsive at mobile widths', () => {
     expect(stylesheet).toMatch(/\.blog-post-grid\s*\{[^}]*grid-template-columns:\s*repeat\(4,minmax\(0,1fr\)\)/);
     expect(stylesheet).toMatch(/@media\(max-width:760px\)[\s\S]*?\.blog-post-grid\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
     expect(stylesheet).toMatch(/@media\(max-width:520px\)[\s\S]*?\.blog-post-grid\{grid-template-columns:1fr\}/);
-    expect(stylesheet).toMatch(/@media\(prefers-color-scheme:dark\)[\s\S]*?\.blog-shell\s*\{background:#15171c;color:#eef0f3\}/);
-    expect(contrastRatio('#d1d5db', '#15171c')).toBeGreaterThanOrEqual(4.5);
   });
 });
 
