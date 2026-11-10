@@ -19,7 +19,11 @@ export interface PublicArticle extends PublicArticleSummary {
   updatedAtUtc: string;
 }
 
-export const articleCoverUrl = (fileId: string | null) => fileId ? `${API_BASE_URL}/files/${encodeURIComponent(fileId)}` : null;
+export const publicFileUrl = (fileId: string, apiBaseUrl = API_BASE_URL) =>
+  new URL(`/files/${encodeURIComponent(fileId)}`, apiBaseUrl).toString();
+
+export const articleCoverUrl = (fileId: string | null, apiBaseUrl = API_BASE_URL) =>
+  fileId ? publicFileUrl(fileId, apiBaseUrl) : null;
 
 export interface ArticlePage {
   items: PublicArticleSummary[];
