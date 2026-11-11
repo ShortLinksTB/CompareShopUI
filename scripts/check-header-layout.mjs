@@ -92,7 +92,7 @@ try {
       assert.equal(layout.bottomNav, 'none', 'Tablet keeps the existing non-mobile navigation pattern');
     }
     if (width <= 390) {
-      assert.equal(layout.bottomNav, 'flex', 'Mobile bottom navigation remains visible');
+      assert.equal(layout.bottomNav, 'grid', 'Mobile bottom navigation remains visible');
       assert.notEqual(layout.mobileSearch, 'none', 'Mobile search action remains visible');
       assert.equal(layout.actionStyles.at(-1)?.fontSize, '13px', 'Language selector retains approved type size on mobile');
     }
@@ -110,6 +110,43 @@ try {
     await page.locator('.language-trigger').click();
     await page.getByRole('option', { name: 'VI — Tiếng Việt' }).click();
   }
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await page.goto(`${origin}/search`, { waitUntil: 'networkidle' });
+  const darkMobileHeader = await page.evaluate(() => {
+    const color = element => getComputedStyle(element).color.match(/[\d.]+/g).slice(0, 3).map(Number);
+    const background = element => getComputedStyle(element).backgroundColor.match(/[\d.]+/g).slice(0, 3).map(Number);
+    const contrast = (foreground, backdrop) => {
+      const luminance = rgb => rgb.map(channel => channel / 255).map(channel => channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2).reduce((sum, channel, index) => sum + channel * [0.2126, 0.7152, 0.0722][index], 0);
+      const values = [luminance(foreground), luminance(backdrop)].sort((a, b) => b - a);
+      return (values[0] + 0.05) / (values[1] + 0.05);
+    };
+    const header = document.querySelector('.site-header');
+    const search = document.querySelector('.mobile-search');
+    const languageIcon = document.querySelector('.language-trigger svg');
+    return {
+      headerBackground: background(header),
+      searchColor: color(search),
+      searchContrast: contrast(color(search), background(header)),
+      languageIconColor: getComputedStyle(languageIcon).stroke,
+      languageIconContrast: contrast(color(languageIcon), background(header)),
+      searchVisible: getComputedStyle(search).display !== 'none',
+    };
+  });
+  assert(darkMobileHeader.searchVisible, 'Dark mobile header search remains visible');
+  assert.deepEqual(darkMobileHeader.searchColor, [238, 240, 243], 'Dark mobile search uses the approved light foreground');
+  assert(darkMobileHeader.searchContrast >= 3, `Dark mobile search contrast is at least 3:1: ${JSON.stringify(darkMobileHeader)}`);
+  assert(darkMobileHeader.languageIconContrast >= 3, `Dark mobile language icon contrast passes without a color change: ${JSON.stringify(darkMobileHeader)}`);
+  console.log(`PASS dark mobile header contrast: search ${darkMobileHeader.searchContrast.toFixed(2)}:1; language icon ${darkMobileHeader.languageIconContrast.toFixed(2)}:1`);
+  await page.emulateMedia({ colorScheme: 'light' });
+  const lightMobileHeader = await page.evaluate(() => ({
+    headerBackground: getComputedStyle(document.querySelector('.site-header')).backgroundColor,
+    searchColor: getComputedStyle(document.querySelector('.mobile-search')).color,
+  }));
+  assert.deepEqual(lightMobileHeader, { headerBackground: 'rgb(255, 255, 255)', searchColor: 'rgb(0, 0, 0)' },
+    `Light mobile header colors remain unchanged: ${JSON.stringify(lightMobileHeader)}`);
+  console.log('PASS light mobile header colors remain unchanged');
 } finally {
   await browser?.close();
   server.kill();
