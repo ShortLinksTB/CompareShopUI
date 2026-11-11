@@ -16,15 +16,17 @@ export interface AuthSessionValue {
   signOut: () => void | Promise<void>;
 }
 
-const AuthSessionContext = createContext<AuthSessionValue>({
+const unavailableSession: AuthSessionValue = {
   status: 'loading',
   user: null,
   getAccessToken: async () => null,
   signIn: () => undefined,
   signOut: () => undefined,
-});
+};
 
-export function AuthSessionProvider({ value, children }: { value: AuthSessionValue; children: ReactNode }) {
+const AuthSessionContext = createContext<AuthSessionValue>(unavailableSession);
+
+export function AuthSessionProvider({ value = unavailableSession, children }: { value?: AuthSessionValue; children: ReactNode }) {
   return <AuthSessionContext.Provider value={value}>{children}</AuthSessionContext.Provider>;
 }
 
