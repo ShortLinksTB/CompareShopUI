@@ -30,7 +30,28 @@ describe('typed auth API client', () => {
     await expect(authApi.me()).resolves.toMatchObject({ displayName: 'Mai' });
     expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(fetchMock.mock.calls[1][1]).toMatchObject({ credentials: 'include' });
+    expect(fetchMock.mock.calls[1][1].headers).toMatchObject({ 'X-Requested-With': 'XMLHttpRequest' });
     expect(fetchMock.mock.calls[2][1].headers).toMatchObject({ Authorization: 'Bearer fresh-token' });
+  });
+
+  it('sends the CSRF request header on logout', async () => {
+    window.__APP_CONFIG__ = { AUTH_API_URL: 'https://auth.example.test' };
+    const fetchMock = vi.fn().mockResolvedValue(response({})); vi.stubGlobal('fetch', fetchMock);
+    await authApi.logout();
+    expect(fetchMock).toHaveBeenCalledWith('https://auth.example.test/api/v1/auth/logout', expect.objectContaining({
+      credentials: 'include', headers: expect.objectContaining({ 'X-Requested-With': 'XMLHttpRequest' }),
+    }));
+  });
+
+  it('clears the session and publishes anonymous state when refresh fails', async () => {
+    window.__APP_CONFIG__ = { AUTH_API_URL: 'https://auth.example.test' };
+    const fetchMock = vi.fn().mockResolvedValueOnce(response({ code: 'expired' }, 401)).mockResolvedValueOnce(response({ code: 'expired' }, 401));
+    vi.stubGlobal('fetch', fetchMock);
+    const sessionChange = vi.fn(); window.addEventListener('compareshop:auth-session', sessionChange);
+    await expect(authApi.me()).rejects.toMatchObject({ code: 'expired' });
+    expect(sessionChange).toHaveBeenCalledWith(expect.objectContaining({ detail: null }));
+    expect(fetchMock.mock.calls[1][1].headers).toMatchObject({ 'X-Requested-With': 'XMLHttpRequest' });
+    window.removeEventListener('compareshop:auth-session', sessionChange);
   });
 
   it('retries one protected Shop API request after a 401 refresh', async () => {

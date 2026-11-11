@@ -28,14 +28,18 @@ async function request<T>(operation: AuthOperation, method: 'GET' | 'POST', body
   let response: Response;
   try {
     response = await fetch(`${base}/api/v1/auth/${operation}`, {
-      method, credentials: 'include', headers: { 'Content-Type': 'application/json', ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) },
+      method, credentials: 'include', headers: {
+        'Content-Type': 'application/json',
+        ...(operation === 'refresh' || operation === 'logout' ? { 'X-Requested-With': 'XMLHttpRequest' } : {}),
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      },
       ...(body ? { body: JSON.stringify(body) } : {}),
     });
   } catch { throw new AuthApiError(0, 'service_unavailable', 'Không thể kết nối dịch vụ xác thực. Vui lòng thử lại.'); }
   if (response.status === 401 && retry && operation !== 'login' && operation !== 'refresh' && operation !== 'verify-reset-code') {
     const refreshed = await refreshAccessToken();
     if (refreshed) return request<T>(operation, method, body, false);
-    accessToken = null;
+    clearSessionAfterRefreshFailure();
   }
   let data: Record<string, unknown> = {};
   try { data = await response.json() as Record<string, unknown>; } catch { /* use generic message */ }
@@ -101,7 +105,7 @@ export const authApi = {
 
 export async function refreshAccessToken(): Promise<string | null> {
   if (!refreshTask) {
-    refreshTask = authApi.refresh().then(result => { accessToken = result.accessToken; return accessToken; }).catch(() => { accessToken = null; return null; }).finally(() => { refreshTask = null; });
+    refreshTask = authApi.refresh().then(result => { accessToken = result.accessToken; return accessToken; }).catch(() => { clearSessionAfterRefreshFailure(); return null; }).finally(() => { refreshTask = null; });
   }
   return refreshTask;
 }
@@ -112,9 +116,14 @@ export async function fetchWithAuth(input: RequestInfo | URL, init: RequestInit,
   const response = await fetch(input, { ...init, headers });
   if (response.status !== 401) return response;
   const freshToken = await refreshAccessToken();
-  if (!freshToken) return response;
+  if (!freshToken) { clearSessionAfterRefreshFailure(); return response; }
   const retryHeaders = mergeBearerHeader(init.headers, freshToken);
   return fetch(input, { ...init, headers: retryHeaders });
+}
+
+function clearSessionAfterRefreshFailure() {
+  accessToken = null;
+  if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('compareshop:auth-session', { detail: null }));
 }
 
 function mergeBearerHeader(headers: HeadersInit | undefined, token: string): Record<string, string> {
