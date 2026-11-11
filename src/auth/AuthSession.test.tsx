@@ -21,6 +21,14 @@ it('falls back to anonymous state when no refresh session is available', async (
   expect(auth.me).not.toHaveBeenCalled();
 });
 
+it('clears the authenticated user when a protected request cannot refresh the session', async () => {
+  auth.getAccessToken.mockResolvedValue('access'); auth.me.mockResolvedValue({ id: 'u1', email: 'mai@example.test', displayName: 'Mai', emailVerified: true });
+  render(<AuthSessionProvider><Probe /></AuthSessionProvider>);
+  await waitFor(() => expect(screen.getByTestId('state').textContent).toBe('authenticated:Mai'));
+  window.dispatchEvent(new CustomEvent('compareshop:auth-session', { detail: null }));
+  await waitFor(() => expect(screen.getByTestId('state').textContent).toBe('anonymous:anonymous'));
+});
+
 it('accepts the existing injectable AuthSession test boundary and publishes user changes', async () => {
   const injected: AuthSessionValue = { status: 'anonymous', user: null, getAccessToken: async () => null, signIn: vi.fn(), signOut: vi.fn() };
   render(<AuthSessionProvider value={injected}><Probe /></AuthSessionProvider>);
