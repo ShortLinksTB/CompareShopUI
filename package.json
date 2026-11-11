@@ -16,7 +16,6 @@
     "test:header-layout": "node scripts/check-header-layout.mjs"
   },
   "dependencies": {
-    "oidc-client-ts": "^3.5.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-router-dom": "^7.9.1"

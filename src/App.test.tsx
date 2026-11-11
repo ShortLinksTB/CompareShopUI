@@ -194,7 +194,7 @@ describe('browser storage failures', () => {
     expect(screen.getByRole('menuitem', { name: 'Wishlist' })).toBeTruthy();
     const accountLinkEn = screen.getByRole('menuitem', { name: 'Account' });
     expect(accountLinkEn.getAttribute('href')).toBe('/account');
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Đăng xuất' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Sign out' }));
     expect(signOut).toHaveBeenCalledOnce();
     expect(localStorage.getItem('giatot-language')).toBe('en');
     expect(screen.queryByRole('listbox', { name: 'Choose language' })).toBeNull();
@@ -295,7 +295,10 @@ describe('fixed route themes', () => {
   ] as const)('%s always uses the %s %s scheme independent of OS preference', async (path, shellClass, scheme) => {
     setColorScheme('dark');
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ items: [] })));
-    renderAppAt(path);
+    if (path === '/login') {
+      const anonymous: AuthSessionValue = { status: 'anonymous', user: null, getAccessToken: async () => null, signIn: vi.fn(), signOut: vi.fn() };
+      renderAppAtWithSession(path, anonymous);
+    } else renderAppAt(path);
 
     expect(document.querySelector(`.${shellClass}`)).toBeTruthy();
     expect(shellColorScheme(shellClass)).toBe(scheme);
@@ -600,7 +603,10 @@ describe('English route copy', () => {
     vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => String(input).endsWith('/articles/unknown-article')
       ? response(null, false, 404)
       : response({ items: [] })));
-    renderAppAt(path);
+    if (path === '/login') {
+      const anonymous: AuthSessionValue = { status: 'anonymous', user: null, getAccessToken: async () => null, signIn: vi.fn(), signOut: vi.fn() };
+      renderAppAtWithSession(path, anonymous);
+    } else renderAppAt(path);
 
     expect(await screen.findByText(expectedCopy)).toBeTruthy();
     expect(document.title).toBe('GiaTot - Smart Price Comparison');
@@ -673,10 +679,14 @@ it('renders the storefront and opens the saved products page', async () => {
   expect(await screen.findByRole('heading', { name: 'Đăng nhập để xem sản phẩm đã lưu' })).toBeTruthy();
 });
 
-it('renders the auth callback outside the storefront shell', async () => {
-  renderAppAt('/auth/callback');
-  expect(await screen.findByRole('button', { name: 'Thử đăng nhập lại' })).toBeTruthy();
-  expect(document.querySelector('.site-header')).toBeNull();
+it('routes login and registration through the shared auth pages while preserving the site shell', () => {
+  const anonymous: AuthSessionValue = { status: 'anonymous', user: null, getAccessToken: async () => null, signIn: vi.fn(), signOut: vi.fn() };
+  renderAppAtWithSession('/login', anonymous);
+  expect(screen.getByRole('heading', { name: 'Đăng nhập để trải nghiệm tốt hơn' })).toBeTruthy();
+  expect(document.querySelector('.site-header')).toBeTruthy();
+  cleanup();
+  renderAppAtWithSession('/register', anonymous);
+  expect(screen.getByRole('heading', { name: 'Tạo tài khoản GiaTot' })).toBeTruthy();
 });
 
 describe('Wishlist API data', () => {
@@ -931,7 +941,7 @@ describe('Search and Category API data', () => {
     expect(fetchMock.mock.calls.some(([url, init]) => String(url).endsWith('/wishlist') && init?.method === 'POST')).toBe(false);
   });
 
-  it('starts OIDC from the current Search URL after the wishlist session is rejected', async () => {
+  it('starts auth from the current Search URL after the wishlist session is rejected', async () => {
     authMock.getToken.mockResolvedValueOnce('revoked-token').mockResolvedValue(null);
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
@@ -950,7 +960,7 @@ describe('Search and Category API data', () => {
     expect(fetchMock.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(0);
   });
 
-  it('starts OIDC when session lookup fails and never posts to wishlist', async () => {
+  it('starts auth when session lookup fails and never posts to wishlist', async () => {
     authMock.getToken.mockResolvedValueOnce('valid-token').mockRejectedValueOnce(new Error('session storage unavailable'));
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
