@@ -290,6 +290,13 @@ describe('fixed route themes', () => {
     expect(stylesheet).not.toMatch(/(?:^|})\s*\.site-header\s*\{[^}]*background:\s*#15171c/);
   });
 
+  it('gives the mobile search glyph readable contrast in OS dark preference', () => {
+    const darkHeaderRule = stylesheet.match(/@media\s*\(prefers-color-scheme:\s*dark\)\s*\{([\s\S]*?)\n\}/)?.[1];
+    expect(darkHeaderRule).toMatch(/\.site-header \.mobile-search\s*\{\s*color:\s*#eef0f3;?\s*\}/);
+    expect(contrastRatio('#eef0f3', '#13151a')).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio('#eef0f3', '#15171c')).toBeGreaterThanOrEqual(4.5);
+  });
+
   it('keeps popular category cards in a contained mobile grid', () => {
     expect(stylesheet).toMatch(/\.home-shell \.category-grid\s*\{[^}]*grid-template-columns:\s*repeat\(8,\s*minmax\(0,\s*1fr\)\)/);
     expect(stylesheet).toMatch(/@media\s*\(min-width:\s*640px\) and \(max-width:\s*980px\)[\s\S]*?\.home-shell \.category-grid\s*\{[^}]*repeat\(4,\s*minmax\(0,\s*1fr\)\)/);

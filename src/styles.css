@@ -474,6 +474,7 @@
 }
 @media (prefers-color-scheme: dark) {
   .site-header { --primary: #ff7a33; --primary-soft: #2a1b12; --surface: #1d2028; --border: #2a2e37; --muted: #9aa3af; border-color: var(--border); background: #13151a; color: #eef0f3; }
+  .site-header .mobile-search { color: #eef0f3; }
   .site-header .brand, .site-header .desktop-nav, .site-header .header-links .header-action { color: #eef0f3; }
   .site-header .brand small { color: var(--muted); }
   .site-header .header-search { border-color: var(--border); background: var(--surface); color: var(--muted); }
