@@ -38,6 +38,11 @@ function renderAppAt(path: string, status?: AuthSessionValue['status']) {
   return renderApp(status);
 }
 
+function renderAppAtWithSession(path: string, session: AuthSessionValue) {
+  window.history.pushState({}, '', path);
+  return render(<CountryProvider><LanguageProvider><AuthSessionProvider value={session}><BrowserRouter><App /></BrowserRouter></AuthSessionProvider></LanguageProvider></CountryProvider>);
+}
+
 function setColorScheme(theme: 'light' | 'dark') {
   vi.stubGlobal('matchMedia', vi.fn((query: string) => ({
     matches: query.includes('prefers-color-scheme: dark') && theme === 'dark',
@@ -158,24 +163,24 @@ describe('browser storage failures', () => {
     expect(localStorage.getItem('giatot-language')).toBe('id');
   });
 
-  it('renders the approved header actions in order and selects English through the language provider', () => {
+  it('renders the signed-in header menu with localized Account and selects English through the language provider', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ items: [] })));
-    renderAppAt('/');
+    const signOut = vi.fn();
+    renderAppAtWithSession('/', { status: 'authenticated', user: { id: 'u1', displayName: 'Minh Anh', email: 'minh@example.test' }, getAccessToken: async () => null, signIn: vi.fn(), signOut });
 
     const actions = screen.getByRole('navigation', { name: 'Header actions' });
     const controls = Array.from(actions.children);
-    expect(controls[0].textContent).toContain('Yêu thích');
-    expect(controls[0].querySelector('svg')).toBeTruthy();
-    expect(controls[1].textContent).toContain('Tài khoản');
-    expect(controls[1].querySelector('svg')).toBeTruthy();
-    expect((controls[0] as HTMLAnchorElement).getAttribute('href')).toBe('/wishlist');
-    expect((controls[1] as HTMLAnchorElement).getAttribute('href')).toBe('/account');
-    expect(controls[2].className).toContain('header-actions-divider');
-    expect(controls[3].querySelector('[aria-label="Country"]')).toBeNull();
+    expect(controls[0].textContent).toContain('Minh Anh');
+    expect(controls[1].className).toContain('header-actions-divider');
     const languageControl = actions.querySelector('.header-language-control');
     expect(languageControl).toBeTruthy();
     expect(languageControl?.querySelector('button[aria-label="Change language"]')).toBeTruthy();
     expect(languageControl?.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
+
+    fireEvent.click(screen.getByRole('button', { name: /Minh Anh/ }));
+    const accountLinkVi = screen.getByRole('menuitem', { name: 'Tài khoản' });
+    expect(accountLinkVi.getAttribute('href')).toBe('/account');
+    fireEvent.click(screen.getByRole('button', { name: /Minh Anh/ }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Change language' }));
     expect(screen.getByRole('listbox', { name: 'Choose language' })).toBeTruthy();
@@ -185,9 +190,31 @@ describe('browser storage failures', () => {
     expect(screen.getByText('ID')).toBeTruthy();
     fireEvent.click(screen.getByRole('option', { name: 'EN — English' }));
     expect(document.documentElement.lang).toBe('en');
-    expect(screen.getByRole('link', { name: 'Wishlist' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /Minh Anh/ }));
+    expect(screen.getByRole('menuitem', { name: 'Wishlist' })).toBeTruthy();
+    const accountLinkEn = screen.getByRole('menuitem', { name: 'Account' });
+    expect(accountLinkEn.getAttribute('href')).toBe('/account');
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Đăng xuất' }));
+    expect(signOut).toHaveBeenCalledOnce();
     expect(localStorage.getItem('giatot-language')).toBe('en');
     expect(screen.queryByRole('listbox', { name: 'Choose language' })).toBeNull();
+  });
+
+  it('routes anonymous sign-in through AuthSession with the current local path', () => {
+    const signIn = vi.fn();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ items: [] })));
+    renderAppAtWithSession('/search?q=phone', { status: 'anonymous', user: null, getAccessToken: async () => null, signIn, signOut: vi.fn() });
+    fireEvent.click(screen.getByRole('button', { name: 'Đăng nhập' }));
+    expect(signIn).toHaveBeenCalledWith('/search?q=phone');
+    expect(screen.getByRole('navigation', { name: 'Header actions' }).querySelector('a[href="/account"]')).toBeNull();
+  });
+
+  it.each(['loading', 'error'] as const)('does not show authenticated actions while AuthSession is %s', status => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ items: [] })));
+    renderAppAtWithSession('/', { status, user: null, getAccessToken: async () => null, signIn: vi.fn(), signOut: vi.fn() });
+    expect(screen.queryByRole('button', { name: 'Đăng nhập' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Minh Anh/ })).toBeNull();
+    expect(screen.getByRole('navigation', { name: 'Header actions' }).querySelector('a[href="/account"]')).toBeNull();
   });
 
   it('closes the language selector with Escape or an outside click without changing the selection', () => {
@@ -247,6 +274,7 @@ describe('browser storage failures', () => {
     expect(stylesheet).toMatch(/\.header-brand-divider\s*\{[^}]*height:\s*24px/);
     expect(stylesheet).toMatch(/@media\s*\(prefers-color-scheme:\s*dark\)/);
     expect(stylesheet).toMatch(/@media\s*\(max-width:\s*639px\)[\s\S]*?\.header-links \.header-action\s*\{\s*display:\s*none/);
+    expect(stylesheet).toMatch(/@media\s*\(max-width:\s*639px\)[\s\S]*?\.site-header \.header-links \.header-user-trigger[\s\S]*?display:\s*flex/);
     expect(stylesheet).not.toMatch(/\.header-links \.header-language-control\s*\{[^}]*display:\s*none/);
   });
 });
