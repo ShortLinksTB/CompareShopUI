@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { BrowserRouter, Link, MemoryRouter, Route, Routes } from 'react-router-dom';
 import { App } from './App';
 import { LanguageProvider } from './i18n';
@@ -692,15 +692,22 @@ it('routes login and registration through the shared auth pages while preserving
 describe('Wishlist API data', () => {
   it('keeps the page loading until the authenticated wishlist request resolves', async () => {
     authMock.getToken.mockResolvedValue('access-token');
-    let resolveRequest!: (value: Response) => void;
-    const fetchMock = vi.fn((..._args: Parameters<typeof fetch>) => new Promise<Response>(resolve => { resolveRequest = resolve; }));
+    let resolveWishlistRequest!: (value: Response) => void;
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      if (String(input).endsWith('/wishlist')) {
+        return new Promise<Response>(resolve => { resolveWishlistRequest = resolve; });
+      }
+      return response({ items: [] });
+    });
     vi.stubGlobal('fetch', fetchMock);
     renderAppAt('/wishlist', 'authenticated');
 
     expect(screen.getByLabelText('Đang tải sản phẩm yêu thích').getAttribute('aria-busy')).toBe('true');
     expect(screen.queryByText('Chưa có sản phẩm yêu thích')).toBeNull();
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/wishlist', { headers: { Authorization: 'Bearer access-token' } }));
-    resolveRequest(await response({ items: [{ productId: 12, slug: 'real-phone', name: 'Real Phone', createdAtUtc: '2026-10-19T00:00:00Z' }] }));
+    await act(async () => {
+      resolveWishlistRequest(await response({ items: [{ productId: 12, slug: 'real-phone', name: 'Real Phone', createdAtUtc: '2026-10-19T00:00:00Z' }] }));
+    });
     expect(await screen.findByRole('link', { name: 'Real Phone' }, { timeout: 5000 })).toBeTruthy();
     expect(screen.getByText('Giá hiện tại chưa có dữ liệu')).toBeTruthy();
     expect(screen.queryByText(/200\.000/)).toBeNull();
