@@ -1,3 +1,5 @@
+import { fetchWithAuth } from './auth/authApi';
+
 export interface WishlistItemDto {
   productId: number;
   slug: string;
@@ -23,9 +25,7 @@ function mapItem(value: unknown): WishlistItemDto | null {
 }
 
 export async function getWishlist(accessToken: string): Promise<WishlistItemDto[]> {
-  const response = await fetch(WISHLIST_API, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
+  const response = await fetchWithAuth(WISHLIST_API, {}, accessToken);
   if (!response.ok) throw new WishlistApiError(response.status);
 
   const payload = await response.json() as { items?: unknown };
@@ -34,25 +34,25 @@ export async function getWishlist(accessToken: string): Promise<WishlistItemDto[
 }
 
 export async function addWishlistItem(accessToken: string, productId: number): Promise<void> {
-  const response = await fetch(WISHLIST_API, {
+  const response = await fetchWithAuth(WISHLIST_API, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ productId, operation: 'add' }),
-  });
+  }, accessToken);
   if (!response.ok) throw new WishlistApiError(response.status);
 }
 
 export async function removeWishlistItem(accessToken: string, productId: number): Promise<void> {
-  const response = await fetch(WISHLIST_API, {
+  const response = await fetchWithAuth(WISHLIST_API, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ productId, operation: 'remove' }),
-  });
+  }, accessToken);
   if (response.status !== 204) throw new WishlistApiError(response.status);
 }

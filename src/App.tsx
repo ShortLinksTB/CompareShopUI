@@ -10,7 +10,7 @@ import { SearchPage } from './SearchPage';
 import { ShopPage } from './ShopPage';
 import { getSearchSuggestions } from './searchApi';
 import { ComparePage } from './ComparePage';
-import { AuthCallbackPage } from './AuthCallbackPage';
+import { AuthPages } from './auth/AuthPages';
 import { WishlistPage } from './WishlistPage';
 import { getApplicationTitle } from './pageMetadata';
 import { AccountPage } from './AccountPage';
@@ -21,6 +21,7 @@ function HeaderSessionActions() {
   const location = useLocation();
   const { language, t } = useLanguage();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [signOutFailed, setSignOutFailed] = useState(false);
 
   if (session.status === 'anonymous') {
     return <button className="header-action header-sign-in" type="button" onClick={() => void session.signIn(`${location.pathname}${location.search}${location.hash}`)}>{uiText(language, 'Đăng nhập')}</button>;
@@ -34,7 +35,8 @@ function HeaderSessionActions() {
     {menuOpen && <div className="header-user-dropdown" role="menu">
       <Link className="header-action" role="menuitem" to="/wishlist">{t('wishlist')}</Link>
       <Link className="header-action" role="menuitem" to="/account">{t('account')}</Link>
-      <button className="header-action" role="menuitem" type="button" onClick={() => void session.signOut()}>{uiText(language, 'Đăng xuất')}</button>
+      {signOutFailed && <span className="auth-header-error" role="alert">{uiText(language, 'Không thể đăng xuất. Vui lòng thử lại.')}</span>}
+      <button className="header-action" role="menuitem" type="button" onClick={() => { setSignOutFailed(false); void Promise.resolve(session.signOut()).catch(() => setSignOutFailed(true)); }}>{uiText(language, 'Đăng xuất')}</button>
     </div>}
   </div>;
 }
@@ -90,7 +92,7 @@ function getShellClass(pathname: string) {
   if (/^\/product\/[^/]+$/.test(pathname)) return 'product-shell';
   if (/^\/shops\/[^/]+$/.test(pathname)) return 'shop-shell';
   if (pathname === '/blog' || /^\/blog\/[^/]+$/.test(pathname)) return 'blog-shell';
-  if (pathname === '/' || pathname === '/search' || /^\/category\/[^/]+$/.test(pathname) || ['/compare', '/wishlist', '/login', '/account'].includes(pathname)) {
+  if (pathname === '/' || pathname === '/search' || /^\/category\/[^/]+$/.test(pathname) || ['/compare', '/wishlist', '/login', '/register', '/verify-email', '/forgot-password', '/account'].includes(pathname)) {
     return pathname === '/' ? 'home-shell' : 'light-shell';
   }
   return 'home-shell';
@@ -103,14 +105,12 @@ function Partners() {
 }
 function Footer() {
   const { t } = useLanguage(); return <footer className="site-footer"><div className="footer-main"><div className="footer-brand"><Link className="brand" to="/"><span className="brand-mark">G</span><span>GiaTot<small>{t('newsletterStoreTagline')}</small></span></Link><p>{t('footerTagline')}</p><div className="social-links"><span>f</span><span>◎</span><span>in</span></div></div><div><strong>{t('about')}</strong><Link to="/blog">{t('blog')}</Link><Link to="/account">{t('account')}</Link><Link to="/shops/techmart">{t('partnerLink')}</Link></div><div><strong>{t('exploreMenu')}</strong><Link to="/search">{t('categories')}</Link><Link to="/compare">{t('compareProducts')}</Link><Link to="/wishlist">{t('trackPrices')}</Link></div><div><strong>{t('support')}</strong><Link to="/search">{t('helpCenter')}</Link><Link to="/account">{t('terms')}</Link><Link to="/account">{t('privacyPolicy')}</Link></div></div><div className="footer-bottom"><span>© 2026 GiaTot. {t('allRightsReserved')}</span><span>{t('madeForSmarterShopping')} <b>♥</b></span></div></footer>; }
-function LoginPage() {
-  const { language } = useLanguage(); return <div className="auth-page"><div className="auth-panel"><Link className="brand" to="/"><span className="brand-mark">G</span><span>GiaTot</span></Link><h1>{uiText(language, 'Đăng nhập để trải nghiệm tốt hơn')}</h1><p className="muted">{uiText(language, 'Lưu sản phẩm, theo dõi giá và nhận ưu đãi.')}</p><button className="social-button">{uiText(language, '🌐 Tiếp tục với Google')}</button><button className="social-button">{uiText(language, '● Tiếp tục với Apple')}</button><div className="auth-divider">{uiText(language, 'hoặc')}</div><input placeholder={uiText(language, 'Nhập email của bạn')} type="email" /><input placeholder={uiText(language, 'Nhập mật khẩu')} type="password" /><button className="button button-primary button-large">{uiText(language, 'Đăng nhập')}</button><p className="muted">{uiText(language, 'Chưa có tài khoản?')}<Link to="/account">{uiText(language, 'Đăng ký ngay')}</Link></p></div><div className="auth-art"><div className="promo-bag">%</div><h2>{uiText(language, 'Mua sắm thông minh,')}<br />{uiText(language, 'tiết kiệm hơn.')}</h2></div></div>; }
 export function App() {
   const location = useLocation();
   const { language } = useLanguage();
   useEffect(() => {
     document.title = getApplicationTitle(language);
   }, [language]);
-  if (location.pathname === '/auth/callback') return <AuthCallbackPage />;
-  return <Shell><Routes><Route path="/" element={<HomePage partners={<Partners />} footer={<Footer />} />} /><Route path="/search" element={<SearchPage />} /><Route path="/category/:slug" element={<SearchPage />} /><Route path="/product/:slug" element={<ProductDetailPage />} /><Route path="/compare" element={<ComparePage />} /><Route path="/blog" element={<BlogPage />} /><Route path="/blog/:slug" element={<BlogDetailPage />} /><Route path="/shops/:slug" element={<ShopPage />} /><Route path="/wishlist" element={<WishlistPage />} /><Route path="/login" element={<LoginPage />} /><Route path="/account" element={<AccountPage />} /><Route path="*" element={<Navigate to="/" replace />} /></Routes></Shell>;
+  if (['/login', '/register', '/verify-email', '/forgot-password'].includes(location.pathname)) return <Shell><AuthPages /></Shell>;
+  return <Shell><Routes><Route path="/" element={<HomePage partners={<Partners />} footer={<Footer />} />} /><Route path="/search" element={<SearchPage />} /><Route path="/category/:slug" element={<SearchPage />} /><Route path="/product/:slug" element={<ProductDetailPage />} /><Route path="/compare" element={<ComparePage />} /><Route path="/blog" element={<BlogPage />} /><Route path="/blog/:slug" element={<BlogDetailPage />} /><Route path="/shops/:slug" element={<ShopPage />} /><Route path="/wishlist" element={<WishlistPage />} /><Route path="/login" element={<AuthPages />} /><Route path="/register" element={<AuthPages />} /><Route path="/verify-email" element={<AuthPages />} /><Route path="/forgot-password" element={<AuthPages />} /><Route path="/account" element={<AccountPage />} /><Route path="*" element={<Navigate to="/" replace />} /></Routes></Shell>;
 }

@@ -88,7 +88,7 @@ export function SearchPage() {
       // initial wishlist load can never authorize an unauthenticated request.
       currentToken = await getAuthenticatedAccessToken();
     } catch {
-      // A broken or unavailable OIDC session is still unauthenticated for this
+      // A broken or unavailable auth session is still unauthenticated for this
       // action. Clear it and start sign-in instead of leaving the heart inert.
       await clearAuthenticatedSession().catch(() => undefined);
       setWishlistIds([]);

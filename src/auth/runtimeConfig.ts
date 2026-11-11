@@ -1,7 +1,8 @@
 export interface PublicRuntimeConfig {
-  KEYCLOAK_URL?: string;
-  KEYCLOAK_REALM?: string;
-  KEYCLOAK_CLIENT_ID?: string;
+  AUTH_API_URL?: string;
+  TURNSTILE_ENABLED?: boolean;
+  TURNSTILE_SITE_KEY?: string;
+  AUTH_MOCK_ENABLED?: boolean;
 }
 
 declare global {
@@ -16,22 +17,9 @@ function readConfigValue(runtimeValue: string | undefined, localValue: string | 
 
 export function getAuthConfig() {
   const runtime = window.__APP_CONFIG__;
-  const baseUrl = readConfigValue(runtime?.KEYCLOAK_URL, import.meta.env.VITE_KEYCLOAK_URL);
-  const realm = readConfigValue(runtime?.KEYCLOAK_REALM, import.meta.env.VITE_KEYCLOAK_REALM);
-  const clientId = readConfigValue(runtime?.KEYCLOAK_CLIENT_ID, import.meta.env.VITE_KEYCLOAK_CLIENT_ID);
-
-  if (!baseUrl || !realm || !clientId) {
-    throw new Error('Public sign-in configuration is unavailable.');
-  }
-
-  const authority = baseUrl.replace(/\/$/, '');
-  if (new URL(authority).pathname.replace(/\/$/, '') !== `/realms/${realm}`) {
-    throw new Error('Public sign-in configuration does not match the approved realm.');
-  }
-
-  return {
-    authority,
-    clientId,
-    redirectUri: `${window.location.origin}/auth/callback`,
-  };
+  const baseUrl = readConfigValue(runtime?.AUTH_API_URL, import.meta.env.VITE_AUTH_API_URL);
+  const turnstileEnabled = runtime?.TURNSTILE_ENABLED ?? import.meta.env.VITE_TURNSTILE_ENABLED === 'true';
+  const siteKey = readConfigValue(runtime?.TURNSTILE_SITE_KEY, import.meta.env.VITE_TURNSTILE_SITE_KEY);
+  const mockEnabled = import.meta.env.DEV && (runtime?.AUTH_MOCK_ENABLED ?? import.meta.env.VITE_AUTH_MOCK_ENABLED === 'true');
+  return { baseUrl: baseUrl.replace(/\/$/, ''), turnstileEnabled, turnstileSiteKey: siteKey, mockEnabled };
 }
