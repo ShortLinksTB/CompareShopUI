@@ -215,6 +215,7 @@ const englishCopy: Record<string, string> = {
   'Không thể tải tài khoản. Vui lòng thử lại.': 'Could not load your account. Please try again.',
   'Đang tải…': 'Loading…',
   'Không thể tải số sản phẩm yêu thích.': 'Could not load your wishlist count.',
+  'Không thể tải số theo dõi giá.': 'Could not load your price-alert count.',
   'Không thể đăng xuất. Vui lòng thử lại.': 'Could not sign out. Please try again.',
 };
 

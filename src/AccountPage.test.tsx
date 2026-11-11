@@ -19,6 +19,14 @@ const baseSession: AuthSessionValue = {
   signOut: vi.fn(),
 };
 
+function alertResponse(items: unknown[], ok = true, status = ok ? 200 : 500) {
+  return { ok, status, json: async () => ({ items }) } as Response;
+}
+
+function priceAlert(id: number) {
+  return { id, productId: id + 10, slug: `product-${id}`, name: `Product ${id}`, targetPrice: 100, isActive: true, createdAtUtc: '2026-01-01' };
+}
+
 describe('AccountPage', () => {
   it('shows loading without exposing account data before session resolves', () => {
     renderAccount(baseSession);
@@ -33,17 +41,20 @@ describe('AccountPage', () => {
     expect(screen.getByRole('status').textContent).toContain('Đang chuyển đến đăng nhập');
   });
 
-  it('renders session identity and a live wishlist count, while hiding unsupported cards', async () => {
+  it('renders session identity and live wishlist and price-alert counts, hiding unsupported cards', async () => {
     const getAccessToken = vi.fn(async () => 'opaque-test-token');
-    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => ({ items: [
-      { productId: 12, slug: 'one', name: 'One', imageUrl: null, createdAtUtc: '2026-01-01' },
-      { productId: 13, slug: 'two', name: 'Two', imageUrl: null, createdAtUtc: '2026-01-02' },
-    ] }) } as Response)));
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => String(input).endsWith('/price-alerts')
+      ? alertResponse([priceAlert(1), priceAlert(2), priceAlert(3)])
+      : alertResponse([
+        { productId: 12, slug: 'one', name: 'One', imageUrl: null, createdAtUtc: '2026-01-01' },
+        { productId: 13, slug: 'two', name: 'Two', imageUrl: null, createdAtUtc: '2026-01-02' },
+      ])));
     renderAccount({ ...baseSession, status: 'authenticated', user: { id: 'u1', displayName: 'Mai Nguyen', email: 'mai@example.test' }, getAccessToken });
     expect(screen.getByRole('heading', { name: 'Xin chào, Mai Nguyen' })).toBeTruthy();
     expect(screen.getByText('mai@example.test')).toBeTruthy();
     await waitFor(() => expect(screen.getAllByText('2').length).toBeGreaterThan(0));
-    expect(screen.queryByText('Theo dõi giá')).toBeNull();
+    expect(await screen.findByText('3 sản phẩm')).toBeTruthy();
+    expect(screen.getByText('Theo dõi giá')).toBeTruthy();
     expect(screen.queryByText('Lịch sử xem')).toBeNull();
     expect(getAccessToken).toHaveBeenCalledOnce();
   });
@@ -57,10 +68,38 @@ describe('AccountPage', () => {
 
   it('localizes the live wishlist count in English', async () => {
     localStorage.setItem('giatot-language', 'en');
-    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => ({ items: [
-      { productId: 12, slug: 'one', name: 'One', imageUrl: null, createdAtUtc: '2026-01-01' },
-    ] }) } as Response)));
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => String(input).endsWith('/price-alerts')
+      ? alertResponse([priceAlert(1)])
+      : alertResponse([{ productId: 12, slug: 'one', name: 'One', imageUrl: null, createdAtUtc: '2026-01-01' }])));
     renderAccount({ ...baseSession, status: 'authenticated', user: { id: 'u1', displayName: 'Mai Nguyen', email: 'mai@example.test' }, getAccessToken: async () => 'opaque-test-token' });
     expect(await screen.findByText('1 product')).toBeTruthy();
+    expect(await screen.findByText('1 alert')).toBeTruthy();
+  });
+
+  it('shows a zero count when the price-alert API returns an empty list', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => String(input).endsWith('/price-alerts')
+      ? alertResponse([])
+      : alertResponse([])));
+    renderAccount({ ...baseSession, status: 'authenticated', user: { id: 'u1', displayName: 'Mai Nguyen', email: 'mai@example.test' }, getAccessToken: async () => 'opaque-test-token' });
+    expect(screen.getAllByText('Đang tải…').length).toBeGreaterThan(0);
+    expect((await screen.findAllByText('0 sản phẩm')).length).toBe(2);
+    expect(screen.queryByText('Không thể tải số theo dõi giá.')).toBeNull();
+  });
+
+  it('shows a localized error when loading price alerts fails', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => String(input).endsWith('/price-alerts')
+      ? alertResponse([], false, 500)
+      : alertResponse([])));
+    renderAccount({ ...baseSession, status: 'authenticated', user: { id: 'u1', displayName: 'Mai Nguyen', email: 'mai@example.test' }, getAccessToken: async () => 'opaque-test-token' });
+    expect(await screen.findByText('Không thể tải số theo dõi giá.')).toBeTruthy();
+  });
+
+  it('localizes price-alert failures in English', async () => {
+    localStorage.setItem('giatot-language', 'en');
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => String(input).endsWith('/price-alerts')
+      ? alertResponse([], false, 503)
+      : alertResponse([])));
+    renderAccount({ ...baseSession, status: 'authenticated', user: { id: 'u1', displayName: 'Mai Nguyen', email: 'mai@example.test' }, getAccessToken: async () => 'opaque-test-token' });
+    expect(await screen.findByText('Could not load your price-alert count.')).toBeTruthy();
   });
 });
