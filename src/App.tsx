@@ -14,6 +14,7 @@ import { AuthPages } from './auth/AuthPages';
 import { WishlistPage } from './WishlistPage';
 import { getApplicationTitle } from './pageMetadata';
 import { AccountPage } from './AccountPage';
+import { WishlistProvider } from './wishlist/WishlistContext';
 import { useAuthSession } from './auth/AuthSession';
 
 function HeaderSessionActions() {
@@ -112,5 +113,5 @@ export function App() {
     document.title = getApplicationTitle(language);
   }, [language]);
   if (['/login', '/register', '/verify-email', '/forgot-password'].includes(location.pathname)) return <Shell><AuthPages /></Shell>;
-  return <Shell><Routes><Route path="/" element={<HomePage partners={<Partners />} footer={<Footer />} />} /><Route path="/search" element={<SearchPage />} /><Route path="/category/:slug" element={<SearchPage />} /><Route path="/product/:slug" element={<ProductDetailPage />} /><Route path="/compare" element={<ComparePage />} /><Route path="/blog" element={<BlogPage />} /><Route path="/blog/:slug" element={<BlogDetailPage />} /><Route path="/shops/:slug" element={<ShopPage />} /><Route path="/wishlist" element={<WishlistPage />} /><Route path="/login" element={<AuthPages />} /><Route path="/register" element={<AuthPages />} /><Route path="/verify-email" element={<AuthPages />} /><Route path="/forgot-password" element={<AuthPages />} /><Route path="/account" element={<AccountPage />} /><Route path="*" element={<Navigate to="/" replace />} /></Routes></Shell>;
+  return <WishlistProvider><Shell><Routes><Route path="/" element={<HomePage partners={<Partners />} footer={<Footer />} />} /><Route path="/search" element={<SearchPage />} /><Route path="/category/:slug" element={<SearchPage />} /><Route path="/product/:slug" element={<ProductDetailPage />} /><Route path="/compare" element={<ComparePage />} /><Route path="/blog" element={<BlogPage />} /><Route path="/blog/:slug" element={<BlogDetailPage />} /><Route path="/shops/:slug" element={<ShopPage />} /><Route path="/wishlist" element={<WishlistPage />} /><Route path="/login" element={<AuthPages />} /><Route path="/register" element={<AuthPages />} /><Route path="/verify-email" element={<AuthPages />} /><Route path="/forgot-password" element={<AuthPages />} /><Route path="/account" element={<AccountPage />} /><Route path="*" element={<Navigate to="/" replace />} /></Routes></Shell></WishlistProvider>;
 }

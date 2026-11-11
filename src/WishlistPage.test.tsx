@@ -1,58 +1,52 @@
-import { LanguageProvider } from './i18n';
 // @vitest-environment jsdom
-/// <reference types="vite/client" />
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import stylesheet from './styles.css?inline';
-
-const auth = vi.hoisted(() => ({
-  getToken: vi.fn<() => Promise<string | null>>(),
-  clear: vi.fn<() => Promise<void>>(),
-  signIn: vi.fn<(_: unknown) => Promise<void>>(),
-}));
-
-vi.mock('./auth/authClient', () => ({
-  getAuthenticatedAccessToken: auth.getToken,
-  clearAuthenticatedSession: auth.clear,
-  startSignIn: auth.signIn,
-}));
-
+import { LanguageProvider } from './i18n';
+import { AuthSessionProvider, type AuthSessionValue } from './auth/AuthSession';
+import { WishlistProvider } from './wishlist/WishlistContext';
 import { WishlistPage } from './WishlistPage';
 
 const item = { productId: 42, slug: 'sample-item', name: 'Sample item', imageUrl: 'https://cdn.example/wishlist.jpg', createdAtUtc: '2026-10-30T10:00:00Z' };
 const jsonResponse = (status: number, body?: unknown) => ({ status, ok: status >= 200 && status < 300, json: () => Promise.resolve(body) }) as Response;
+const session = (status: AuthSessionValue['status'], overrides: Partial<AuthSessionValue> = {}): AuthSessionValue => ({
+  status,
+  user: status === 'authenticated' ? { id: 'user-1', displayName: 'Sample User', email: 'sample@example.test' } : null,
+  getAccessToken: vi.fn(async () => status === 'authenticated' ? 'access-token' : null),
+  signIn: vi.fn(async () => undefined),
+  signOut: vi.fn(async () => undefined),
+  ...overrides,
+});
 
-function renderPage() { return render(<LanguageProvider><MemoryRouter><WishlistPage /></MemoryRouter></LanguageProvider>); }
+function renderPage(authSession: AuthSessionValue) {
+  return render(<LanguageProvider><AuthSessionProvider value={authSession}><MemoryRouter initialEntries={['/wishlist']}><WishlistProvider><WishlistPage /></WishlistProvider></MemoryRouter></AuthSessionProvider></LanguageProvider>);
+}
 
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
-  auth.getToken.mockReset();
-  auth.clear.mockReset().mockResolvedValue();
-  auth.signIn.mockReset().mockResolvedValue();
 });
 
 describe('WishlistPage', () => {
-  it('keeps the API out of signed-out sessions and starts sign-in with the Wishlist return path', async () => {
-    auth.getToken.mockResolvedValue(null);
+  it('keeps the API out of anonymous sessions and signs in with the Wishlist return path', async () => {
+    const anonymous = session('anonymous');
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
-    renderPage();
+    renderPage(anonymous);
 
     fireEvent.click(await screen.findByRole('button', { name: 'Đăng nhập' }));
-    await waitFor(() => expect(auth.signIn).toHaveBeenCalledWith('/wishlist'));
+    await waitFor(() => expect(anonymous.signIn).toHaveBeenCalledWith('/wishlist'));
     expect(fetchMock).not.toHaveBeenCalled();
     expect(screen.getByText('Danh sách yêu thích chỉ hiển thị cho tài khoản đã xác thực.')).toBeTruthy();
   });
 
-  it('shows the skeleton until the bearer-authenticated response succeeds and then renders only API items', async () => {
-    auth.getToken.mockResolvedValue('access-token');
+  it('shows loading until the authenticated API response succeeds and renders only API items', async () => {
     let resolveFetch!: (value: Response) => void;
     const fetchMock = vi.fn((..._args: Parameters<typeof fetch>) => new Promise<Response>(resolve => { resolveFetch = resolve; }));
     vi.stubGlobal('fetch', fetchMock);
-    renderPage();
+    renderPage(session('authenticated'));
 
     expect(screen.getByLabelText('Đang tải sản phẩm yêu thích').getAttribute('aria-busy')).toBe('true');
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
@@ -66,9 +60,8 @@ describe('WishlistPage', () => {
   });
 
   it('keeps the empty-state action below its description with wireframe spacing', async () => {
-    auth.getToken.mockResolvedValue('access-token');
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, { items: [] })));
-    renderPage();
+    renderPage(session('authenticated'));
 
     expect(await screen.findByRole('heading', { name: 'Chưa có sản phẩm yêu thích' })).toBeTruthy();
     const description = screen.getByText('Nhấn biểu tượng trái tim trên sản phẩm để lưu lại.');
@@ -77,41 +70,27 @@ describe('WishlistPage', () => {
     expect(stylesheet).toMatch(/\.wishlist-page \.empty-state p\s*\{\s*margin:\s*0 0 18px;\s*font-size:\s*13px\s*;?\s*\}/);
   });
 
-  it('clears unusable auth after a 401 and offers retryable sign-in', async () => {
-    auth.getToken.mockResolvedValue('expired-token');
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(401)));
-    renderPage();
-
-    expect((await screen.findByRole('alert')).textContent).toContain('Phiên đăng nhập đã hết hạn');
-    expect(auth.clear).toHaveBeenCalledOnce();
-    fireEvent.click(screen.getByRole('button', { name: 'Đăng nhập lại' }));
-    await waitFor(() => expect(auth.signIn).toHaveBeenCalledWith('/wishlist'));
-    expect(screen.queryByRole('link', { name: 'Sample item' })).toBeNull();
-  });
-
-  it('keeps other load failures retryable without displaying a successful empty list', async () => {
-    auth.getToken.mockResolvedValue('access-token');
+  it('keeps load failures retryable without displaying a successful empty list', async () => {
     const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse(500)).mockResolvedValueOnce(jsonResponse(200, { items: [item] }));
     vi.stubGlobal('fetch', fetchMock);
-    renderPage();
+    renderPage(session('authenticated'));
 
     fireEvent.click(await screen.findByRole('button', { name: 'Thử lại' }));
     expect(await screen.findByRole('link', { name: 'Sample item' })).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
-  it('removes only after 204 and keeps the item visible with a retry action on failure', async () => {
-    auth.getToken.mockResolvedValue('access-token');
+  it('keeps a failed removal visible and offers a retry through the shared wishlist state', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(jsonResponse(200, { items: [item] }))
       .mockResolvedValueOnce(jsonResponse(500))
-      .mockResolvedValueOnce(jsonResponse(204));
+      .mockResolvedValueOnce(jsonResponse(204))
+      .mockResolvedValueOnce(jsonResponse(200, { items: [] }));
     vi.stubGlobal('fetch', fetchMock);
-    renderPage();
+    renderPage(session('authenticated'));
 
-    const removeButton = await screen.findByRole('button', { name: 'Xóa Sample item' });
-    fireEvent.click(removeButton);
-    expect(await screen.findByText('Không thể xóa sản phẩm yêu thích. Vui lòng thử lại.')).toBeTruthy();
+    fireEvent.click(await screen.findByRole('button', { name: 'Xóa Sample item' }));
+    expect(await screen.findByText('Không thể cập nhật sản phẩm yêu thích. Vui lòng thử lại.')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Sample item' })).toBeTruthy();
     expect(fetchMock.mock.calls[1][1]).toMatchObject({
       method: 'POST',
@@ -119,8 +98,8 @@ describe('WishlistPage', () => {
       body: JSON.stringify({ productId: 42, operation: 'remove' }),
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Thử lại' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Thử lại' })[0]);
     await waitFor(() => expect(screen.queryByRole('link', { name: 'Sample item' })).toBeNull());
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 });

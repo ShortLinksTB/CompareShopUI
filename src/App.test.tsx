@@ -28,14 +28,14 @@ const products = {
   page: 1, pageSize: 10, totalItems: 1, totalPages: 1,
 };
 
-function renderApp() {
-  const authSession: AuthSessionValue = { status: 'authenticated', user: { id: 'test-user', displayName: 'Trần Minh Quân', email: 'quanquan@example.test' }, getAccessToken: async () => null, signIn: vi.fn(), signOut: vi.fn() };
+function renderApp(status: AuthSessionValue['status'] = window.location.pathname === '/account' ? 'authenticated' : 'anonymous') {
+  const authSession: AuthSessionValue = { status, user: status === 'authenticated' ? { id: 'test-user', displayName: 'Trần Minh Quân', email: 'quanquan@example.test' } : null, getAccessToken: authMock.getToken, signIn: authMock.signIn, signOut: vi.fn() };
   return render(<CountryProvider><LanguageProvider><AuthSessionProvider value={authSession}><BrowserRouter><App /></BrowserRouter></AuthSessionProvider></LanguageProvider></CountryProvider>);
 }
 
-function renderAppAt(path: string) {
+function renderAppAt(path: string, status?: AuthSessionValue['status']) {
   window.history.pushState({}, '', path);
-  return renderApp();
+  return renderApp(status);
 }
 
 function renderAppAtWithSession(path: string, session: AuthSessionValue) {
@@ -650,7 +650,7 @@ describe('English copy for route controls and accessible labels', () => {
     authMock.getToken.mockResolvedValue('access-token');
     let resolveRequest!: (value: Response) => void;
     vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(resolve => { resolveRequest = resolve; })));
-    renderAppAt('/wishlist');
+    renderAppAt('/wishlist', 'authenticated');
 
     const loadingRegion = screen.getByLabelText('Loading wishlist products');
     expect(loadingRegion.getAttribute('aria-busy')).toBe('true');
@@ -695,7 +695,7 @@ describe('Wishlist API data', () => {
     let resolveRequest!: (value: Response) => void;
     const fetchMock = vi.fn((..._args: Parameters<typeof fetch>) => new Promise<Response>(resolve => { resolveRequest = resolve; }));
     vi.stubGlobal('fetch', fetchMock);
-    renderAppAt('/wishlist');
+    renderAppAt('/wishlist', 'authenticated');
 
     expect(screen.getByLabelText('Đang tải sản phẩm yêu thích').getAttribute('aria-busy')).toBe('true');
     expect(screen.queryByText('Chưa có sản phẩm yêu thích')).toBeNull();
@@ -710,22 +710,23 @@ describe('Wishlist API data', () => {
     authMock.getToken.mockResolvedValue('access-token');
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(response({ items: [{ productId: 12, slug: 'real-phone', name: 'Real Phone', createdAtUtc: '2026-10-19T00:00:00Z' }] }))
-      .mockResolvedValueOnce({ ok: true, status: 204 } as Response);
+      .mockResolvedValueOnce({ ok: true, status: 204 } as Response)
+      .mockResolvedValueOnce(response({ items: [] }));
     vi.stubGlobal('fetch', fetchMock);
-    renderAppAt('/wishlist');
+    renderAppAt('/wishlist', 'authenticated');
 
     fireEvent.click(await screen.findByRole('button', { name: 'Xóa Real Phone' }));
     expect(await screen.findByText('Chưa có sản phẩm yêu thích')).toBeTruthy();
-    expect(fetchMock).toHaveBeenLastCalledWith('https://api-compareshop-dev.giamha.online/api/v1/wishlist', {
+    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/wishlist', {
       method: 'POST', headers: { Authorization: 'Bearer access-token', 'Content-Type': 'application/json' },
       body: JSON.stringify({ productId: 12, operation: 'remove' }),
     });
   });
 
-  it('shows the unauthenticated state for an unauthorized response', async () => {
+  it('offers sign-in after the wishlist API rejects the current token', async () => {
     authMock.getToken.mockResolvedValue('expired-token');
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 401 } as Response));
-    renderAppAt('/wishlist');
+    renderAppAt('/wishlist', 'authenticated');
 
     expect(await screen.findByRole('heading', { name: 'Đăng nhập để xem sản phẩm đã lưu' })).toBeTruthy();
     const loginCta = screen.getByRole('button', { name: 'Đăng nhập' });
@@ -734,13 +735,15 @@ describe('Wishlist API data', () => {
     expect(promptFlow?.classList.contains('wishlist-unauthenticated__actions')).toBe(true);
     expect(promptFlow?.firstElementChild?.textContent).toBe('Danh sách yêu thích chỉ hiển thị cho tài khoản đã xác thực.');
     expect(stylesheet).toMatch(/\.wishlist-unauthenticated__actions\s*\{\s*display:\s*flex;\s*flex-direction:\s*column;\s*align-items:\s*center;\s*gap:\s*24px;\s*\}/);
+    fireEvent.click(loginCta);
+    await waitFor(() => expect(authMock.signIn).toHaveBeenCalledWith('/wishlist'));
   });
 
   it('shows an error and retries the wishlist request', async () => {
     authMock.getToken.mockResolvedValue('access-token');
     const fetchMock = vi.fn().mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce(response({ items: [] }));
     vi.stubGlobal('fetch', fetchMock);
-    renderAppAt('/wishlist');
+    renderAppAt('/wishlist', 'authenticated');
 
     fireEvent.click(await screen.findByRole('button', { name: 'Thử lại' }));
     expect(await screen.findByText('Chưa có sản phẩm yêu thích')).toBeTruthy();
@@ -830,15 +833,20 @@ const catalogPage = {
 describe('Search and Category API data', () => {
   it('adds a product to the authenticated wishlist through the API heart action', async () => {
     authMock.getToken.mockResolvedValue('access-token');
+    let wishlistItems: Array<{ productId: number; slug: string; name: string; createdAtUtc: string }> = [];
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       if (url.endsWith('/categories')) return response({ items: [{ id: 42, slug: 'phones', name: 'Phones' }] });
-      if (url.endsWith('/wishlist') && init?.method !== 'POST') return response({ items: [] });
-      if (url.endsWith('/wishlist') && init?.method === 'POST') return init.body === JSON.stringify({ productId: 17, operation: 'remove' }) ? Promise.resolve({ ok: true, status: 204 } as Response) : response(null);
+      if (url.endsWith('/wishlist') && init?.method !== 'POST') return response({ items: wishlistItems });
+      if (url.endsWith('/wishlist') && init?.method === 'POST') {
+        const operation = (JSON.parse(String(init.body)) as { operation: string }).operation;
+        wishlistItems = operation === 'remove' ? [] : [{ productId: 17, slug: 'api-phone', name: 'API Phone', createdAtUtc: '2026-11-11T00:00:00Z' }];
+        return Promise.resolve({ ok: true, status: 204 } as Response);
+      }
       return response(catalogPage);
     });
     vi.stubGlobal('fetch', fetchMock);
-    renderAppAt('/category/phones');
+    renderAppAt('/category/phones', 'authenticated');
 
     const addButton = await screen.findByRole('button', { name: 'Thêm vào yêu thích' });
     await waitFor(() => expect(addButton.hasAttribute('disabled')).toBe(false));
@@ -868,7 +876,7 @@ describe('Search and Category API data', () => {
       return response(catalogPage);
     });
     vi.stubGlobal('fetch', fetchMock);
-    renderAppAt('/category/phones');
+    renderAppAt('/category/phones', 'authenticated');
 
     fireEvent.click(await screen.findByRole('button', { name: 'Thêm vào yêu thích' }));
     expect(await screen.findByRole('alert')).toBeTruthy();
@@ -889,6 +897,24 @@ describe('Search and Category API data', () => {
     expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/wishlist'))).toBe(false);
   });
 
+  it('recovers from a null wishlist token by enabling the heart and signing in at the current path', async () => {
+    authMock.getToken.mockResolvedValue(null);
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith('/categories')) return response({ items: [{ id: 42, slug: 'phones', name: 'Phones' }] });
+      return response(catalogPage);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderAppAt('/search?q=Apple', 'authenticated');
+
+    const heart = await screen.findByRole('button', { name: 'Thêm vào yêu thích' });
+    await waitFor(() => expect(heart.hasAttribute('disabled')).toBe(false));
+    fireEvent.click(heart);
+
+    await waitFor(() => expect(authMock.signIn).toHaveBeenCalledWith('/search?q=Apple'));
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/wishlist'))).toBe(false);
+  });
+
   it('rechecks the session at click time and never posts with a token cleared after wishlist load', async () => {
     let accessToken: string | null = 'stale-token';
     authMock.getToken.mockImplementation(async () => accessToken);
@@ -901,7 +927,7 @@ describe('Search and Category API data', () => {
       return response(catalogPage);
     });
     vi.stubGlobal('fetch', fetchMock);
-    renderAppAt('/search?q=phone');
+    renderAppAt('/search?q=phone', 'authenticated');
 
     const heart = await screen.findByRole('button', { name: 'Thêm vào yêu thích' });
     await waitFor(() => expect(heart.hasAttribute('disabled')).toBe(false));
@@ -924,7 +950,7 @@ describe('Search and Category API data', () => {
       return response(catalogPage);
     });
     vi.stubGlobal('fetch', fetchMock);
-    renderAppAt('/search?q=Apple');
+    renderAppAt('/search?q=Apple', 'authenticated');
 
     const heart = await screen.findByRole('button', { name: 'Thêm vào yêu thích' });
     await waitFor(() => expect(heart.hasAttribute('disabled')).toBe(false));
@@ -943,14 +969,14 @@ describe('Search and Category API data', () => {
       return response(catalogPage);
     });
     vi.stubGlobal('fetch', fetchMock);
-    renderAppAt('/search?q=Apple');
+    renderAppAt('/search?q=Apple', 'authenticated');
 
     const heart = await screen.findByRole('button', { name: 'Thêm vào yêu thích' });
     await waitFor(() => expect(heart.hasAttribute('disabled')).toBe(false));
     fireEvent.click(heart);
 
     await waitFor(() => expect(authMock.signIn).toHaveBeenCalledWith('/search?q=Apple'));
-    expect(authMock.clear).toHaveBeenCalled();
+    expect(authMock.clear).not.toHaveBeenCalled();
     expect(fetchMock.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(0);
   });
 

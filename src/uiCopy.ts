@@ -57,6 +57,8 @@ const englishCopy: Record<string, string> = {
   'Trang trước': 'Previous page',
   'Trang sau': 'Next page',
   'Đăng nhập để lưu sản phẩm yêu thích.': 'Sign in to save products to your wishlist.',
+  'Không thể tải sản phẩm yêu thích.': 'Could not load your wishlist.',
+  'Không thể mở đăng nhập. Vui lòng thử lại.': 'Could not start sign-in. Please try again.',
   'Không thể cập nhật sản phẩm yêu thích. Vui lòng thử lại.': 'Could not update your wishlist. Please try again.',
   'Đang tải sản phẩm...': 'Loading products...',
   'Không thể tải dữ liệu tìm kiếm': 'Could not load search results',
