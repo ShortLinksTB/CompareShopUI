@@ -672,7 +672,8 @@ describe('Wishlist API data', () => {
     authMock.getToken.mockResolvedValue('access-token');
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(response({ items: [{ productId: 12, slug: 'real-phone', name: 'Real Phone', createdAtUtc: '2026-10-19T00:00:00Z' }] }))
-      .mockResolvedValueOnce({ ok: true, status: 204 } as Response);
+      .mockResolvedValueOnce({ ok: true, status: 204 } as Response)
+      .mockResolvedValueOnce(response({ items: [] }));
     vi.stubGlobal('fetch', fetchMock);
     renderAppAt('/wishlist', 'authenticated');
 
@@ -794,11 +795,16 @@ const catalogPage = {
 describe('Search and Category API data', () => {
   it('adds a product to the authenticated wishlist through the API heart action', async () => {
     authMock.getToken.mockResolvedValue('access-token');
+    let wishlistItems: Array<{ productId: number; slug: string; name: string; createdAtUtc: string }> = [];
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       if (url.endsWith('/categories')) return response({ items: [{ id: 42, slug: 'phones', name: 'Phones' }] });
-      if (url.endsWith('/wishlist') && init?.method !== 'POST') return response({ items: [] });
-      if (url.endsWith('/wishlist') && init?.method === 'POST') return init.body === JSON.stringify({ productId: 17, operation: 'remove' }) ? Promise.resolve({ ok: true, status: 204 } as Response) : response(null);
+      if (url.endsWith('/wishlist') && init?.method !== 'POST') return response({ items: wishlistItems });
+      if (url.endsWith('/wishlist') && init?.method === 'POST') {
+        const operation = (JSON.parse(String(init.body)) as { operation: string }).operation;
+        wishlistItems = operation === 'remove' ? [] : [{ productId: 17, slug: 'api-phone', name: 'API Phone', createdAtUtc: '2026-11-11T00:00:00Z' }];
+        return Promise.resolve({ ok: true, status: 204 } as Response);
+      }
       return response(catalogPage);
     });
     vi.stubGlobal('fetch', fetchMock);

@@ -103,8 +103,9 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
   }, [signIn]);
 
   const mutate = useCallback(async (productId: number, safeReturnTo: string, forceRemove = false) => {
-    if (sessionStatus !== 'authenticated' || !user) {
+    if (status === 'anonymous' || sessionStatus !== 'authenticated' || !user) {
       if (sessionStatus === 'anonymous' || sessionStatus === 'error') await requestSignIn(safeReturnTo);
+      else if (status === 'anonymous') await requestSignIn(safeReturnTo);
       return;
     }
     if (status !== 'loaded' || busyIdsRef.current.has(productId)) return;
