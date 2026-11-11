@@ -71,7 +71,12 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       return getWishlist(token);
     }).then(result => {
       if (!active) return;
-      if (!result) return;
+      if (!result) {
+        setItems([]);
+        setError(null);
+        setStatus('anonymous');
+        return;
+      }
       setItems(result);
       setStatus('loaded');
     }).catch(reason => {

@@ -859,6 +859,24 @@ describe('Search and Category API data', () => {
     expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/wishlist'))).toBe(false);
   });
 
+  it('recovers from a null wishlist token by enabling the heart and signing in at the current path', async () => {
+    authMock.getToken.mockResolvedValue(null);
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith('/categories')) return response({ items: [{ id: 42, slug: 'phones', name: 'Phones' }] });
+      return response(catalogPage);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderAppAt('/search?q=Apple', 'authenticated');
+
+    const heart = await screen.findByRole('button', { name: 'Thêm vào yêu thích' });
+    await waitFor(() => expect(heart.hasAttribute('disabled')).toBe(false));
+    fireEvent.click(heart);
+
+    await waitFor(() => expect(authMock.signIn).toHaveBeenCalledWith('/search?q=Apple'));
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/wishlist'))).toBe(false);
+  });
+
   it('rechecks the session at click time and never posts with a token cleared after wishlist load', async () => {
     let accessToken: string | null = 'stale-token';
     authMock.getToken.mockImplementation(async () => accessToken);
