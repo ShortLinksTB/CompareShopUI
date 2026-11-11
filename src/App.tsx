@@ -33,6 +33,7 @@ function HeaderSessionActions() {
     </button>
     {menuOpen && <div className="header-user-dropdown" role="menu">
       <Link className="header-action" role="menuitem" to="/wishlist">{t('wishlist')}</Link>
+      <Link className="header-action" role="menuitem" to="/account">{t('account')}</Link>
       <button className="header-action" role="menuitem" type="button" onClick={() => void session.signOut()}>{uiText(language, 'Đăng xuất')}</button>
     </div>}
   </div>;

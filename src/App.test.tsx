@@ -163,7 +163,7 @@ describe('browser storage failures', () => {
     expect(localStorage.getItem('giatot-language')).toBe('id');
   });
 
-  it('renders the signed-in header menu without Account and selects English through the language provider', () => {
+  it('renders the signed-in header menu with localized Account and selects English through the language provider', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ items: [] })));
     const signOut = vi.fn();
     renderAppAtWithSession('/', { status: 'authenticated', user: { id: 'u1', displayName: 'Minh Anh', email: 'minh@example.test' }, getAccessToken: async () => null, signIn: vi.fn(), signOut });
@@ -177,6 +177,11 @@ describe('browser storage failures', () => {
     expect(languageControl?.querySelector('button[aria-label="Change language"]')).toBeTruthy();
     expect(languageControl?.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
 
+    fireEvent.click(screen.getByRole('button', { name: /Minh Anh/ }));
+    const accountLinkVi = screen.getByRole('menuitem', { name: 'Tài khoản' });
+    expect(accountLinkVi.getAttribute('href')).toBe('/account');
+    fireEvent.click(screen.getByRole('button', { name: /Minh Anh/ }));
+
     fireEvent.click(screen.getByRole('button', { name: 'Change language' }));
     expect(screen.getByRole('listbox', { name: 'Choose language' })).toBeTruthy();
     expect(screen.getByRole('option', { name: 'VI — Tiếng Việt' }).getAttribute('aria-selected')).toBe('true');
@@ -187,7 +192,8 @@ describe('browser storage failures', () => {
     expect(document.documentElement.lang).toBe('en');
     fireEvent.click(screen.getByRole('button', { name: /Minh Anh/ }));
     expect(screen.getByRole('menuitem', { name: 'Wishlist' })).toBeTruthy();
-    expect(screen.queryByRole('menuitem', { name: 'Account' })).toBeNull();
+    const accountLinkEn = screen.getByRole('menuitem', { name: 'Account' });
+    expect(accountLinkEn.getAttribute('href')).toBe('/account');
     fireEvent.click(screen.getByRole('menuitem', { name: 'Đăng xuất' }));
     expect(signOut).toHaveBeenCalledOnce();
     expect(localStorage.getItem('giatot-language')).toBe('en');
