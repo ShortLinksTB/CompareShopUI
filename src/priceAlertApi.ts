@@ -1,3 +1,5 @@
+import { fetchWithAuth } from './auth/authApi';
+
 export interface PriceAlertDto {
   id: number;
   productId: number;
@@ -30,9 +32,9 @@ function isPriceAlert(value: unknown): value is PriceAlertDto {
 }
 
 export async function getPriceAlerts(accessToken: string): Promise<PriceAlertDto[]> {
-  const response = await fetch(PRICE_ALERTS_API, {
+  const response = await fetchWithAuth(PRICE_ALERTS_API, {
     headers: { Authorization: `Bearer ${accessToken}` },
-  });
+  }, accessToken);
   if (!response.ok) throw new PriceAlertApiError(response.status);
 
   const payload = await response.json() as { items?: unknown };
