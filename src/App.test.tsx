@@ -5,6 +5,7 @@ import { BrowserRouter, Link, MemoryRouter, Route, Routes } from 'react-router-d
 import { App } from './App';
 import { LanguageProvider } from './i18n';
 import { CountryProvider } from './country';
+import { AuthSessionProvider, type AuthSessionValue } from './auth/AuthSession';
 import { ProductDetailPage } from './ProductDetailPage';
 import stylesheet from './styles.css?inline';
 
@@ -28,7 +29,8 @@ const products = {
 };
 
 function renderApp() {
-  return render(<CountryProvider><LanguageProvider><BrowserRouter><App /></BrowserRouter></LanguageProvider></CountryProvider>);
+  const authSession: AuthSessionValue = { status: 'authenticated', user: { id: 'test-user', displayName: 'Trần Minh Quân', email: 'quanquan@example.test' }, getAccessToken: async () => null, signIn: vi.fn(), signOut: vi.fn() };
+  return render(<CountryProvider><LanguageProvider><AuthSessionProvider value={authSession}><BrowserRouter><App /></BrowserRouter></AuthSessionProvider></LanguageProvider></CountryProvider>);
 }
 
 function renderAppAt(path: string) {
@@ -313,18 +315,16 @@ describe('fixed route themes', () => {
     expect(stylesheet).toMatch(/\.home-shell \.hero-featured-price\s*\{[^}]*white-space:\s*nowrap/);
   });
 
-  it('keeps Account member metadata and verified badge above AA on their light surfaces', () => {
+  it('renders Account identity without invented membership or verification claims', () => {
     const style = document.createElement('style');
     style.textContent = stylesheet;
     document.head.appendChild(style);
     try {
       renderAppAt('/account');
-      const member = screen.getByText('Thành viên từ tháng 09/2024');
-      const badge = screen.getByText('✓ Đã xác thực');
-      expect(contrastRatio(getComputedStyle(member).color, '#ffffff')).toBeGreaterThanOrEqual(4.5);
-      expect(contrastRatio(getComputedStyle(member).color, '#fff8f3')).toBeGreaterThanOrEqual(4.5);
-      expect(contrastRatio(getComputedStyle(badge).color, getComputedStyle(badge).backgroundColor)).toBeGreaterThanOrEqual(4.5);
-      expect(member.closest('.light-shell')).not.toBeNull();
+      expect(screen.getByText('quanquan@example.test')).toBeTruthy();
+      expect(screen.queryByText('Thành viên từ tháng 09/2024')).toBeNull();
+      expect(screen.queryByText('✓ Đã xác thực')).toBeNull();
+      expect(screen.getByText('quanquan@example.test').closest('.light-shell')).not.toBeNull();
     } finally {
       style.remove();
     }
@@ -579,7 +579,7 @@ describe('English route copy', () => {
     expect(screen.queryByText('Đang tải sản phẩm...')).toBeNull();
   });
 
-  it('preserves the account name diacritics when rendering English copy', () => {
+  it('preserves the session account name diacritics when rendering English copy', () => {
     localStorage.setItem('giatot-language', 'en');
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ items: [] })));
     renderAppAt('/account');
