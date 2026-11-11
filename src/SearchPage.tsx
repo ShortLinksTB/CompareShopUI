@@ -1,19 +1,18 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLanguage } from './i18n';
 import { uiText } from './uiCopy';
-import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { getCategories, getProducts, type ProductPage, type SearchCategory } from './searchApi';
 import { SafeImage } from './components/SafeImage';
-import { clearAuthenticatedSession, getAuthenticatedAccessToken, startSignIn } from './auth/authClient';
-import { addWishlistItem, getWishlist, removeWishlistItem, WishlistApiError } from './wishlistApi';
+import { WishlistHeart } from './wishlist/WishlistHeart';
 
 const PAGE_SIZE = 12;
 const money = (value: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(value);
 
-function ProductCard({ product, liked, busy, onToggle }: { product: ProductPage['items'][number]; liked: boolean; busy: boolean; onToggle: (id: number) => void }) {
+function ProductCard({ product }: { product: ProductPage['items'][number] }) {
   const { language } = useLanguage();
   const { minPrice, offerCount } = product.offerSummary;
-  return <article className="product-card"><div className="product-image">{product.imageUrl ? <SafeImage src={product.imageUrl} alt={product.name} fallbackLabel={uiText(language, 'Chưa có hình ảnh')} /> : <span className="muted" role="img" aria-label={uiText(language, 'Chưa có hình ảnh')}>{uiText(language, 'Chưa có hình ảnh')}</span>}<button className={`heart ${liked ? 'liked' : ''}`} onClick={() => onToggle(product.id)} disabled={busy} aria-label={uiText(language, liked ? 'Bỏ khỏi yêu thích' : 'Thêm vào yêu thích')}>{liked ? '♥' : '♡'}</button></div><div className="product-card-body"><Link to={`/product/${product.slug}`} className="product-name">{product.name}</Link>{product.brand && <span className="muted">{product.brand}</span>}{minPrice !== null && <strong className="price">{uiText(language, 'Từ')} {money(minPrice)}</strong>}<span className="offer-count"><span className="shop-dot" />{offerCount} {uiText(language, 'cửa hàng đang bán')}</span><div className="card-actions"><Link className="button button-primary" to={`/product/${product.slug}`}>{uiText(language, 'Xem giá')}</Link><button className="button button-ghost" onClick={() => { const saved = JSON.parse(localStorage.getItem('compare-products') || '[]') as string[]; if (!saved.includes(product.slug) && saved.length < 4) localStorage.setItem('compare-products', JSON.stringify([...saved, product.slug])); }}>{uiText(language, '+ So sánh')}</button></div></div></article>;
+  return <article className="product-card"><div className="product-image">{product.imageUrl ? <SafeImage src={product.imageUrl} alt={product.name} fallbackLabel={uiText(language, 'Chưa có hình ảnh')} /> : <span className="muted" role="img" aria-label={uiText(language, 'Chưa có hình ảnh')}>{uiText(language, 'Chưa có hình ảnh')}</span>}<WishlistHeart productId={product.id} /></div><div className="product-card-body"><Link to={`/product/${product.slug}`} className="product-name">{product.name}</Link>{product.brand && <span className="muted">{product.brand}</span>}{minPrice !== null && <strong className="price">{uiText(language, 'Từ')} {money(minPrice)}</strong>}<span className="offer-count"><span className="shop-dot" />{offerCount} {uiText(language, 'cửa hàng đang bán')}</span><div className="card-actions"><Link className="button button-primary" to={`/product/${product.slug}`}>{uiText(language, 'Xem giá')}</Link><button className="button button-ghost" onClick={() => { const saved = JSON.parse(localStorage.getItem('compare-products') || '[]') as string[]; if (!saved.includes(product.slug) && saved.length < 4) localStorage.setItem('compare-products', JSON.stringify([...saved, product.slug])); }}>{uiText(language, '+ So sánh')}</button></div></div></article>;
 }
 
 function PriceFilters({ minPrice, maxPrice, setPrice }: { minPrice?: number; maxPrice?: number; setPrice: (min?: number, max?: number) => void }) {
@@ -23,9 +22,8 @@ function PriceFilters({ minPrice, maxPrice, setPrice }: { minPrice?: number; max
 
 export function SearchPage() {
   const { language } = useLanguage();
-  const location = useLocation();
   const { slug } = useParams();
-  const [params, setParams] = useSearchParams();
+  const [params] = useSearchParams();
   const query = params.get('q') || '';
   const categoryQuery = params.get('category') || '';
   const [categories, setCategories] = useState<SearchCategory[]>([]);
@@ -38,89 +36,6 @@ export function SearchPage() {
   const [maxPrice, setMaxPrice] = useState<number>();
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [categoryError, setCategoryError] = useState(false);
-  const [wishlistIds, setWishlistIds] = useState<number[]>([]);
-  const [wishlistLoading, setWishlistLoading] = useState(true);
-  const [wishlistBusyIds, setWishlistBusyIds] = useState<number[]>([]);
-  const [wishlistError, setWishlistError] = useState<'unauthenticated' | 'request' | null>(null);
-  const [signInStarting, setSignInStarting] = useState(false);
-  const signInStartingRef = useRef(false);
-
-  const startSearchSignIn = async () => {
-    if (signInStartingRef.current) return;
-    signInStartingRef.current = true;
-    setSignInStarting(true);
-    setWishlistError(null);
-    try {
-      await startSignIn(`${location.pathname}${location.search}${location.hash}`);
-    } catch {
-      signInStartingRef.current = false;
-      setSignInStarting(false);
-      setWishlistError('request');
-    }
-  };
-
-  useEffect(() => {
-    let active = true;
-    getAuthenticatedAccessToken().then(token => {
-      if (!active) return;
-      if (!token) { setWishlistIds([]); return; }
-      return getWishlist(token).then(items => {
-        if (active) setWishlistIds(items.map(item => item.productId));
-      });
-    }).catch(async reason => {
-      if (!active) return;
-      setWishlistIds([]);
-      if (reason instanceof WishlistApiError && reason.status === 401) {
-        await clearAuthenticatedSession().catch(() => undefined);
-        if (active) setWishlistError('unauthenticated');
-      } else {
-        setWishlistError('request');
-      }
-    }).finally(() => { if (active) setWishlistLoading(false); });
-    return () => { active = false; };
-  }, []);
-
-  const toggleWishlist = async (productId: number) => {
-    if (wishlistLoading || signInStartingRef.current || wishlistBusyIds.includes(productId)) return;
-    let currentToken: string | null;
-    try {
-      // Read the session at click time so a token cleared or expired since the
-      // initial wishlist load can never authorize an unauthenticated request.
-      currentToken = await getAuthenticatedAccessToken();
-    } catch {
-      // A broken or unavailable OIDC session is still unauthenticated for this
-      // action. Clear it and start sign-in instead of leaving the heart inert.
-      await clearAuthenticatedSession().catch(() => undefined);
-      setWishlistIds([]);
-      await startSearchSignIn();
-      return;
-    }
-    if (!currentToken) {
-      setWishlistIds([]);
-      await startSearchSignIn();
-      return;
-    }
-    const adding = !wishlistIds.includes(productId);
-    setWishlistError(null);
-    setWishlistBusyIds(ids => [...ids, productId]);
-    setWishlistIds(ids => adding ? [...ids, productId] : ids.filter(id => id !== productId));
-    try {
-      if (adding) await addWishlistItem(currentToken, productId);
-      else await removeWishlistItem(currentToken, productId);
-    } catch (reason) {
-      setWishlistIds(ids => adding ? ids.filter(id => id !== productId) : [...ids, productId]);
-      if (reason instanceof WishlistApiError && reason.status === 401) {
-        await clearAuthenticatedSession().catch(() => undefined);
-        setWishlistError('unauthenticated');
-        await startSearchSignIn();
-      } else {
-        setWishlistError('request');
-      }
-    } finally {
-      setWishlistBusyIds(ids => ids.filter(id => id !== productId));
-    }
-  };
-
   useEffect(() => { setPage(1); }, [query, slug, categoryQuery, minPrice, maxPrice]);
   useEffect(() => {
     let active = true;
@@ -171,8 +86,7 @@ export function SearchPage() {
     <div className="page-title"><div><span className="eyebrow">{selectedCategory?.name || uiText(language, 'Tìm kiếm')}</span><h1>{query ? `${uiText(language, 'Kết quả cho')} “${query}”` : selectedCategory?.name || uiText(language, 'Tất cả sản phẩm')}</h1><p className="muted">{data?.totalItems || 0} {uiText(language, 'sản phẩm phù hợp')}</p></div></div>
     <div className="category-pills"><Link className={!selectedCategory ? 'active' : ''} to={query ? `/search?q=${encodeURIComponent(query)}` : '/search'}>{uiText(language, 'Tất cả')}</Link>{categories.map(category => <Link className={selectedCategory?.id === category.id ? 'active' : ''} key={category.id} to={`/category/${category.slug}${query ? `?q=${encodeURIComponent(query)}` : ''}`}>{category.name}</Link>)}</div>
     <div className="catalog-layout"><PriceFilters {...filterProps} /><div className="catalog-results"><div className="results-toolbar"><span>{data?.totalItems || 0} {uiText(language, 'sản phẩm')} · {uiText(language, 'Trang')} {page}/{totalPages}</span><button className="filter-mobile-button" onClick={() => setMobileFiltersOpen(true)}>{uiText(language, '☷ Bộ lọc')}</button><span className="view-toggle">▦ ▦</span></div>
-      {wishlistError === 'unauthenticated' ? <p className="suggestion-error" role="alert">{uiText(language, 'Đăng nhập để lưu sản phẩm yêu thích.')}<Link to="/login">{uiText(language, 'Đăng nhập')}</Link></p> : wishlistError === 'request' && <p className="suggestion-error" role="alert">{uiText(language, 'Không thể cập nhật sản phẩm yêu thích. Vui lòng thử lại.')}</p>}
-      {loading ? <p className="detail-state" role="status">{uiText(language, 'Đang tải sản phẩm...')}</p> : error || categoryError ? <div className="empty-state" role="alert"><h3>{uiText(language, 'Không thể tải dữ liệu tìm kiếm')}</h3><p>{uiText(language, 'Vui lòng thử lại.')}</p><button className="button button-primary" onClick={retry}>{uiText(language, 'Thử lại')}</button></div> : data?.items.length ? <div className="product-grid">{data.items.map(product => <ProductCard key={product.id} product={product} liked={wishlistIds.includes(product.id)} busy={wishlistLoading || signInStarting || wishlistBusyIds.includes(product.id)} onToggle={toggleWishlist} />)}</div> : <div className="empty-state"><span>⌕</span><h3>{uiText(language, slug && !selectedCategory ? 'Không tìm thấy danh mục' : 'Không tìm thấy sản phẩm')}</h3><p>{uiText(language, 'Thử thay đổi từ khóa hoặc bộ lọc của bạn.')}</p></div>}
+      {loading ? <p className="detail-state" role="status">{uiText(language, 'Đang tải sản phẩm...')}</p> : error || categoryError ? <div className="empty-state" role="alert"><h3>{uiText(language, 'Không thể tải dữ liệu tìm kiếm')}</h3><p>{uiText(language, 'Vui lòng thử lại.')}</p><button className="button button-primary" onClick={retry}>{uiText(language, 'Thử lại')}</button></div> : data?.items.length ? <div className="product-grid">{data.items.map(product => <ProductCard key={product.id} product={product} />)}</div> : <div className="empty-state"><span>⌕</span><h3>{uiText(language, slug && !selectedCategory ? 'Không tìm thấy danh mục' : 'Không tìm thấy sản phẩm')}</h3><p>{uiText(language, 'Thử thay đổi từ khóa hoặc bộ lọc của bạn.')}</p></div>}
       {data && !loading && !error && totalPages > 1 && <nav className="pagination" aria-label={uiText(language, 'Phân trang sản phẩm')}><button disabled={page === 1} onClick={() => setPage(page - 1)} aria-label={uiText(language, 'Trang trước')}>←</button>{Array.from({ length: totalPages }, (_, index) => index + 1).map(item => <button className={item === page ? 'active' : ''} key={item} onClick={() => setPage(item)} aria-current={item === page ? 'page' : undefined}>{item}</button>)}<button disabled={page === totalPages} onClick={() => setPage(page + 1)} aria-label={uiText(language, 'Trang sau')}>→</button></nav>}
     </div></div>
     {mobileFiltersOpen && <div className="mobile-filter-drawer"><div className="mobile-filter-header"><strong>{uiText(language, 'Bộ lọc')}</strong><button aria-label={uiText(language, 'Đóng bộ lọc')} onClick={() => setMobileFiltersOpen(false)}>×</button></div><PriceFilters {...filterProps} /><button className="button button-primary mobile-filter-apply" onClick={() => setMobileFiltersOpen(false)}>{uiText(language, 'Xem kết quả')}</button></div>}
