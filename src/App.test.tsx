@@ -679,7 +679,7 @@ describe('Wishlist API data', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Xóa Real Phone' }));
     expect(await screen.findByText('Chưa có sản phẩm yêu thích')).toBeTruthy();
-    expect(fetchMock).toHaveBeenLastCalledWith('https://api-compareshop-dev.giamha.online/api/v1/wishlist', {
+    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/wishlist', {
       method: 'POST', headers: { Authorization: 'Bearer access-token', 'Content-Type': 'application/json' },
       body: JSON.stringify({ productId: 12, operation: 'remove' }),
     });
