@@ -23,7 +23,7 @@ function enter(id: string, value: string) { fireEvent.change(document.getElement
 function submit() { fireEvent.submit(document.querySelector('form')!); }
 function CurrentPath() { return <span data-testid="current-path">{useLocation().pathname}</span>; }
 
-afterEach(() => { cleanup(); vi.clearAllMocks(); window.__APP_CONFIG__ = undefined; });
+afterEach(() => { cleanup(); vi.clearAllMocks(); window.__APP_CONFIG__ = undefined; window.localStorage.removeItem('giatot-language'); });
 
 describe('auth pages', () => {
   it('shows a generic registration confirmation only after submission succeeds', async () => {
@@ -33,6 +33,21 @@ describe('auth pages', () => {
     expect(await screen.findByRole('heading', { name: 'Kiểm tra email của bạn' })).toBeTruthy();
     expect(screen.getByText(/Nếu địa chỉ email có thể đăng ký/)).toBeTruthy();
     expect(api.register).toHaveBeenCalledWith({ email: 'mai@example.test', password: 'Shop-Safe-2026' });
+  });
+
+  it('localizes registration password feedback, visibility, and accepted confirmation in English', async () => {
+    window.localStorage.setItem('giatot-language', 'en');
+    api.register.mockResolvedValue({ accepted: true });
+    renderAt('/register');
+    expect(screen.getByText('At least 8 characters')).toBeTruthy();
+    expect(screen.getByText('Not a commonly used password')).toBeTruthy();
+    expect(screen.getByText('Does not contain the part of your email before @')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Show password' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Show password' }));
+    expect(screen.getByRole('button', { name: 'Hide password' })).toBeTruthy();
+    enter('email', 'mai@example.test'); enter('password', 'Shop-Safe-2026'); submit();
+    expect(await screen.findByRole('heading', { name: 'Check your email' })).toBeTruthy();
+    expect(screen.getByText('Open the verification email to activate your account. The link is valid for 24 hours.')).toBeTruthy();
   });
 
   it('keeps an API failure visible instead of showing a success state', async () => {
