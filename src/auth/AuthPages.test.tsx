@@ -28,6 +28,18 @@ function LanguageControls() { const { setLanguage } = useLanguage(); return <><b
 afterEach(() => { cleanup(); vi.clearAllMocks(); localStorage.clear(); window.__APP_CONFIG__ = undefined; });
 
 describe('auth pages', () => {
+  it('localizes the auth brand accessible name when the locale changes', () => {
+    render(<LanguageProvider><LanguageControls /><AuthSessionProvider value={anonymous}><MemoryRouter initialEntries={['/login']}><Routes><Route path="*" element={<AuthPages />} /></Routes></MemoryRouter></AuthSessionProvider></LanguageProvider>);
+
+    expect(screen.getByRole('link', { name: 'GiaTot — trang chủ' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'EN' }));
+    expect(screen.getByRole('link', { name: 'GiaTot — home page' })).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'GiaTot — trang chủ' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'VI' }));
+    expect(screen.getByRole('link', { name: 'GiaTot — trang chủ' })).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'GiaTot — home page' })).toBeNull();
+  });
+
   it('shows a generic registration confirmation only after submission succeeds', async () => {
     api.register.mockResolvedValue({ accepted: true });
     renderAt('/register');
