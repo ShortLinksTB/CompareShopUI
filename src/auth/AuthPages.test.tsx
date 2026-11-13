@@ -259,6 +259,23 @@ describe('auth pages', () => {
     expect(window.location.search).toBe('');
   });
 
+  it('localizes the verify-email success body when the locale changes', async () => {
+    api.verifyEmail.mockResolvedValue({ verified: true });
+    const path = '/verify-email?token=one-time-secret';
+    window.history.replaceState({}, '', path);
+    render(<LanguageProvider><AuthSessionProvider value={anonymous}><MemoryRouter initialEntries={[path]}><Routes><Route path="*" element={<><AuthPages /><LanguageControls /></>} /></Routes></MemoryRouter></AuthSessionProvider></LanguageProvider>);
+
+    const vietnameseBody = 'Tài khoản của bạn đã sẵn sàng. Đăng nhập để lưu sản phẩm và theo dõi giá.';
+    const englishBody = 'Your account is ready. Sign in to save products and track prices.';
+    expect(await screen.findByText(vietnameseBody)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'EN' }));
+    expect(screen.getByText(englishBody)).toBeTruthy();
+    expect(screen.queryByText(vietnameseBody)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'VI' }));
+    expect(screen.getByText(vietnameseBody)).toBeTruthy();
+    expect(screen.queryByText(englishBody)).toBeNull();
+  });
+
   it('localizes the English PIN and reset-password states', async () => {
     localStorage.setItem('giatot-language', 'en');
     api.forgotPassword.mockResolvedValue({ accepted: true });
