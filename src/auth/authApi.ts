@@ -51,7 +51,10 @@ async function request<T>(operation: AuthOperation, method: 'GET' | 'POST', body
   let data: Record<string, unknown> = {};
   try { data = await response.json() as Record<string, unknown>; } catch { /* use generic message */ }
   if (!response.ok) {
-    const code = typeof data.code === 'string' ? data.code : 'request_failed';
+    const responseCode = typeof data.code === 'string' ? data.code : 'request_failed';
+    // AuthAPI reports an expired or consumed reset session as
+    // `reset_token_invalid`; keep the UI contract provider-neutral.
+    const code = responseCode === 'reset_token_invalid' ? 'reset_session_expired' : responseCode;
     const messages: Record<string, string> = {
       invalid_credentials: 'Email hoặc mật khẩu chưa đúng.', email_not_verified: 'Bạn cần xác minh email trước khi đăng nhập.',
       account_locked: 'Tài khoản tạm thời bị khoá. Hãy đặt lại mật khẩu hoặc thử lại sau.', captcha_failed: 'Xác minh bảo mật chưa hoàn tất. Vui lòng thử lại.',

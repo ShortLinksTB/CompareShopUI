@@ -291,6 +291,9 @@ describe('fixed route themes', () => {
     ['/shops/sample-shop', 'shop-shell', 'light'],
     ['/wishlist', 'light-shell', 'light'],
     ['/login', 'light-shell', 'light'],
+    ['/register', 'light-shell', 'light'],
+    ['/verify-email', 'light-shell', 'light'],
+    ['/forgot-password', 'light-shell', 'light'],
     ['/account', 'light-shell', 'light'],
   ] as const)('%s always uses the %s %s scheme independent of OS preference', async (path, shellClass, scheme) => {
     setColorScheme('dark');
@@ -303,9 +306,28 @@ describe('fixed route themes', () => {
     expect(document.querySelector(`.${shellClass}`)).toBeTruthy();
     expect(shellColorScheme(shellClass)).toBe(scheme);
     expect(stylesheet).toMatch(/@media\s*\(prefers-color-scheme:\s*dark\)[\s\S]*?\.site-header/);
+    const header = document.querySelector('.site-header');
+    expect(header?.classList.contains('auth-fixed-light')).toBe(['/login', '/register', '/verify-email', '/forgot-password'].includes(path));
+    if (header?.classList.contains('auth-fixed-light')) {
+      expect(stylesheet).toMatch(/\.site-header:not\(\.auth-fixed-light\)\s*\{[^}]*background:\s*#13151a/);
+      expect(stylesheet).toMatch(/\.site-header:not\(\.auth-fixed-light\) \.header-search/);
+    }
     if (path === '/') {
       expect((await screen.findAllByText('Chưa có sản phẩm nổi bật')).length).toBeGreaterThan(0);
     }
+  });
+
+  it.each(['light', 'dark'] as const)('keeps auth headers excluded from OS dark styling under %s preference', theme => {
+    setColorScheme(theme);
+    const anonymous: AuthSessionValue = { status: 'anonymous', user: null, getAccessToken: async () => null, signIn: vi.fn(), signOut: vi.fn() };
+    renderAppAtWithSession('/login', anonymous);
+
+    expect(document.querySelector('.site-header')?.classList.contains('auth-fixed-light')).toBe(true);
+    expect(stylesheet).toMatch(/@media\s*\(prefers-color-scheme:\s*dark\)[\s\S]*?\.site-header:not\(\.auth-fixed-light\)/);
+
+    cleanup();
+    renderAppAt('/search');
+    expect(document.querySelector('.site-header')?.classList.contains('auth-fixed-light')).toBe(false);
   });
 
   it('provides visible focus indicators for the fixed light theme', () => {
@@ -337,7 +359,7 @@ describe('fixed route themes', () => {
     expect(stylesheet).toMatch(/\.home-shell \.hero \+ \.section\s*\{[^}]*padding-bottom:\s*calc\(88px \+ env\(safe-area-inset-bottom\)\)/);
     expect(stylesheet).toMatch(/\.home-shell \.hero \+ \.section\s*\{[^}]*padding-top:\s*8px/);
     expect(stylesheet).toMatch(/\.home-shell \.hero \+ \.section \.section-heading\s*\{[^}]*margin-bottom:\s*8px/);
-    expect(stylesheet).toMatch(/\.home-shell \.hero-featured-product\s*\{[^}]*grid-template-columns:\s*38px minmax\(0,\s*1fr\) auto[^}]*min-height:\s*42px;\s*padding:\s*5px 0/);
+    expect(stylesheet).toMatch(/\.home-shell \.hero-featured-product\s*\{[^}]*grid-template-columns:\s*38px minmax\(0,\s*1fr\) auto 32px[^}]*min-height:\s*42px;\s*padding:\s*5px 0/);
     expect(stylesheet).toMatch(/\.bottom-nav\s*\{[^}]*position:\s*fixed/);
     expect(stylesheet).toMatch(/\.home-shell \.category-grid\s*\{[^}]*display:\s*flex[^}]*overflow-x:\s*auto/);
     expect(stylesheet).toMatch(/\.home-shell \.hero-copy > h1\s*\{[^}]*line-height:\s*1\.2/);
@@ -437,6 +459,7 @@ describe('Home API data', () => {
     expect(screen.queryByText('2 cửa hàng đang bán')).toBeNull();
     expect(screen.getAllByText('Chưa có hình ảnh').length).toBeGreaterThan(0);
     expect(screen.getAllByRole('img', { name: 'Chưa có hình ảnh' }).length).toBeGreaterThan(0);
+    expect(document.querySelectorAll('.product-card .heart').length).toBeGreaterThan(0);
     expect(screen.queryByText('Apple')).toBeNull();
     expect(screen.queryByText(/★/)).toBeNull();
     expect(fetchMock).toHaveBeenNthCalledWith(1, 'https://api-compareshop-dev.giamha.online/api/v1/categories');
@@ -488,6 +511,7 @@ describe('Home API data', () => {
     const featuredCard = document.querySelector('.hero-featured-card') as HTMLElement;
     expect((await screen.findAllByRole('link', { name: 'Sample Phone 1' })).length).toBeGreaterThan(0);
     expect(featuredCard.querySelectorAll('.hero-featured-product')).toHaveLength(3);
+    expect(featuredCard.querySelectorAll('.hero-featured-heart')).toHaveLength(3);
     expect(featuredCard.querySelectorAll('.hero-featured-name')[0].textContent).toBe('Sample Phone 1');
     expect(featuredCard.querySelectorAll('.hero-featured-name')[2].textContent).toBe('Sample Phone 3');
     expect(Array.from(featuredCard.querySelectorAll('.hero-featured-name')).some(name => name.textContent === 'Sample Phone 4')).toBe(false);
@@ -827,7 +851,7 @@ describe('Blog listing route', () => {
     expect(stylesheet).toMatch(/\.blog-list-heading h1\{[^}]*color:#171b24/);
     expect(stylesheet).toMatch(/\.blog-detail-subscribe\{[^}]*background:#fff3eb/);
     expect(contrastRatio('#595959', '#fff3eb')).toBeGreaterThanOrEqual(4.5);
-    expect(stylesheet).toMatch(/@media \(prefers-color-scheme: dark\)[\s\S]*?\.site-header \{/);
+    expect(stylesheet).toMatch(/@media \(prefers-color-scheme: dark\)[\s\S]*?\.site-header:not\(\.auth-fixed-light\)\s*\{/);
 
     cleanup();
     const article = { slug: '10-meo-so-sanh-gia', title: 'A real published article', category: 'shopping-tips', excerptText: 'Excerpt', coverFileId: null, tags: [], authorName: 'Minh Anh', publishedAtUtc: '2026-11-12T00:00:00Z', totalViews: 0, contentMarkdown: 'Published content', updatedAtUtc: '2026-11-12T00:00:00Z' };
@@ -1093,6 +1117,8 @@ describe('Product Detail API data', () => {
 
     renderAppAt('/product/sample-product-01');
     expect(await screen.findByRole('heading', { name: 'Sample Product 01' })).toBeTruthy();
+    expect(document.querySelector('.detail-gallery .detail-wishlist-heart')).toBeTruthy();
+    expect(document.querySelector('.detail-actions .detail-wishlist-heart')).toBeNull();
     expect(document.querySelector('.product-shell')).toBeTruthy();
     expect(shellColorScheme('product-shell')).toBe('light');
     expect(screen.getByText('Ảnh chưa có')).toBeTruthy();
