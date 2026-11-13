@@ -305,6 +305,7 @@ const englishCopy: Record<string, string> = {
   'Mã đã bị huỷ sau 5 lần nhập sai. Yêu cầu mã mới để tiếp tục.': 'The code was cancelled after 5 incorrect attempts. Request a new code to continue.',
   'Mật khẩu mới đã có hiệu lực. Các phiên khác đã bị đăng xuất.': 'Your new password is active. Other sessions have been signed out.',
   'Phiên đặt lại mật khẩu đã hết hạn hoặc đã được dùng. Bạn có thể yêu cầu mã mới.': 'The password reset session expired or was already used. You can request a new code.',
+  'Quay lại đăng nhập': 'Back to sign in',
   'Bạn chưa xác minh email. Hãy kiểm tra thư đã gửi tới': 'Your email is not verified. Check the message sent to',
   'Có quá nhiều lần đăng nhập không thành công. Hãy thử lại sau hoặc đặt lại mật khẩu.': 'There have been too many failed sign-in attempts. Try again later or reset your password.',
   'Xác minh bảo mật chưa được cấu hình.': 'Security verification is not configured.',

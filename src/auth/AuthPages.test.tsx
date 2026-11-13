@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { AuthPages } from './AuthPages';
+import { AuthApiError } from './authApi';
 import { AuthSessionProvider, type AuthSessionValue } from './AuthSession';
 import { LanguageProvider } from '../i18n';
 
@@ -156,5 +157,26 @@ describe('auth pages', () => {
     expect(await screen.findByRole('heading', { name: 'Đã đổi mật khẩu' })).toBeTruthy();
     expect(api.resetPassword).toHaveBeenCalledWith('private-reset-token', 'New-Shop-Safe-2026');
     expect(document.body.textContent).not.toContain('private-reset-token');
+  });
+
+  it('shows the localized expired reset state when the API rejects an expired reset token', async () => {
+    localStorage.setItem('giatot-language', 'en');
+    api.resetPassword.mockRejectedValue(new AuthApiError(400, 'reset_token_invalid'));
+    renderAt('/forgot-password?step=reset');
+
+    enter('password', 'New-Shop-Safe-2026');
+    enter('confirmPassword', 'New-Shop-Safe-2026');
+    submit();
+
+    expect(await screen.findByRole('heading', { name: 'Password reset session expired' })).toBeTruthy();
+    expect(screen.getByText('The password reset session expired or was already used. You can request a new code.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Request a new code' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Back to sign in' })).toBeTruthy();
+    expect(document.body.textContent).not.toContain('Phiên đặt lại');
+    expect(document.body.textContent).not.toContain('New-Shop-Safe-2026');
+    expect(document.getElementById('password')).toBeNull();
+    expect(document.getElementById('confirmPassword')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Request a new code' }));
+    expect(screen.getByRole('heading', { name: 'Forgot password?' })).toBeTruthy();
   });
 });
