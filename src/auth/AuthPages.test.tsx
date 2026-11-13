@@ -120,6 +120,18 @@ describe('auth pages', () => {
     expect(screen.getByRole('heading', { name: 'Đăng nhập để trải nghiệm tốt hơn' })).toBeTruthy();
   });
 
+  it('publishes the authenticated user to the shared AuthSession after login', async () => {
+    const user = { id: 'u1', email: 'mai@example.test', displayName: 'Mai', emailVerified: true };
+    api.login.mockResolvedValue({ accessToken: 'memory-token', user });
+    const onSession = vi.fn();
+    window.addEventListener('compareshop:auth-session', onSession);
+    renderAt('/login');
+    enter('email', 'mai@example.test'); enter('password', 'Shop-Safe-2026'); submit();
+
+    await waitFor(() => expect(onSession).toHaveBeenCalledWith(expect.objectContaining({ detail: user })));
+    window.removeEventListener('compareshop:auth-session', onSession);
+  });
+
   it('consumes verification token and removes it from browser history', async () => {
     api.verifyEmail.mockResolvedValue({ verified: true });
     renderAt('/verify-email?token=one-time-secret');

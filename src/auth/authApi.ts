@@ -1,7 +1,8 @@
 import { getAuthConfig } from './runtimeConfig';
 
 export interface AuthUser { id: string; email: string; displayName: string; emailVerified: boolean }
-export interface AuthResult { accessToken: string; user?: AuthUser }
+export interface AuthResult { accessToken: string; user: AuthUser }
+interface LoginResponse { accessToken: string; user?: AuthUser }
 export type AuthOperation = 'register' | 'verify-email' | 'resend-verification' | 'login' | 'refresh' | 'logout' | 'forgot-password' | 'verify-reset-code' | 'reset-password' | 'me';
 
 export class AuthApiError extends Error {
@@ -61,10 +62,7 @@ async function request<T>(operation: AuthOperation, method: 'GET' | 'POST', body
   if (operation === 'login' || operation === 'refresh') {
     const token = typeof data.accessToken === 'string' ? data.accessToken : '';
     const user = data.user as Record<string, unknown> | undefined;
-    if (!token) {
-      throw new AuthApiError(502, 'invalid_response', 'Không thể xác nhận phiên đăng nhập. Vui lòng thử lại.');
-    }
-    if (operation === 'login' && user && (typeof user.id !== 'string' || typeof user.email !== 'string' || typeof user.displayName !== 'string')) {
+    if (!token || (operation === 'login' && user !== undefined && (!user || typeof user.id !== 'string' || typeof user.email !== 'string' || typeof user.displayName !== 'string'))) {
       throw new AuthApiError(502, 'invalid_response', 'Không thể xác nhận phiên đăng nhập. Vui lòng thử lại.');
     }
     accessToken = token;
@@ -106,7 +104,16 @@ export const authApi = {
   register: (input: { email: string; password: string; displayName?: string; captchaToken?: string }) => request<{ accepted: true }>('register', 'POST', input),
   verifyEmail: (token: string) => request<{ verified: true }>('verify-email', 'POST', { token }),
   resendVerification: (email: string, captchaToken?: string) => request<{ accepted: true }>('resend-verification', 'POST', { email, ...(captchaToken ? { captchaToken } : {}) }),
-  login: (input: { email: string; password: string; captchaToken?: string }) => request<AuthResult>('login', 'POST', input),
+  async login(input: { email: string; password: string; captchaToken?: string }): Promise<AuthResult> {
+    const result = await request<LoginResponse>('login', 'POST', input);
+    if (result.user) return result as AuthResult;
+    try {
+      return { accessToken: result.accessToken, user: await authApi.me() };
+    } catch (error) {
+      accessToken = null;
+      throw error;
+    }
+  },
   refresh: () => request<{ accessToken: string }>('refresh', 'POST', {}),
   logout: () => request<Record<string, never>>('logout', 'POST', {}),
   forgotPassword: (email: string, captchaToken?: string) => request<{ accepted: true }>('forgot-password', 'POST', { email, ...(captchaToken ? { captchaToken } : {}) }),
