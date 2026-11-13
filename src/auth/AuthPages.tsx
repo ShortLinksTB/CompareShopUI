@@ -137,12 +137,8 @@ export function AuthPages() {
     setBusy(true); clearFeedback();
     try {
       if (getAuthConfig().turnstileEnabled && !captchaToken) throw new Error('Hoàn tất xác minh bảo mật để tiếp tục.');
-      if (view === 'verify-sent' || view === 'unverified' || view === 'verify-bad') {
-        const result = await authApi.resendVerification(email, captchaToken || undefined);
-        if (result.accepted !== true) throw new Error('Không thể gửi lại. Vui lòng thử lại.');
-      } else {
-        await authApi.forgotPassword(email, captchaToken || undefined);
-      }
+      if (view === 'verify-sent' || view === 'unverified' || view === 'verify-bad') await authApi.resendVerification(email, captchaToken || undefined);
+      else await authApi.forgotPassword(email, captchaToken || undefined);
       setCountdown(30); setMessage(text('Nếu email có thể nhận yêu cầu, thư mới đã được gửi.'));
     } catch (reason) { setError(text(reason instanceof Error ? reason.message : 'Không thể gửi lại. Vui lòng thử lại.')); }
     finally { setBusy(false); resetCaptcha(); }

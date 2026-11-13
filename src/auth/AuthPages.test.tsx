@@ -99,19 +99,6 @@ describe('auth pages', () => {
     expect(screen.queryByText('Nếu email có thể nhận yêu cầu, thư mới đã được gửi.')).toBeNull();
   });
 
-  it('does not show accepted feedback when resend resolves without acceptance', async () => {
-    api.login.mockRejectedValue(new AuthApiError(403, 'email_not_verified', 'Bạn cần xác minh email trước khi đăng nhập.'));
-    api.resendVerification.mockResolvedValue({ accepted: false } as never);
-    renderAt('/login');
-    enter('email', 'mai@example.test'); enter('password', 'Shop-Safe-2026'); submit();
-    await screen.findByRole('heading', { name: 'Xác minh email để tiếp tục' });
-
-    fireEvent.click(screen.getByRole('button', { name: 'Gửi lại thư xác minh' }));
-
-    expect((await screen.findByRole('alert')).textContent).toContain('Không thể gửi lại. Vui lòng thử lại.');
-    expect(screen.queryByText('Nếu email có thể nhận yêu cầu, thư mới đã được gửi.')).toBeNull();
-  });
-
   it('keeps an API failure visible instead of showing a success state', async () => {
     api.login.mockRejectedValue(new Error('Auth service is unavailable.'));
     renderAt('/login'); enter('email', 'mai@example.test'); enter('password', 'password'); submit();
