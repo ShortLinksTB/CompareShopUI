@@ -98,7 +98,15 @@ export function AuthPages() {
     try {
       if (view === 'login' || view === 'expired') {
         const result = await authApi.login({ email: normalizedEmail, password, ...(captchaToken ? { captchaToken } : {}) });
-        setAuthSessionUser(result.user); navigate(safeReturnTo, { replace: true });
+        try {
+          const user = result.user ?? await authApi.me();
+          setAuthSessionUser(user);
+          navigate(safeReturnTo, { replace: true });
+        } catch (reason) {
+          authApi.clear();
+          if (reason instanceof AuthApiError) throw reason;
+          throw new AuthApiError(502, 'profile_unavailable', 'Không thể xác nhận phiên đăng nhập. Vui lòng thử lại.');
+        }
       } else if (view === 'register') {
         if (!rules.every(rule => rule.valid)) throw new Error('Mật khẩu chưa đạt các yêu cầu bên dưới.');
         await authApi.register({ email: normalizedEmail, password, ...(displayName.trim() ? { displayName: displayName.trim() } : {}), ...(captchaToken ? { captchaToken } : {}) });

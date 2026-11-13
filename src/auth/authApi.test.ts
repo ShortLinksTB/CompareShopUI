@@ -44,6 +44,33 @@ describe('typed auth API client', () => {
     await expect(authApi.login({ email: 'a@b.test', password: 'pw' })).rejects.toMatchObject({ code: 'email_not_verified', status: 403 });
   });
 
+  it('loads the authenticated user after login when the contract returns only an access token', async () => {
+    window.__APP_CONFIG__ = { AUTH_API_URL: 'https://auth.example.test' };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(response({ accessToken: 'memory-token' }))
+      .mockResolvedValueOnce(response({ id: 'u1', email: 'mai@example.test', displayName: 'Mai', emailVerified: true }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(authApi.login({ email: 'mai@example.test', password: 'private-password' })).resolves.toEqual({
+      accessToken: 'memory-token',
+      user: { id: 'u1', email: 'mai@example.test', displayName: 'Mai', emailVerified: true },
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1][0]).toBe('https://auth.example.test/api/v1/auth/me');
+    expect(fetchMock.mock.calls[1][1].headers).toMatchObject({ Authorization: 'Bearer memory-token' });
+    await expect(authApi.getAccessToken()).resolves.toBe('memory-token');
+  });
+
+  it('clears the in-memory token when the post-login user lookup fails', async () => {
+    window.__APP_CONFIG__ = { AUTH_API_URL: 'https://auth.example.test' };
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce(response({ accessToken: 'memory-token' }))
+      .mockResolvedValueOnce(response({ code: 'forbidden' }, 403)));
+
+    await expect(authApi.login({ email: 'mai@example.test', password: 'private-password' })).rejects.toMatchObject({ status: 403 });
+    await expect(authApi.getAccessToken()).resolves.toBeNull();
+  });
+
   it('refreshes once and retries a protected request with the new bearer token', async () => {
     window.__APP_CONFIG__ = { AUTH_API_URL: 'https://auth.example.test' };
     const fetchMock = vi.fn().mockResolvedValueOnce(response({ code: 'expired' }, 401)).mockResolvedValueOnce(response({ accessToken: 'fresh-token' })).mockResolvedValueOnce(response({ id: 'u', email: 'a@b.test', displayName: 'Mai', emailVerified: true }));
