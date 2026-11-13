@@ -1048,6 +1048,28 @@ describe('Search and Category API data', () => {
     expect(screen.queryByText(/★/)).toBeNull();
   });
 
+  it('resolves a nested category after navigating from its parent without remounting', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith('/categories')) return response({ items: [{ id: 1006, slug: 'electronics', name: 'Electronics' }] });
+      if (url.endsWith('/categories?parentId=1006')) return response({ items: [{ id: 2, slug: 'computers', name: 'Computers', parentId: 1006 }] });
+      if (url.endsWith('/categories?parentId=2')) return response({ items: [] });
+      return response(catalogPage);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderAppAt('/category/electronics');
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products?page=1&pageSize=12&categoryId=1006'));
+    act(() => {
+      window.history.pushState({}, '', '/category/computers');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products?page=1&pageSize=12&categoryId=2'));
+    expect(screen.getByRole('heading', { name: 'Computers' })).toBeTruthy();
+    expect(screen.queryByText('Không tìm thấy danh mục')).toBeNull();
+  });
+
   it('searches by query and sends price filters and page to the catalog API', async () => {
     const fetchMock = vi.fn((input: RequestInfo | URL) => String(input).endsWith('/categories') ? response({ items: [] }) : response(catalogPage));
     vi.stubGlobal('fetch', fetchMock);
