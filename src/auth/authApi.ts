@@ -52,6 +52,10 @@ async function request<T>(operation: AuthOperation, method: 'GET' | 'POST', body
     };
     throw new AuthApiError(response.status, code, messages[code] ?? 'Yêu cầu chưa thể hoàn tất. Vui lòng thử lại.');
   }
+  // The registration contract deliberately uses HTTP 202 for both new and
+  // existing email addresses. Treat that status as accepted without inspecting
+  // a response body, which may be empty and must not expose account existence.
+  if (operation === 'register' && response.status === 202) return { accepted: true } as T;
   if (operation === 'login' || operation === 'refresh') {
     const token = typeof data.accessToken === 'string' ? data.accessToken : '';
     const user = data.user as Record<string, unknown> | undefined;

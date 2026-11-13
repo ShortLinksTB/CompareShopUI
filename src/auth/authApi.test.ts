@@ -14,6 +14,13 @@ describe('typed auth API client', () => {
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ email: 'mai@example.test', password: 'private-password' });
   });
 
+  it('treats an empty HTTP 202 registration response as accepted', async () => {
+    window.__APP_CONFIG__ = { AUTH_API_URL: 'https://auth.example.test' };
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 202, json: async () => { throw new SyntaxError('empty response'); } } as unknown as Response);
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(authApi.register({ email: 'mai@example.test', password: 'private-password' })).resolves.toEqual({ accepted: true });
+  });
+
   it('keeps the returned access token in memory and maps API auth errors', async () => {
     window.__APP_CONFIG__ = { AUTH_API_URL: 'https://auth.example.test' };
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ accessToken: 'memory-token', user: { id: '1', email: 'a@b.test', displayName: 'Mai', emailVerified: true } })));
