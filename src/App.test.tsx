@@ -694,8 +694,11 @@ it('keeps the shared site header and mobile navigation around the expired verifi
   renderAppAtWithSession('/verify-email', anonymous);
 
   expect(await screen.findByRole('heading', { name: 'Liên kết không còn hiệu lực' })).toBeTruthy();
+  expect(document.querySelector('.light-shell')?.classList.contains('auth-shell')).toBe(true);
   expect(document.querySelector('.light-shell > .site-header')).toBeTruthy();
   expect(document.querySelector('.light-shell > .bottom-nav')).toBeTruthy();
+  expect(stylesheet).toMatch(/\.auth-shell > \.site-header\s*\{[^}]*display:\s*block[^}]*visibility:\s*visible/);
+  expect(stylesheet).toMatch(/@media\s*\(max-width:\s*900px\)\s*\{\.auth-shell > \.bottom-nav\s*\{display:flex;visibility:visible\}\}/);
 });
 
 describe('Wishlist API data', () => {

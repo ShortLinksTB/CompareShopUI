@@ -90,10 +90,11 @@ function Header() {
 function BottomNav() {
   const location = useLocation(); const { t } = useLanguage(); return <nav className="bottom-nav" aria-label="Primary navigation"><Link className={location.pathname === '/' ? 'active' : ''} to="/">⌂<span>{t('home')}</span></Link><Link className={location.pathname.startsWith('/category') ? 'active' : ''} to="/category/phone">◫<span>{t('categories')}</span></Link><Link className={location.pathname === '/wishlist' ? 'active' : ''} to="/wishlist">♡<span>{t('wishlist')}</span></Link><Link className={location.pathname.startsWith('/blog') ? 'active' : ''} to="/blog">▤<span>{t('blog')}</span></Link><Link className={location.pathname === '/account' ? 'active' : ''} to="/account">♙<span>{t('account')}</span></Link></nav>; }
 function getShellClass(pathname: string) {
+  if (['/login', '/register', '/verify-email', '/forgot-password'].includes(pathname)) return 'light-shell auth-shell';
   if (/^\/product\/[^/]+$/.test(pathname)) return 'product-shell';
   if (/^\/shops\/[^/]+$/.test(pathname)) return 'shop-shell';
   if (pathname === '/blog' || /^\/blog\/[^/]+$/.test(pathname)) return 'blog-shell';
-  if (pathname === '/' || pathname === '/search' || /^\/category\/[^/]+$/.test(pathname) || ['/compare', '/wishlist', '/login', '/register', '/verify-email', '/forgot-password', '/account'].includes(pathname)) {
+  if (pathname === '/' || pathname === '/search' || /^\/category\/[^/]+$/.test(pathname) || ['/compare', '/wishlist', '/account'].includes(pathname)) {
     return pathname === '/' ? 'home-shell' : 'light-shell';
   }
   return 'home-shell';
