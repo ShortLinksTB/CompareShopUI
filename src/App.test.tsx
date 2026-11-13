@@ -685,6 +685,18 @@ describe('English copy for route controls and accessible labels', () => {
   });
 });
 
+describe('localized shared header search placeholder', () => {
+  it.each([
+    ['vi', 'Tìm sản phẩm, thương hiệu, mã SKU…'],
+    ['en', 'Search products, brands, SKU…'],
+  ] as const)('uses the %s placeholder on the registration route', (language, placeholder) => {
+    localStorage.setItem('giatot-language', language);
+    renderAppAt('/register');
+
+    expect(screen.getByPlaceholderText(placeholder)).toBeTruthy();
+  });
+});
+
 
 it('renders the storefront and opens the saved products page', async () => {
   const fetchMock = vi.fn()
