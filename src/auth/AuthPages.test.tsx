@@ -73,6 +73,19 @@ describe('auth pages', () => {
     expect(api.forgotPassword).toHaveBeenCalledWith('mai@example.test', undefined);
   });
 
+  it('localizes the auth brand accessible name when the locale changes on the PIN screen', async () => {
+    api.forgotPassword.mockResolvedValue({ accepted: true });
+    render(<LanguageProvider><LanguageControls /><AuthSessionProvider value={anonymous}><MemoryRouter initialEntries={['/forgot-password?step=code']}><Routes><Route path="*" element={<AuthPages />} /></Routes></MemoryRouter></AuthSessionProvider></LanguageProvider>);
+
+    expect(screen.getByRole('link', { name: 'GiaTot — trang chủ' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'EN' }));
+    expect(screen.getByRole('link', { name: 'GiaTot — home page' })).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'GiaTot — trang chủ' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'VI' }));
+    expect(screen.getByRole('link', { name: 'GiaTot — trang chủ' })).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'GiaTot — home page' })).toBeNull();
+  });
+
   it('updates the unverified alert and accepted resend feedback when locale changes', async () => {
     api.login.mockRejectedValue(new AuthApiError(403, 'email_not_verified', 'Bạn cần xác minh email trước khi đăng nhập.'));
     api.resendVerification.mockResolvedValue({ accepted: true });
