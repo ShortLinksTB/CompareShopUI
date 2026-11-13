@@ -314,7 +314,6 @@ const englishCopy: Record<string, string> = {
   'Dùng email khác': 'Use a different email',
   'Đã có tài khoản?': 'Already have an account?',
   'Đăng xuất': 'Sign out',
-  'GiaTot — trang chủ': 'GiaTot — home page',
   'Nhập mã 6 số được gửi qua email. Mã có hiệu lực trong 10 phút.': 'Enter the 6-digit code sent by email. The code is valid for 10 minutes.',
   'Mã đã bị huỷ sau 5 lần nhập sai. Yêu cầu mã mới để tiếp tục.': 'The code was cancelled after 5 incorrect attempts. Request a new code to continue.',
   'Mật khẩu mới đã có hiệu lực. Các phiên khác đã bị đăng xuất.': 'Your new password is active. Other sessions have been signed out.',
