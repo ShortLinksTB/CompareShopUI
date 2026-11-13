@@ -232,6 +232,7 @@ const englishCopy: Record<string, string> = {
   'Phiên đặt lại đã hết hạn': 'Password reset session expired',
   'Xác minh email để tiếp tục': 'Verify your email to continue',
   'Đăng nhập tạm khoá': 'Sign-in temporarily locked',
+  'Đặt lại mật khẩu': 'Reset password',
   'Bạn đã đăng nhập': 'You are signed in',
   'Độ mạnh mật khẩu': 'Password strength',
   'Nhập mật khẩu để xem độ mạnh': 'Enter a password to check its strength',

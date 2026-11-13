@@ -119,6 +119,31 @@ describe('auth pages', () => {
     expect(screen.getByRole('heading', { name: 'Đăng nhập để trải nghiệm tốt hơn' })).toBeTruthy();
   });
 
+  it('shows the Vietnamese temporary-lockout state for a login HTTP 429', async () => {
+    api.login.mockRejectedValue(new AuthApiError(429, 'request_failed'));
+    renderAt('/login');
+    enter('email', 'mai@example.test'); enter('password', 'Shop-Safe-2026'); submit();
+
+    expect(await screen.findByRole('heading', { name: 'Đăng nhập tạm khoá' })).toBeTruthy();
+    expect(screen.getByRole('alert').textContent).toContain('Hãy thử lại sau hoặc đặt lại mật khẩu.');
+    expect(screen.getByRole('button', { name: 'Đặt lại mật khẩu' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Quay lại đăng nhập' })).toBeTruthy();
+    expect(screen.queryByText('The request could not be completed. Please try again.')).toBeNull();
+  });
+
+  it('localizes the temporary-lockout state for a login HTTP 429 in English', async () => {
+    localStorage.setItem('giatot-language', 'en');
+    api.login.mockRejectedValue(new AuthApiError(429, 'request_failed'));
+    renderAt('/login');
+    enter('email', 'mai@example.test'); enter('password', 'Shop-Safe-2026'); submit();
+
+    expect(await screen.findByRole('heading', { name: 'Sign-in temporarily locked' })).toBeTruthy();
+    expect(screen.getByRole('alert').textContent).toContain('Try again later or reset your password.');
+    expect(screen.getByRole('button', { name: 'Reset password' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Back to sign in' })).toBeTruthy();
+    expect(document.body.textContent).not.toContain('Đăng nhập tạm khoá');
+  });
+
   it('localizes the login password toggle, accessible label, and forgot-password link in English', () => {
     localStorage.setItem('giatot-language', 'en');
     renderAt('/login');
