@@ -228,6 +228,7 @@ const englishCopy: Record<string, string> = {
   'Nhập mã 6 số': 'Enter your 6-digit code',
   'Yêu cầu mã mới': 'Request a new code',
   'Đặt mật khẩu mới': 'Set a new password',
+  'Chọn mật khẩu mới để bảo vệ tài khoản của bạn.': 'Choose a new password to protect your account.',
   'Đã đổi mật khẩu': 'Password updated',
   'Phiên đặt lại đã hết hạn': 'Password reset session expired',
   'Xác minh email để tiếp tục': 'Verify your email to continue',

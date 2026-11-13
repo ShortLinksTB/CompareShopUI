@@ -269,6 +269,7 @@ describe('auth pages', () => {
     expect(await screen.findByRole('heading', { name: 'Enter your 6-digit code' })).toBeTruthy();
     enter('pin', '482913'); submit();
     expect(await screen.findByRole('heading', { name: 'Set a new password' })).toBeTruthy();
+    expect(screen.getByText('Choose a new password to protect your account.')).toBeTruthy();
     expect(screen.getByLabelText('New password')).toBeTruthy();
     expect(screen.getByLabelText('Confirm password')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Change password' })).toBeTruthy();
@@ -289,6 +290,9 @@ describe('auth pages', () => {
     expect(document.getElementById('pin')?.getAttribute('inputmode')).toBe('numeric');
     enter('pin', '482913'); submit();
     expect(await screen.findByRole('heading', { name: 'Đặt mật khẩu mới' })).toBeTruthy();
+    expect(screen.getByText('Chọn mật khẩu mới để bảo vệ tài khoản của bạn.')).toBeTruthy();
+    expect(screen.getByLabelText('Mật khẩu mới')).toBeTruthy();
+    expect(screen.getByLabelText('Nhập lại mật khẩu')).toBeTruthy();
     enter('password', 'New-Shop-Safe-2026'); enter('confirmPassword', 'New-Shop-Safe-2026'); submit();
     expect(await screen.findByRole('heading', { name: 'Đã đổi mật khẩu' })).toBeTruthy();
     expect(api.resetPassword).toHaveBeenCalledWith('private-reset-token', 'New-Shop-Safe-2026');
