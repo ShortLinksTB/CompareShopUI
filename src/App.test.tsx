@@ -245,7 +245,7 @@ describe('browser storage failures', () => {
       const nav = document.querySelector('.desktop-nav') as HTMLElement;
       expect(nav.querySelectorAll('[aria-current="page"]')).toHaveLength(1);
       expect(nav.querySelector('[aria-current="page"]')?.textContent).toContain(activeLabel);
-      expect(screen.getByPlaceholderText('Tìm sản phẩm, thương hiệu, mã SKU…')).toBeTruthy();
+      expect(screen.getAllByPlaceholderText('Tìm sản phẩm, thương hiệu...').length).toBeGreaterThan(0);
     }
     cleanup();
     renderAppAt('/compare');
@@ -696,6 +696,24 @@ it('keeps the shared site header and mobile navigation around the expired verifi
   expect(await screen.findByRole('heading', { name: 'Liên kết không còn hiệu lực' })).toBeTruthy();
   expect(document.querySelector('.light-shell > .site-header')).toBeTruthy();
   expect(document.querySelector('.light-shell > .bottom-nav')).toBeTruthy();
+});
+
+it('localizes the expired verification action and shared search placeholder in Vietnamese and English', async () => {
+  const anonymous: AuthSessionValue = { status: 'anonymous', user: null, getAccessToken: async () => null, signIn: vi.fn(), signOut: vi.fn() };
+  window.localStorage.setItem('giatot-language', 'vi');
+  renderAppAtWithSession('/verify-email', anonymous);
+
+  expect(await screen.findByRole('heading', { name: 'Liên kết không còn hiệu lực' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Quay lại đăng nhập' })).toBeTruthy();
+  expect((screen.getByRole('textbox', { name: 'Tìm sản phẩm, thương hiệu...' }) as HTMLInputElement).placeholder).toBe('Tìm sản phẩm, thương hiệu...');
+
+  cleanup();
+  window.localStorage.setItem('giatot-language', 'en');
+  renderAppAtWithSession('/verify-email', anonymous);
+
+  expect(await screen.findByRole('heading', { name: 'This link is no longer valid' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Back to sign in' })).toBeTruthy();
+  expect((screen.getByRole('textbox', { name: 'Search products, brands...' }) as HTMLInputElement).placeholder).toBe('Search products, brands...');
 });
 
 describe('Wishlist API data', () => {

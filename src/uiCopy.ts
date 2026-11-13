@@ -299,6 +299,7 @@ const englishCopy: Record<string, string> = {
   'Gửi lại thư xác minh': 'Resend verification email',
   'Gửi liên kết mới': 'Send a new link',
   'Dùng email khác': 'Use a different email',
+  'Quay lại đăng nhập': 'Back to sign in',
   'Đã có tài khoản?': 'Already have an account?',
   'Đăng xuất': 'Sign out',
   'Nhập mã 6 số được gửi qua email. Mã có hiệu lực trong 10 phút.': 'Enter the 6-digit code sent by email. The code is valid for 10 minutes.',
