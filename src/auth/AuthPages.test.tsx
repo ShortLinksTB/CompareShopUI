@@ -50,6 +50,21 @@ describe('auth pages', () => {
     expect(screen.getByText('Open the verification email to activate your account. The link is valid for 24 hours.')).toBeTruthy();
   });
 
+  it('localizes the complete forgot-password request and accepted state in English', async () => {
+    window.localStorage.setItem('giatot-language', 'en');
+    api.forgotPassword.mockResolvedValue({ accepted: true });
+    renderAt('/forgot-password');
+
+    expect(screen.getByRole('heading', { name: 'Forgot password?' })).toBeTruthy();
+    expect(screen.getByText('Enter your registered email address. We will send a 6-digit code to reset your password.')).toBeTruthy();
+    expect(screen.getByLabelText('Email')).toBeTruthy();
+    enter('email', 'mai@example.test'); submit();
+
+    expect(await screen.findByRole('heading', { name: 'Enter your 6-digit code' })).toBeTruthy();
+    expect(screen.getByRole('status').textContent).toContain('If the email is registered, a reset code has been sent.');
+    expect(api.forgotPassword).toHaveBeenCalledWith('mai@example.test', undefined);
+  });
+
   it('keeps an API failure visible instead of showing a success state', async () => {
     api.login.mockRejectedValue(new Error('Auth service is unavailable.'));
     renderAt('/login'); enter('email', 'mai@example.test'); enter('password', 'password'); submit();

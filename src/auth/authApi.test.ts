@@ -17,7 +17,22 @@ describe('typed auth API client', () => {
   it('treats the contract HTTP 202 as accepted without requiring a response body field', async () => {
     window.__APP_CONFIG__ = { AUTH_API_URL: 'https://auth.example.test' };
     const fetchMock = vi.fn().mockResolvedValue(response({}, 202)); vi.stubGlobal('fetch', fetchMock);
-    await expect(authApi.register({ email: 'mai@example.test', password: 'private-password' })).resolves.toEqual({});
+    await expect(authApi.register({ email: 'mai@example.test', password: 'private-password' })).resolves.toEqual({ accepted: true });
+  });
+
+  it('treats an empty-body forgot-password HTTP 202 as generic acceptance', async () => {
+    window.__APP_CONFIG__ = { AUTH_API_URL: 'https://auth.example.test' };
+    const jsonMock = vi.fn().mockRejectedValue(new SyntaxError('empty response'));
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true, status: 202, json: jsonMock,
+    } as unknown as Response);
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(authApi.forgotPassword('mai@example.test')).resolves.toEqual({ accepted: true });
+    expect(fetchMock).toHaveBeenCalledWith('https://auth.example.test/api/v1/auth/forgot-password', expect.objectContaining({
+      credentials: 'include', method: 'POST', body: JSON.stringify({ email: 'mai@example.test' }),
+    }));
+    expect(jsonMock).not.toHaveBeenCalled();
   });
 
   it('keeps the returned access token in memory and maps API auth errors', async () => {
