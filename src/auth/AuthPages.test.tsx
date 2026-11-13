@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { AuthPages } from './AuthPages';
+import { AuthApiError } from './authApi';
 import { AuthSessionProvider, type AuthSessionValue } from './AuthSession';
 import { LanguageProvider } from '../i18n';
 
@@ -155,6 +156,41 @@ describe('auth pages', () => {
     enter('password', 'New-Shop-Safe-2026'); enter('confirmPassword', 'New-Shop-Safe-2026'); submit();
     expect(await screen.findByRole('heading', { name: 'Đã đổi mật khẩu' })).toBeTruthy();
     expect(api.resetPassword).toHaveBeenCalledWith('private-reset-token', 'New-Shop-Safe-2026');
+    expect(document.body.textContent).not.toContain('private-reset-token');
+  });
+
+  it('shows the localized expired reset state when AuthAPI rejects an expired token', async () => {
+    api.forgotPassword.mockResolvedValue({ accepted: true });
+    api.verifyResetCode.mockResolvedValue({ resetToken: 'private-reset-token' });
+    api.resetPassword.mockRejectedValue(new AuthApiError(400, 'reset_token_invalid'));
+    renderAt('/forgot-password'); enter('email', 'mai@example.test'); submit();
+    expect(await screen.findByRole('heading', { name: 'Nhập mã 6 số' })).toBeTruthy();
+    enter('pin', '482913'); submit();
+    expect(await screen.findByRole('heading', { name: 'Đặt mật khẩu mới' })).toBeTruthy();
+    enter('password', 'New-Shop-Safe-2026'); enter('confirmPassword', 'New-Shop-Safe-2026'); submit();
+
+    expect(await screen.findByRole('heading', { name: 'Phiên đặt lại đã hết hạn' })).toBeTruthy();
+    expect(screen.getByText('Phiên đặt lại mật khẩu đã hết hạn hoặc đã được dùng. Bạn có thể yêu cầu mã mới.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Yêu cầu mã mới' })).toBeTruthy();
+    expect(document.body.textContent).not.toContain('private-reset-token');
+    expect(document.getElementById('password')).toBeNull();
+  });
+
+  it('localizes the expired reset state and recovery action in English', async () => {
+    window.localStorage.setItem('giatot-language', 'en');
+    api.forgotPassword.mockResolvedValue({ accepted: true });
+    api.verifyResetCode.mockResolvedValue({ resetToken: 'private-reset-token' });
+    api.resetPassword.mockRejectedValue(new AuthApiError(400, 'reset_token_invalid'));
+    renderAt('/forgot-password'); enter('email', 'mai@example.test'); submit();
+    expect(await screen.findByRole('heading', { name: 'Enter your 6-digit code' })).toBeTruthy();
+    enter('pin', '482913'); submit();
+    expect(await screen.findByRole('heading', { name: 'Set a new password' })).toBeTruthy();
+    enter('password', 'New-Shop-Safe-2026'); enter('confirmPassword', 'New-Shop-Safe-2026'); submit();
+
+    expect(await screen.findByRole('heading', { name: 'Password reset session expired' })).toBeTruthy();
+    expect(screen.getByText('The password reset session expired or was already used. You can request a new code.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Request a new code' })).toBeTruthy();
+    expect(screen.queryByText('Phiên đặt lại mật khẩu đã hết hạn hoặc đã được dùng. Bạn có thể yêu cầu mã mới.')).toBeNull();
     expect(document.body.textContent).not.toContain('private-reset-token');
   });
 });

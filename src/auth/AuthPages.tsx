@@ -126,7 +126,9 @@ export function AuthPages() {
       if (reason instanceof AuthApiError) {
         if (reason.code === 'email_not_verified') { setView('unverified'); setEmail(normalizedEmail); setError(text(reason.message)); }
         else if (reason.code === 'account_locked' || reason.code === 'temporarily_locked') setView('locked');
-        else if (reason.code === 'reset_session_expired') setView('reset-bad');
+        else if (reason.code === 'reset_session_expired' || reason.code === 'reset_token_invalid') {
+          setResetToken(''); setPassword(''); setConfirmPassword(''); setView('reset-bad');
+        }
         else if (view === 'forgot-code') { const next = remaining - 1; setRemaining(next); if (next <= 0) setView('code-locked'); else setError(`${text(reason.message)} Còn ${next} lần thử.`); }
         else setError(text(reason.message));
       } else setError(text(reason instanceof Error ? reason.message : 'Không thể hoàn tất yêu cầu. Vui lòng thử lại.'));
