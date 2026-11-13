@@ -304,7 +304,9 @@ describe('auth pages', () => {
     enter('confirmPassword', 'New-Shop-Safe-2026');
     submit();
 
-    expect(await screen.findByRole('heading', { name: 'Password reset session expired' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: 'This link is no longer valid' })).toBeTruthy();
+    expect(document.querySelector('.auth-state-icon.is-warning svg')).toBeTruthy();
+    expect(screen.queryByText('Follow the instructions below to continue.')).toBeNull();
     expect(screen.getByText('The password reset session expired or was already used. You can request a new code.')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Request a new code' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Back to sign in' })).toBeTruthy();
@@ -314,5 +316,21 @@ describe('auth pages', () => {
     expect(document.getElementById('confirmPassword')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Request a new code' }));
     expect(screen.getByRole('heading', { name: 'Forgot password?' })).toBeTruthy();
+  });
+
+  it('matches the approved Vietnamese reset-expired state composition', async () => {
+    api.resetPassword.mockRejectedValue(new AuthApiError(400, 'reset_token_invalid'));
+    renderAt('/forgot-password?step=reset');
+
+    enter('password', 'New-Shop-Safe-2026');
+    enter('confirmPassword', 'New-Shop-Safe-2026');
+    submit();
+
+    expect(await screen.findByRole('heading', { name: 'Liên kết không còn hiệu lực' })).toBeTruthy();
+    expect(document.querySelector('.auth-state-icon.is-warning svg')).toBeTruthy();
+    expect(screen.queryByText('Làm theo hướng dẫn bên dưới để tiếp tục.')).toBeNull();
+    expect(screen.getByText('Phiên đặt lại mật khẩu đã hết hạn hoặc đã được dùng. Bạn có thể yêu cầu mã mới.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Yêu cầu mã mới' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Quay lại đăng nhập' })).toBeTruthy();
   });
 });
