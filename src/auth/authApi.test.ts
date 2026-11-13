@@ -14,6 +14,12 @@ describe('typed auth API client', () => {
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ email: 'mai@example.test', password: 'private-password' });
   });
 
+  it('treats the contract HTTP 202 as accepted without requiring a response body field', async () => {
+    window.__APP_CONFIG__ = { AUTH_API_URL: 'https://auth.example.test' };
+    const fetchMock = vi.fn().mockResolvedValue(response({}, 202)); vi.stubGlobal('fetch', fetchMock);
+    await expect(authApi.register({ email: 'mai@example.test', password: 'private-password' })).resolves.toEqual({});
+  });
+
   it('keeps the returned access token in memory and maps API auth errors', async () => {
     window.__APP_CONFIG__ = { AUTH_API_URL: 'https://auth.example.test' };
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ accessToken: 'memory-token', user: { id: '1', email: 'a@b.test', displayName: 'Mai', emailVerified: true } })));

@@ -60,7 +60,10 @@ async function request<T>(operation: AuthOperation, method: 'GET' | 'POST', body
     }
     accessToken = token;
   }
-  if ((operation === 'register' || operation === 'resend-verification' || operation === 'forgot-password') && data.accepted !== true) throw new AuthApiError(502, 'invalid_response');
+  // These endpoints use HTTP 202 as the contract-level acceptance signal. Their
+  // response body is intentionally generic and is not required to expose an
+  // `accepted` field.
+  if ((operation === 'register' || operation === 'resend-verification' || operation === 'forgot-password') && response.status !== 202 && data.accepted !== true) throw new AuthApiError(502, 'invalid_response');
   if (operation === 'verify-reset-code' && typeof data.resetToken !== 'string') throw new AuthApiError(502, 'invalid_response');
   if (operation === 'me' && (typeof data.id !== 'string' || typeof data.email !== 'string' || typeof data.displayName !== 'string')) throw new AuthApiError(502, 'invalid_response');
   return data as T;
