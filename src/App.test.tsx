@@ -492,6 +492,8 @@ describe('Home API data', () => {
     expect(featuredCard.querySelectorAll('.hero-featured-name')[2].textContent).toBe('Sample Phone 3');
     expect(Array.from(featuredCard.querySelectorAll('.hero-featured-name')).some(name => name.textContent === 'Sample Phone 4')).toBe(false);
     expect(featuredCard.querySelectorAll('.hero-featured-image')).toHaveLength(3);
+    expect(featuredCard.querySelectorAll('.hero-featured-media .hero-featured-heart')).toHaveLength(3);
+    expect(Array.from(featuredCard.querySelectorAll('.hero-featured-media')).every(media => media.querySelector('.hero-featured-heart[aria-label="Thêm vào yêu thích"]'))).toBe(true);
     expect(featuredCard.querySelectorAll('.hero-featured-product')[1].querySelector('.hero-featured-price')).toBeNull();
     expect((await screen.findAllByRole('link', { name: 'Phones' })).length).toBeGreaterThan(0);
     const categoryIcons = Array.from(document.querySelectorAll('.category-card svg')).map(icon => icon.getAttribute('data-category-icon'));
@@ -1085,6 +1087,11 @@ describe('Product Detail API data', () => {
 
     expect((await screen.findByRole('img', { name: 'Sample Product 01' }) as HTMLImageElement).src).toBe(productImage);
     expect((screen.getByRole('img', { name: 'Related Product' }) as HTMLImageElement).src).toBe(relatedImage);
+    const detailHeart = document.querySelector('.detail-image-heart') as HTMLButtonElement;
+    expect(detailHeart.getAttribute('aria-label')).toBe('Thêm vào yêu thích');
+    expect(detailHeart.classList.contains('detail-image-heart')).toBe(true);
+    expect(detailHeart.parentElement?.classList.contains('detail-gallery')).toBe(true);
+    expect(document.querySelector('.detail-actions .detail-wishlist-heart')).toBeNull();
   });
 
   it.each(['light', 'dark'] as const)('applies fixed light Product Detail shell for direct navigation in %s OS preference', async theme => {
