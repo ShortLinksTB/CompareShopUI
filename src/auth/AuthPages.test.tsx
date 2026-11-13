@@ -35,6 +35,21 @@ describe('auth pages', () => {
     expect(api.register).toHaveBeenCalledWith({ email: 'mai@example.test', password: 'Shop-Safe-2026' });
   });
 
+  it('localizes registration password feedback, visibility, and accepted confirmation in English', async () => {
+    window.localStorage.setItem('giatot-language', 'en');
+    api.register.mockResolvedValue({ accepted: true });
+    renderAt('/register');
+    expect(screen.getByText('At least 8 characters')).toBeTruthy();
+    expect(screen.getByText('Not a commonly used password')).toBeTruthy();
+    expect(screen.getByText('Does not contain the part of your email before @')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Show password' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Show password' }));
+    expect(screen.getByRole('button', { name: 'Hide password' })).toBeTruthy();
+    enter('email', 'mai@example.test'); enter('password', 'Shop-Safe-2026'); submit();
+    expect(await screen.findByRole('heading', { name: 'Check your email' })).toBeTruthy();
+    expect(screen.getByText('Open the verification email to activate your account. The link is valid for 24 hours.')).toBeTruthy();
+  });
+
   it('keeps an API failure visible instead of showing a success state', async () => {
     api.login.mockRejectedValue(new Error('Auth service is unavailable.'));
     renderAt('/login'); enter('email', 'mai@example.test'); enter('password', 'password'); submit();
