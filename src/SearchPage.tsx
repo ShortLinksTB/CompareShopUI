@@ -39,7 +39,7 @@ export function SearchPage() {
   useEffect(() => { setPage(1); }, [query, slug, categoryQuery, minPrice, maxPrice]);
   useEffect(() => {
     let active = true;
-    getCategories().then(items => { if (active) { setCategories(items); setCategoriesLoaded(true); setCategoryError(false); } }).catch(() => { if (active) { setCategoriesLoaded(true); setCategoryError(true); } });
+    getCategories(slug || categoryQuery || undefined).then(items => { if (active) { setCategories(items); setCategoriesLoaded(true); setCategoryError(false); } }).catch(() => { if (active) { setCategoriesLoaded(true); setCategoryError(true); } });
     return () => { active = false; };
   }, []);
 
@@ -74,7 +74,7 @@ export function SearchPage() {
       setCategoryError(false);
       setCategories([]);
       setCategoriesLoaded(false);
-      getCategories().then(items => { setCategories(items); setCategoriesLoaded(true); }).catch(() => { setCategoriesLoaded(true); setCategoryError(true); });
+      getCategories(slug || categoryQuery || undefined).then(items => { setCategories(items); setCategoriesLoaded(true); }).catch(() => { setCategoriesLoaded(true); setCategoryError(true); });
     } else {
       setError(false);
       setLoading(true);

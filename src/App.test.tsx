@@ -1048,6 +1048,24 @@ describe('Search and Category API data', () => {
     expect(screen.queryByText(/★/)).toBeNull();
   });
 
+  it('resolves a nested computers slug and queries products with its category ID', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith('/categories')) return response({ items: [{ id: 1006, slug: 'electronics', name: 'Electronics' }] });
+      if (url.endsWith('/categories?parentId=1006')) return response({ items: [{ id: 2, slug: 'computers', name: 'Computers' }] });
+      if (url.endsWith('/products?page=1&pageSize=12&categoryId=2')) return response(catalogPage);
+      return response({ ...catalogPage, items: [] });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderAppAt('/category/computers');
+
+    expect(await screen.findByRole('link', { name: 'API Phone' })).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/categories');
+    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/categories?parentId=1006');
+    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products?page=1&pageSize=12&categoryId=2');
+    expect(await screen.findByRole('button', { name: 'Thêm vào yêu thích' })).toBeTruthy();
+  });
+
   it('searches by query and sends price filters and page to the catalog API', async () => {
     const fetchMock = vi.fn((input: RequestInfo | URL) => String(input).endsWith('/categories') ? response({ items: [] }) : response(catalogPage));
     vi.stubGlobal('fetch', fetchMock);
@@ -1060,12 +1078,15 @@ describe('Search and Category API data', () => {
   });
 
   it('keeps unknown category slugs empty without querying products', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(response({ items: [{ id: 42, slug: 'phones', name: 'Phones' }] }));
+    const fetchMock = vi.fn((input: RequestInfo | URL) => String(input).endsWith('/categories')
+      ? response({ items: [{ id: 42, slug: 'phones', name: 'Phones' }] })
+      : response({ items: [{ id: 43, slug: 'tablets', name: 'Tablets' }] }));
     vi.stubGlobal('fetch', fetchMock);
     renderAppAt('/category/not-a-category');
 
     expect(await screen.findByText('Không tìm thấy danh mục')).toBeTruthy();
     expect(fetchMock.mock.calls.map(([url]) => String(url))).not.toContain('https://api-compareshop-dev.giamha.online/api/v1/products?page=1&pageSize=12');
+    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/categories?parentId=42');
   });
 
   it('shows retry after a catalog error and requests API suggestions from header search', async () => {

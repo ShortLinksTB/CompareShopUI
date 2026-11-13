@@ -30,10 +30,19 @@ async function get<T>(path: string): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export async function getCategories(): Promise<SearchCategory[]> {
+export async function getCategories(routeSlug?: string): Promise<SearchCategory[]> {
   const result = await get<{ items: SearchCategory[] }>('/categories');
   if (!result || !Array.isArray(result.items)) throw new Error('Invalid categories response');
-  return result.items;
+  if (!routeSlug || result.items.some(category => category.slug === routeSlug)) return result.items;
+
+  // The catalog endpoint returns root categories by default. Resolve a route
+  // slug against each root's children before treating it as an unknown route.
+  const children = await Promise.all(result.items.map(async category => {
+    const childResult = await get<{ items: SearchCategory[] }>(`/categories?parentId=${category.id}`);
+    if (!childResult || !Array.isArray(childResult.items)) throw new Error('Invalid child categories response');
+    return childResult.items;
+  }));
+  return [...result.items, ...children.flat()];
 }
 
 export async function getProducts(options: {
