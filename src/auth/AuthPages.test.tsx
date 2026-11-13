@@ -62,6 +62,8 @@ describe('auth pages', () => {
 
     expect(await screen.findByRole('heading', { name: 'Enter your 6-digit code' })).toBeTruthy();
     expect(screen.getByRole('status').textContent).toContain('If the email is registered, a reset code has been sent.');
+    expect(screen.getByLabelText('Verification code')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeTruthy();
     expect(api.forgotPassword).toHaveBeenCalledWith('mai@example.test', undefined);
   });
 
