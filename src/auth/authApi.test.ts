@@ -44,6 +44,16 @@ describe('typed auth API client', () => {
     await expect(authApi.login({ email: 'a@b.test', password: 'pw' })).rejects.toMatchObject({ code: 'email_not_verified', status: 403 });
   });
 
+  it('maps an invalid reset token response to the expired reset session state', async () => {
+    window.__APP_CONFIG__ = { AUTH_API_URL: 'https://auth.example.test' };
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ code: 'reset_token_invalid' }, 400)));
+
+    await expect(authApi.resetPassword('private-reset-token', 'New-Shop-Safe-2026')).rejects.toMatchObject({
+      code: 'reset_session_expired', status: 400,
+      message: 'Phiên đặt lại mật khẩu đã hết hạn. Hãy yêu cầu mã mới.',
+    });
+  });
+
   it('loads the authenticated user after login when the contract returns only an access token', async () => {
     window.__APP_CONFIG__ = { AUTH_API_URL: 'https://auth.example.test' };
     const fetchMock = vi.fn()

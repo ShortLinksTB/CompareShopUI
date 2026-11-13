@@ -171,6 +171,7 @@ describe('auth pages', () => {
     expect(await screen.findByRole('heading', { name: 'Password reset session expired' })).toBeTruthy();
     expect(screen.getByText('The password reset session expired or was already used. You can request a new code.')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Request a new code' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Back to sign in' })).toBeTruthy();
     expect(document.body.textContent).not.toContain('Phiên đặt lại');
     fireEvent.click(screen.getByRole('button', { name: 'Request a new code' }));
     expect(screen.getByRole('heading', { name: 'Forgot password?' })).toBeTruthy();
