@@ -173,6 +173,9 @@ describe('auth pages', () => {
     expect(screen.getByRole('button', { name: 'Request a new code' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Back to sign in' })).toBeTruthy();
     expect(document.body.textContent).not.toContain('Phiên đặt lại');
+    expect(document.body.textContent).not.toContain('New-Shop-Safe-2026');
+    expect(document.getElementById('password')).toBeNull();
+    expect(document.getElementById('confirmPassword')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Request a new code' }));
     expect(screen.getByRole('heading', { name: 'Forgot password?' })).toBeTruthy();
   });
