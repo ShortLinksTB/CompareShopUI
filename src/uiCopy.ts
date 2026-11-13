@@ -232,6 +232,8 @@ const englishCopy: Record<string, string> = {
   'Phiên đặt lại đã hết hạn': 'Password reset session expired',
   'Xác minh email để tiếp tục': 'Verify your email to continue',
   'Đăng nhập tạm khoá': 'Sign-in temporarily locked',
+  'Thử lại sau ít phút': 'Try again in a few minutes',
+  'Tạm khoá đăng nhập': 'Sign-in temporarily locked',
   'Bạn đã đăng nhập': 'You are signed in',
   'Độ mạnh mật khẩu': 'Password strength',
   'Nhập mật khẩu để xem độ mạnh': 'Enter a password to check its strength',
@@ -308,6 +310,9 @@ const englishCopy: Record<string, string> = {
   'Quay lại đăng nhập': 'Back to sign in',
   'Bạn chưa xác minh email. Hãy kiểm tra thư đã gửi tới': 'Your email is not verified. Check the message sent to',
   'Có quá nhiều lần đăng nhập không thành công. Hãy thử lại sau hoặc đặt lại mật khẩu.': 'There have been too many failed sign-in attempts. Try again later or reset your password.',
+  'Có quá nhiều lần đăng nhập không thành công. Vui lòng thử lại sau 15 phút, hoặc đặt lại mật khẩu ngay.': 'There have been too many failed sign-in attempts. Please try again in 15 minutes or reset your password now.',
+  'Việc tạm khoá giúp bảo vệ tài khoản của bạn khỏi người lạ.': 'This temporary lock helps protect your account from unauthorized access.',
+  'Đặt lại mật khẩu': 'Reset password',
   'Xác minh bảo mật chưa được cấu hình.': 'Security verification is not configured.',
 };
 

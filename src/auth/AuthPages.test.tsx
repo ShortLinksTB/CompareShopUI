@@ -119,6 +119,28 @@ describe('auth pages', () => {
     expect(screen.getByRole('heading', { name: 'Đăng nhập để trải nghiệm tốt hơn' })).toBeTruthy();
   });
 
+  it('keeps non-lockout HTTP errors in the generic login handling', async () => {
+    api.login.mockRejectedValue(new AuthApiError(503, 'service_unavailable', 'Yêu cầu chưa thể hoàn tất. Vui lòng thử lại.'));
+    renderAt('/login'); enter('email', 'mai@example.test'); enter('password', 'Shop-Safe-2026'); submit();
+
+    expect((await screen.findByRole('alert')).textContent).toBe('Yêu cầu chưa thể hoàn tất. Vui lòng thử lại.');
+    expect(screen.getByRole('heading', { name: 'Đăng nhập để trải nghiệm tốt hơn' })).toBeTruthy();
+  });
+
+  it.each([
+    { language: 'vi', title: 'Thử lại sau ít phút', guidance: 'Tạm khoá đăng nhập Có quá nhiều lần đăng nhập không thành công. Vui lòng thử lại sau 15 phút, hoặc đặt lại mật khẩu ngay.' },
+    { language: 'en', title: 'Try again in a few minutes', guidance: 'Sign-in temporarily locked There have been too many failed sign-in attempts. Please try again in 15 minutes or reset your password now.' },
+  ])('shows localized locked-login guidance for HTTP 429 in $language', async ({ language, title, guidance }) => {
+    if (language === 'en') localStorage.setItem('giatot-language', 'en');
+    api.login.mockRejectedValue(new AuthApiError(429, 'rate_limited', 'The request could not be completed. Please try again.'));
+    renderAt('/login');
+    enter('email', 'mai@example.test'); enter('password', 'Shop-Safe-2026'); submit();
+
+    expect(await screen.findByRole('heading', { name: title })).toBeTruthy();
+    expect(screen.getByRole('alert').textContent).toBe(guidance);
+    expect(screen.getByRole('button', { name: language === 'en' ? 'Reset password' : 'Đặt lại mật khẩu' })).toBeTruthy();
+  });
+
   it('localizes the login password toggle, accessible label, and forgot-password link in English', () => {
     localStorage.setItem('giatot-language', 'en');
     renderAt('/login');
