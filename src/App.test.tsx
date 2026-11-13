@@ -337,7 +337,7 @@ describe('fixed route themes', () => {
     expect(stylesheet).toMatch(/\.home-shell \.hero \+ \.section\s*\{[^}]*padding-bottom:\s*calc\(88px \+ env\(safe-area-inset-bottom\)\)/);
     expect(stylesheet).toMatch(/\.home-shell \.hero \+ \.section\s*\{[^}]*padding-top:\s*8px/);
     expect(stylesheet).toMatch(/\.home-shell \.hero \+ \.section \.section-heading\s*\{[^}]*margin-bottom:\s*8px/);
-    expect(stylesheet).toMatch(/\.home-shell \.hero-featured-product\s*\{[^}]*grid-template-columns:\s*38px minmax\(0,\s*1fr\) auto[^}]*min-height:\s*42px;\s*padding:\s*5px 0/);
+    expect(stylesheet).toMatch(/\.home-shell \.hero-featured-product\s*\{[^}]*grid-template-columns:\s*38px minmax\(0,\s*1fr\) auto 32px[^}]*min-height:\s*42px;\s*padding:\s*5px 0/);
     expect(stylesheet).toMatch(/\.bottom-nav\s*\{[^}]*position:\s*fixed/);
     expect(stylesheet).toMatch(/\.home-shell \.category-grid\s*\{[^}]*display:\s*flex[^}]*overflow-x:\s*auto/);
     expect(stylesheet).toMatch(/\.home-shell \.hero-copy > h1\s*\{[^}]*line-height:\s*1\.2/);
@@ -437,6 +437,7 @@ describe('Home API data', () => {
     expect(screen.queryByText('2 cửa hàng đang bán')).toBeNull();
     expect(screen.getAllByText('Chưa có hình ảnh').length).toBeGreaterThan(0);
     expect(screen.getAllByRole('img', { name: 'Chưa có hình ảnh' }).length).toBeGreaterThan(0);
+    expect(document.querySelectorAll('.product-card .heart').length).toBeGreaterThan(0);
     expect(screen.queryByText('Apple')).toBeNull();
     expect(screen.queryByText(/★/)).toBeNull();
     expect(fetchMock).toHaveBeenNthCalledWith(1, 'https://api-compareshop-dev.giamha.online/api/v1/categories');
@@ -488,6 +489,7 @@ describe('Home API data', () => {
     const featuredCard = document.querySelector('.hero-featured-card') as HTMLElement;
     expect((await screen.findAllByRole('link', { name: 'Sample Phone 1' })).length).toBeGreaterThan(0);
     expect(featuredCard.querySelectorAll('.hero-featured-product')).toHaveLength(3);
+    expect(featuredCard.querySelectorAll('.hero-featured-heart')).toHaveLength(3);
     expect(featuredCard.querySelectorAll('.hero-featured-name')[0].textContent).toBe('Sample Phone 1');
     expect(featuredCard.querySelectorAll('.hero-featured-name')[2].textContent).toBe('Sample Phone 3');
     expect(Array.from(featuredCard.querySelectorAll('.hero-featured-name')).some(name => name.textContent === 'Sample Phone 4')).toBe(false);
@@ -1093,6 +1095,8 @@ describe('Product Detail API data', () => {
 
     renderAppAt('/product/sample-product-01');
     expect(await screen.findByRole('heading', { name: 'Sample Product 01' })).toBeTruthy();
+    expect(document.querySelector('.detail-gallery .detail-wishlist-heart')).toBeTruthy();
+    expect(document.querySelector('.detail-actions .detail-wishlist-heart')).toBeNull();
     expect(document.querySelector('.product-shell')).toBeTruthy();
     expect(shellColorScheme('product-shell')).toBe('light');
     expect(screen.getByText('Ảnh chưa có')).toBeTruthy();
