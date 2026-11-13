@@ -1,6 +1,7 @@
 import type { Language } from './i18n';
 
 const englishCopy: Record<string, string> = {
+  'GiaTot — trang chủ': 'GiaTot — home',
   'Vui lòng thử lại sau.': 'Please try again later.',
   'Xem ngay': 'View now',
   'Biểu đồ lịch sử giá': 'Price history chart',

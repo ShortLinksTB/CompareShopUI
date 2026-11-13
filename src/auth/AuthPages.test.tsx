@@ -27,6 +27,16 @@ function CurrentPath() { return <span data-testid="current-path">{useLocation().
 afterEach(() => { cleanup(); vi.clearAllMocks(); localStorage.clear(); window.__APP_CONFIG__ = undefined; });
 
 describe('auth pages', () => {
+  it.each([
+    ['vi', 'GiaTot — trang chủ'],
+    ['en', 'GiaTot — home'],
+  ] as const)('gives the auth home link the %s accessible name', (language, accessibleName) => {
+    if (language === 'en') window.localStorage.setItem('giatot-language', language);
+    renderAt('/register');
+
+    expect(screen.getByRole('link', { name: accessibleName }).getAttribute('href')).toBe('/');
+  });
+
   it('shows a generic registration confirmation only after submission succeeds', async () => {
     api.register.mockResolvedValue({ accepted: true });
     renderAt('/register');
