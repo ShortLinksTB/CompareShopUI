@@ -220,6 +220,7 @@ const englishCopy: Record<string, string> = {
   'Không thể tải số theo dõi giá.': 'Could not load your price-alert count.',
   'Không thể đăng xuất. Vui lòng thử lại.': 'Could not sign out. Please try again.',
   'Tạo tài khoản GiaTot': 'Create a GiaTot account',
+  'Tạo tài khoản': 'Create account',
   'Quên mật khẩu?': 'Forgot password?',
   'Kiểm tra email của bạn': 'Check your email',
   'Email đã được xác minh': 'Email verified',
@@ -307,7 +308,6 @@ const englishCopy: Record<string, string> = {
   'Bạn chưa xác minh email. Hãy kiểm tra thư đã gửi tới': 'Your email is not verified. Check the message sent to',
   'Có quá nhiều lần đăng nhập không thành công. Hãy thử lại sau hoặc đặt lại mật khẩu.': 'There have been too many failed sign-in attempts. Try again later or reset your password.',
   'Xác minh bảo mật chưa được cấu hình.': 'Security verification is not configured.',
-  'Quên mật khẩu?': 'Forgot password?',
 };
 
 export function uiText(language: Language, source: string): string {

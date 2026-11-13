@@ -29,6 +29,7 @@ describe('auth pages', () => {
   it('shows a generic registration confirmation only after submission succeeds', async () => {
     api.register.mockResolvedValue({ accepted: true });
     renderAt('/register');
+    expect(screen.getByRole('button', { name: 'Tạo tài khoản' })).toBeTruthy();
     enter('email', 'mai@example.test'); enter('password', 'Shop-Safe-2026'); submit();
     expect(await screen.findByRole('heading', { name: 'Kiểm tra email của bạn' })).toBeTruthy();
     expect(screen.getByText(/Nếu địa chỉ email có thể đăng ký/)).toBeTruthy();
@@ -39,6 +40,7 @@ describe('auth pages', () => {
     window.localStorage.setItem('giatot-language', 'en');
     api.register.mockResolvedValue({ accepted: true });
     renderAt('/register');
+    expect(screen.getByRole('button', { name: 'Create account' })).toBeTruthy();
     expect(screen.getByText('At least 8 characters')).toBeTruthy();
     expect(screen.getByText('Not a commonly used password')).toBeTruthy();
     expect(screen.getByText('Does not contain the part of your email before @')).toBeTruthy();
