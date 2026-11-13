@@ -23,7 +23,7 @@ function enter(id: string, value: string) { fireEvent.change(document.getElement
 function submit() { fireEvent.submit(document.querySelector('form')!); }
 function CurrentPath() { return <span data-testid="current-path">{useLocation().pathname}</span>; }
 
-afterEach(() => { cleanup(); vi.clearAllMocks(); window.__APP_CONFIG__ = undefined; window.localStorage.removeItem('giatot-language'); });
+afterEach(() => { cleanup(); vi.clearAllMocks(); localStorage.clear(); window.__APP_CONFIG__ = undefined; });
 
 describe('auth pages', () => {
   it('shows a generic registration confirmation only after submission succeeds', async () => {
@@ -64,6 +64,20 @@ describe('auth pages', () => {
     renderAt('/login'); enter('email', 'mai@example.test'); enter('password', 'password'); submit();
     expect((await screen.findByRole('alert')).textContent).toContain('Auth service is unavailable.');
     expect(screen.getByRole('heading', { name: 'Đăng nhập để trải nghiệm tốt hơn' })).toBeTruthy();
+  });
+
+  it('localizes the login password toggle, accessible label, and forgot-password link in English', () => {
+    localStorage.setItem('giatot-language', 'en');
+    renderAt('/login');
+
+    expect(screen.getByRole('link', { name: 'Forgot password?' })).toBeTruthy();
+    const showPassword = screen.getByRole('button', { name: 'Show password' });
+    expect(showPassword.textContent).toBe('Show');
+
+    fireEvent.click(showPassword);
+
+    expect(screen.getByRole('button', { name: 'Hide password' }).textContent).toBe('Hide');
+    expect((document.getElementById('password') as HTMLInputElement).type).toBe('text');
   });
 
   it('returns to a safe local path after a successful sign-in', async () => {
