@@ -255,8 +255,19 @@ describe('auth pages', () => {
     api.verifyEmail.mockResolvedValue({ verified: true });
     renderAt('/verify-email?token=one-time-secret');
     expect(await screen.findByRole('heading', { name: 'Email đã được xác minh' })).toBeTruthy();
+    expect(screen.getByText('Tài khoản của bạn đã sẵn sàng. Đăng nhập để lưu sản phẩm và theo dõi giá.')).toBeTruthy();
     await waitFor(() => expect(api.verifyEmail).toHaveBeenCalledWith('one-time-secret'));
     expect(window.location.search).toBe('');
+  });
+
+  it('localizes the verify-email success body when the locale changes', async () => {
+    api.verifyEmail.mockResolvedValue({ verified: true });
+    render(<LanguageProvider><LanguageControls /><AuthSessionProvider value={anonymous}><MemoryRouter initialEntries={['/verify-email?token=one-time-secret']}><Routes><Route path="*" element={<AuthPages />} /></Routes></MemoryRouter></AuthSessionProvider></LanguageProvider>);
+
+    expect(await screen.findByText('Tài khoản của bạn đã sẵn sàng. Đăng nhập để lưu sản phẩm và theo dõi giá.')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'EN' }));
+    expect(screen.getByText('Your account is ready. Sign in to save products and track prices.')).toBeTruthy();
+    expect(document.body.textContent).not.toContain('Tài khoản của bạn đã sẵn sàng.');
   });
 
   it('localizes the English PIN and reset-password states', async () => {
