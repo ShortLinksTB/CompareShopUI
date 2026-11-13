@@ -65,6 +65,10 @@ describe('auth pages', () => {
 
     expect(await screen.findByRole('heading', { name: 'Enter your 6-digit code' })).toBeTruthy();
     expect(screen.getByRole('status').textContent).toContain('If the email is registered, a reset code has been sent.');
+    expect(screen.getByLabelText('Verification code')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Resend code/ })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Enter a different email' })).toBeTruthy();
     expect(api.forgotPassword).toHaveBeenCalledWith('mai@example.test', undefined);
   });
 
@@ -237,7 +241,27 @@ describe('auth pages', () => {
     expect(window.location.search).toBe('');
   });
 
-  it('takes the forgot-password flow through PIN verification and a matching new password', async () => {
+  it('localizes the English PIN and reset-password states', async () => {
+    localStorage.setItem('giatot-language', 'en');
+    api.forgotPassword.mockResolvedValue({ accepted: true });
+    api.verifyResetCode.mockResolvedValue({ resetToken: 'private-reset-token' });
+    api.resetPassword.mockResolvedValue({ reset: true });
+    renderAt('/forgot-password');
+    enter('email', 'mai@example.test'); submit();
+    expect(await screen.findByRole('heading', { name: 'Enter your 6-digit code' })).toBeTruthy();
+    enter('pin', '482913'); submit();
+    expect(await screen.findByRole('heading', { name: 'Set a new password' })).toBeTruthy();
+    expect(screen.getByLabelText('New password')).toBeTruthy();
+    expect(screen.getByLabelText('Confirm password')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Change password' })).toBeTruthy();
+    enter('password', 'New-Shop-Safe-2026'); enter('confirmPassword', 'New-Shop-Safe-2026'); submit();
+    expect(await screen.findByRole('heading', { name: 'Password updated' })).toBeTruthy();
+    expect(document.body.textContent).not.toContain('Mã xác nhận');
+    expect(document.body.textContent).not.toContain('Đổi mật khẩu');
+    expect(document.body.textContent).not.toContain('private-reset-token');
+  });
+
+  it('takes the Vietnamese forgot-password flow through PIN verification and a matching new password', async () => {
     api.forgotPassword.mockResolvedValue({ accepted: true });
     api.verifyResetCode.mockResolvedValue({ resetToken: 'private-reset-token' });
     api.resetPassword.mockResolvedValue({ reset: true });
