@@ -77,7 +77,12 @@ async function request<T>(operation: AuthOperation, method: 'GET' | 'POST', body
   // `accepted` field.
   if (acceptedOperations.includes(operation) && data.accepted !== true) throw new AuthApiError(502, 'invalid_response');
   if (operation === 'verify-reset-code' && typeof data.resetToken !== 'string') throw new AuthApiError(502, 'invalid_response');
-  if (operation === 'me' && (typeof data.id !== 'string' || typeof data.email !== 'string' || typeof data.displayName !== 'string')) throw new AuthApiError(502, 'invalid_response');
+  if (operation === 'me') {
+    if (typeof data.id !== 'string' || typeof data.email !== 'string' || (data.displayName !== undefined && typeof data.displayName !== 'string')) {
+      throw new AuthApiError(502, 'invalid_response');
+    }
+    return { ...data, displayName: data.displayName ?? data.email } as T;
+  }
   return data as T;
 }
 

@@ -78,6 +78,30 @@ describe('typed auth API client', () => {
     await expect(authApi.getAccessToken()).resolves.toBe('memory-token');
   });
 
+  it('accepts the canonical /me profile without displayName and uses email as the visible label', async () => {
+    window.__APP_CONFIG__ = { AUTH_API_URL: 'https://auth.example.test' };
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ id: 'u1', email: 'mai@example.test', emailVerified: true })));
+
+    await expect(authApi.me()).resolves.toEqual({
+      id: 'u1', email: 'mai@example.test', displayName: 'mai@example.test', emailVerified: true,
+    });
+  });
+
+  it('preserves an optional displayName and rejects malformed /me profiles', async () => {
+    window.__APP_CONFIG__ = { AUTH_API_URL: 'https://auth.example.test' };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(response({ id: 'u1', email: 'mai@example.test', displayName: 'Mai' }))
+      .mockResolvedValueOnce(response({ email: 'mai@example.test' }))
+      .mockResolvedValueOnce(response({ id: 'u1' }))
+      .mockResolvedValueOnce(response({ id: 'u1', email: 'mai@example.test', displayName: null }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(authApi.me()).resolves.toMatchObject({ displayName: 'Mai' });
+    await expect(authApi.me()).rejects.toMatchObject({ status: 502, code: 'invalid_response' });
+    await expect(authApi.me()).rejects.toMatchObject({ status: 502, code: 'invalid_response' });
+    await expect(authApi.me()).rejects.toMatchObject({ status: 502, code: 'invalid_response' });
+  });
+
   it('clears the in-memory token when the post-login user lookup fails', async () => {
     window.__APP_CONFIG__ = { AUTH_API_URL: 'https://auth.example.test' };
     vi.stubGlobal('fetch', vi.fn()
