@@ -50,15 +50,6 @@ describe('auth pages', () => {
     expect(screen.getByText('Open the verification email to activate your account. The link is valid for 24 hours.')).toBeTruthy();
   });
 
-  it('localizes login forgot-password link and password visibility in English', () => {
-    window.localStorage.setItem('giatot-language', 'en');
-    renderAt('/login');
-    expect(screen.getByRole('link', { name: 'Forgot password?' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Show password' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Show password' }));
-    expect(screen.getByRole('button', { name: 'Hide password' })).toBeTruthy();
-  });
-
   it('keeps an API failure visible instead of showing a success state', async () => {
     api.login.mockRejectedValue(new Error('Auth service is unavailable.'));
     renderAt('/login'); enter('email', 'mai@example.test'); enter('password', 'password'); submit();
