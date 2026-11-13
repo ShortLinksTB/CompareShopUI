@@ -20,6 +20,13 @@ describe('typed auth API client', () => {
     await expect(authApi.register({ email: 'mai@example.test', password: 'private-password' })).resolves.toEqual({ accepted: true });
   });
 
+  it('treats HTTP 202 from resend-verification as accepted even with an empty body', async () => {
+    window.__APP_CONFIG__ = { AUTH_API_URL: 'https://auth.example.test' };
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(undefined, 202)));
+
+    await expect(authApi.resendVerification('mai@example.test')).resolves.toEqual({ accepted: true });
+  });
+
   it('treats an empty-body forgot-password HTTP 202 as generic acceptance', async () => {
     window.__APP_CONFIG__ = { AUTH_API_URL: 'https://auth.example.test' };
     const jsonMock = vi.fn().mockRejectedValue(new SyntaxError('empty response'));
