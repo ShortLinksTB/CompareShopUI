@@ -224,6 +224,7 @@ const englishCopy: Record<string, string> = {
   'Quên mật khẩu?': 'Forgot password?',
   'Kiểm tra email của bạn': 'Check your email',
   'Email đã được xác minh': 'Email verified',
+  'Tài khoản của bạn đã sẵn sàng. Đăng nhập để lưu sản phẩm và theo dõi giá.': 'Your account is ready. Sign in to save products and track prices.',
   'Liên kết không còn hiệu lực': 'This link is no longer valid',
   'Nhập mã 6 số': 'Enter your 6-digit code',
   'Yêu cầu mã mới': 'Request a new code',
