@@ -245,7 +245,7 @@ describe('browser storage failures', () => {
       const nav = document.querySelector('.desktop-nav') as HTMLElement;
       expect(nav.querySelectorAll('[aria-current="page"]')).toHaveLength(1);
       expect(nav.querySelector('[aria-current="page"]')?.textContent).toContain(activeLabel);
-      expect(screen.getAllByPlaceholderText('Tìm sản phẩm, thương hiệu...').length).toBeGreaterThan(0);
+      expect(screen.getAllByPlaceholderText('Tìm sản phẩm, thương hiệu, mã SKU…').length).toBeGreaterThan(0);
     }
     cleanup();
     renderAppAt('/compare');
@@ -705,7 +705,7 @@ it('localizes the expired verification action and shared search placeholder in V
 
   expect(await screen.findByRole('heading', { name: 'Liên kết không còn hiệu lực' })).toBeTruthy();
   expect(screen.getByRole('button', { name: 'Quay lại đăng nhập' })).toBeTruthy();
-  expect((screen.getByRole('textbox', { name: 'Tìm sản phẩm, thương hiệu...' }) as HTMLInputElement).placeholder).toBe('Tìm sản phẩm, thương hiệu...');
+  expect((screen.getByRole('textbox', { name: 'Tìm sản phẩm, thương hiệu...' }) as HTMLInputElement).placeholder).toBe('Tìm sản phẩm, thương hiệu, mã SKU…');
 
   cleanup();
   window.localStorage.setItem('giatot-language', 'en');
