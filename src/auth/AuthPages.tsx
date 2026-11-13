@@ -125,7 +125,7 @@ export function AuthPages() {
     } catch (reason) {
       if (reason instanceof AuthApiError) {
         if (reason.code === 'email_not_verified') { setView('unverified'); setEmail(normalizedEmail); setError(text(reason.message)); }
-        else if (reason.status === 429 || reason.code === 'account_locked' || reason.code === 'temporarily_locked') setView('locked');
+        else if (reason.code === 'account_locked' || reason.code === 'temporarily_locked' || ((view === 'login' || view === 'expired') && reason.status === 429)) setView('locked');
         else if (reason.code === 'reset_session_expired' || reason.code === 'reset_token_invalid') {
           setResetToken(''); setPassword(''); setConfirmPassword(''); setView('reset-bad');
         }
