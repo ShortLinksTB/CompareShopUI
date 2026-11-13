@@ -729,7 +729,7 @@ it('localizes the expired verification action and shared search placeholder in V
 
   expect(await screen.findByRole('heading', { name: 'Liên kết không còn hiệu lực' })).toBeTruthy();
   expect(screen.getByRole('button', { name: 'Quay lại đăng nhập' })).toBeTruthy();
-  expect((screen.getByRole('textbox', { name: 'Tìm sản phẩm, thương hiệu...' }) as HTMLInputElement).placeholder).toBe('Tìm sản phẩm, thương hiệu, mã SKU…');
+  expect((screen.getByRole('textbox', { name: 'Tìm sản phẩm, thương hiệu, mã SKU…' }) as HTMLInputElement).placeholder).toBe('Tìm sản phẩm, thương hiệu, mã SKU…');
 
   cleanup();
   window.localStorage.setItem('giatot-language', 'en');
@@ -819,7 +819,7 @@ it('renders product-object suggestions without crashing the search route', async
   vi.stubGlobal('fetch', fetchMock);
   const { container } = renderAppAt('/search');
 
-  fireEvent.change(screen.getByRole('textbox', { name: 'Tìm sản phẩm, thương hiệu...' }), { target: { value: 'Sample Product 03' } });
+  fireEvent.change(screen.getByRole('textbox', { name: 'Tìm sản phẩm, thương hiệu, mã SKU…' }), { target: { value: 'Sample Product 03' } });
   expect(await screen.findByRole('option', { name: 'Sample Product 03' })).toBeTruthy();
   expect(screen.getByRole('heading', { name: 'Tất cả sản phẩm' })).toBeTruthy();
   expect(container.textContent).toContain('Tất cả sản phẩm');
@@ -1083,7 +1083,7 @@ describe('Search and Category API data', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
     renderAppAt('/search');
-    fireEvent.change(screen.getByRole('textbox', { name: 'Tìm sản phẩm, thương hiệu...' }), { target: { value: 'phone' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Tìm sản phẩm, thương hiệu, mã SKU…' }), { target: { value: 'phone' } });
     expect(await screen.findByRole('option', { name: 'phone suggestion' })).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/search/suggestions?q=phone&limit=5');
     expect(await screen.findByRole('alert')).toBeTruthy();
