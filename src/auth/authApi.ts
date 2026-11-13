@@ -41,6 +41,12 @@ async function request<T>(operation: AuthOperation, method: 'GET' | 'POST', body
     if (refreshed) return request<T>(operation, method, body, false);
     clearSessionAfterRefreshFailure();
   }
+  const acceptedOperations: AuthOperation[] = ['register', 'resend-verification', 'forgot-password'];
+  if (response.status === 202 && acceptedOperations.includes(operation)) {
+    // HTTP 202 is the complete contract signal for these privacy-preserving
+    // requests. Their response body may be empty and must not drive UI state.
+    return { accepted: true } as T;
+  }
   let data: Record<string, unknown> = {};
   try { data = await response.json() as Record<string, unknown>; } catch { /* use generic message */ }
   if (!response.ok) {
@@ -63,7 +69,7 @@ async function request<T>(operation: AuthOperation, method: 'GET' | 'POST', body
   // These endpoints use HTTP 202 as the contract-level acceptance signal. Their
   // response body is intentionally generic and is not required to expose an
   // `accepted` field.
-  if ((operation === 'register' || operation === 'resend-verification' || operation === 'forgot-password') && response.status !== 202 && data.accepted !== true) throw new AuthApiError(502, 'invalid_response');
+  if (acceptedOperations.includes(operation) && data.accepted !== true) throw new AuthApiError(502, 'invalid_response');
   if (operation === 'verify-reset-code' && typeof data.resetToken !== 'string') throw new AuthApiError(502, 'invalid_response');
   if (operation === 'me' && (typeof data.id !== 'string' || typeof data.email !== 'string' || typeof data.displayName !== 'string')) throw new AuthApiError(502, 'invalid_response');
   return data as T;
