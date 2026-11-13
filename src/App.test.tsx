@@ -689,6 +689,15 @@ it('routes login and registration through the shared auth pages while preserving
   expect(screen.getByRole('heading', { name: 'Tạo tài khoản GiaTot' })).toBeTruthy();
 });
 
+it('keeps the shared site header and mobile navigation around the expired verification state', async () => {
+  const anonymous: AuthSessionValue = { status: 'anonymous', user: null, getAccessToken: async () => null, signIn: vi.fn(), signOut: vi.fn() };
+  renderAppAtWithSession('/verify-email', anonymous);
+
+  expect(await screen.findByRole('heading', { name: 'Liên kết không còn hiệu lực' })).toBeTruthy();
+  expect(document.querySelector('.light-shell > .site-header')).toBeTruthy();
+  expect(document.querySelector('.light-shell > .bottom-nav')).toBeTruthy();
+});
+
 describe('Wishlist API data', () => {
   it('keeps the page loading until the authenticated wishlist request resolves', async () => {
     authMock.getToken.mockResolvedValue('access-token');
