@@ -4,6 +4,7 @@ export interface SearchCategory {
   id: number;
   slug: string;
   name: string;
+  parentId?: number | null;
 }
 
 export interface SearchProduct {
@@ -33,7 +34,30 @@ async function get<T>(path: string): Promise<T> {
 export async function getCategories(): Promise<SearchCategory[]> {
   const result = await get<{ items: SearchCategory[] }>('/categories');
   if (!result || !Array.isArray(result.items)) throw new Error('Invalid categories response');
-  return result.items;
+
+  // The API returns root categories by default. Category pages can target
+  // nested categories, so walk each parent's children before resolving slugs.
+  const categories: SearchCategory[] = [];
+  const visited = new Set<number>();
+  let pending = result.items;
+  while (pending.length) {
+    const level = pending.filter(category => !visited.has(category.id));
+    if (!level.length) break;
+    level.forEach(category => {
+      visited.add(category.id);
+      categories.push(category);
+    });
+    const childResults = await Promise.all(level.map(async category => {
+      const children = await get<{ items: SearchCategory[] }>(`/categories?parentId=${category.id}`);
+      if (!children || !Array.isArray(children.items)) throw new Error('Invalid categories response');
+      return children.items.filter(child => child.parentId === category.id
+        && Number.isInteger(child.id)
+        && typeof child.slug === 'string'
+        && typeof child.name === 'string');
+    }));
+    pending = childResults.flat();
+  }
+  return categories;
 }
 
 export async function getProducts(options: {
