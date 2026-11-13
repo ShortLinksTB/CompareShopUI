@@ -5,7 +5,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { AuthPages } from './AuthPages';
 import { AuthApiError } from './authApi';
 import { AuthSessionProvider, type AuthSessionValue } from './AuthSession';
-import { LanguageProvider } from '../i18n';
+import { LanguageProvider, useLanguage } from '../i18n';
 
 const api = vi.hoisted(() => ({
   register: vi.fn(), verifyEmail: vi.fn(), resendVerification: vi.fn(), login: vi.fn(), me: vi.fn(), forgotPassword: vi.fn(), verifyResetCode: vi.fn(), resetPassword: vi.fn(),
@@ -23,6 +23,7 @@ function renderAt(path: string) {
 function enter(id: string, value: string) { fireEvent.change(document.getElementById(id)!, { target: { value } }); }
 function submit() { fireEvent.submit(document.querySelector('form')!); }
 function CurrentPath() { return <span data-testid="current-path">{useLocation().pathname}</span>; }
+function LanguageControls() { const { setLanguage } = useLanguage(); return <><button onClick={() => setLanguage('vi')}>VI</button><button onClick={() => setLanguage('en')}>EN</button></>; }
 
 afterEach(() => { cleanup(); vi.clearAllMocks(); localStorage.clear(); window.__APP_CONFIG__ = undefined; });
 
@@ -68,22 +69,39 @@ describe('auth pages', () => {
     expect(api.forgotPassword).toHaveBeenCalledWith('mai@example.test', undefined);
   });
 
-  it('localizes the unverified login state and shows accepted resend feedback in English', async () => {
-    localStorage.setItem('giatot-language', 'en');
+  it('updates the unverified alert and accepted resend feedback when locale changes', async () => {
+    api.login.mockRejectedValue(new AuthApiError(403, 'email_not_verified', 'Bạn cần xác minh email trước khi đăng nhập.'));
+    api.resendVerification.mockResolvedValue({ accepted: true });
+    render(<LanguageProvider><LanguageControls /><AuthSessionProvider value={anonymous}><MemoryRouter initialEntries={['/login']}><Routes><Route path="*" element={<AuthPages />} /></Routes></MemoryRouter></AuthSessionProvider></LanguageProvider>);
+
+    enter('email', 'mai@example.test'); enter('password', 'Shop-Safe-2026'); submit();
+
+    expect(await screen.findByRole('heading', { name: 'Xác minh email để tiếp tục' })).toBeTruthy();
+    expect(screen.getByRole('alert').textContent).toBe('Bạn cần xác minh email trước khi đăng nhập.');
+    fireEvent.click(screen.getByRole('button', { name: 'EN' }));
+    expect(screen.getByRole('heading', { name: 'Verify your email to continue' })).toBeTruthy();
+    expect(screen.getByRole('alert').textContent).toBe('Verify your email before signing in.');
+    expect(screen.getByRole('button', { name: 'Back to sign in' })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Resend verification email' }));
+
+    expect(await screen.findByText('If the email can receive requests, a new message has been sent.')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'VI' }));
+    expect(screen.getByText('Nếu email có thể nhận yêu cầu, thư mới đã được gửi.')).toBeTruthy();
+    expect(api.resendVerification).toHaveBeenCalledWith('mai@example.test', undefined);
+  });
+
+  it('shows the unverified alert and accepted resend feedback in Vietnamese', async () => {
     api.login.mockRejectedValue(new AuthApiError(403, 'email_not_verified', 'Bạn cần xác minh email trước khi đăng nhập.'));
     api.resendVerification.mockResolvedValue({ accepted: true });
     renderAt('/login');
 
     enter('email', 'mai@example.test'); enter('password', 'Shop-Safe-2026'); submit();
 
-    expect(await screen.findByRole('heading', { name: 'Verify your email to continue' })).toBeTruthy();
-    expect(screen.getByText('Verify your email before signing in.')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Back to sign in' })).toBeTruthy();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Resend verification email' }));
-
-    expect(await screen.findByText('If the email can receive requests, a new message has been sent.')).toBeTruthy();
-    expect(api.resendVerification).toHaveBeenCalledWith('mai@example.test', undefined);
+    expect(await screen.findByRole('heading', { name: 'Xác minh email để tiếp tục' })).toBeTruthy();
+    expect(screen.getByRole('alert').textContent).toBe('Bạn cần xác minh email trước khi đăng nhập.');
+    fireEvent.click(screen.getByRole('button', { name: 'Gửi lại thư xác minh' }));
+    expect(await screen.findByText('Nếu email có thể nhận yêu cầu, thư mới đã được gửi.')).toBeTruthy();
   });
 
   it('keeps resend failures visible without showing accepted feedback', async () => {
