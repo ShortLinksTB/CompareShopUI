@@ -291,6 +291,9 @@ describe('fixed route themes', () => {
     ['/shops/sample-shop', 'shop-shell', 'light'],
     ['/wishlist', 'light-shell', 'light'],
     ['/login', 'light-shell', 'light'],
+    ['/register', 'light-shell', 'light'],
+    ['/verify-email', 'light-shell', 'light'],
+    ['/forgot-password', 'light-shell', 'light'],
     ['/account', 'light-shell', 'light'],
   ] as const)('%s always uses the %s %s scheme independent of OS preference', async (path, shellClass, scheme) => {
     setColorScheme('dark');
@@ -303,9 +306,28 @@ describe('fixed route themes', () => {
     expect(document.querySelector(`.${shellClass}`)).toBeTruthy();
     expect(shellColorScheme(shellClass)).toBe(scheme);
     expect(stylesheet).toMatch(/@media\s*\(prefers-color-scheme:\s*dark\)[\s\S]*?\.site-header/);
+    const header = document.querySelector('.site-header');
+    expect(header?.classList.contains('auth-fixed-light')).toBe(['/login', '/register', '/verify-email', '/forgot-password'].includes(path));
+    if (header?.classList.contains('auth-fixed-light')) {
+      expect(stylesheet).toMatch(/\.site-header:not\(\.auth-fixed-light\)\s*\{[^}]*background:\s*#13151a/);
+      expect(stylesheet).toMatch(/\.site-header:not\(\.auth-fixed-light\) \.header-search/);
+    }
     if (path === '/') {
       expect((await screen.findAllByText('Chưa có sản phẩm nổi bật')).length).toBeGreaterThan(0);
     }
+  });
+
+  it.each(['light', 'dark'] as const)('keeps auth headers excluded from OS dark styling under %s preference', theme => {
+    setColorScheme(theme);
+    const anonymous: AuthSessionValue = { status: 'anonymous', user: null, getAccessToken: async () => null, signIn: vi.fn(), signOut: vi.fn() };
+    renderAppAtWithSession('/login', anonymous);
+
+    expect(document.querySelector('.site-header')?.classList.contains('auth-fixed-light')).toBe(true);
+    expect(stylesheet).toMatch(/@media\s*\(prefers-color-scheme:\s*dark\)[\s\S]*?\.site-header:not\(\.auth-fixed-light\)/);
+
+    cleanup();
+    renderAppAt('/search');
+    expect(document.querySelector('.site-header')?.classList.contains('auth-fixed-light')).toBe(false);
   });
 
   it('provides visible focus indicators for the fixed light theme', () => {
@@ -829,7 +851,7 @@ describe('Blog listing route', () => {
     expect(stylesheet).toMatch(/\.blog-list-heading h1\{[^}]*color:#171b24/);
     expect(stylesheet).toMatch(/\.blog-detail-subscribe\{[^}]*background:#fff3eb/);
     expect(contrastRatio('#595959', '#fff3eb')).toBeGreaterThanOrEqual(4.5);
-    expect(stylesheet).toMatch(/@media \(prefers-color-scheme: dark\)[\s\S]*?\.site-header \{/);
+    expect(stylesheet).toMatch(/@media \(prefers-color-scheme: dark\)[\s\S]*?\.site-header:not\(\.auth-fixed-light\)\s*\{/);
 
     cleanup();
     const article = { slug: '10-meo-so-sanh-gia', title: 'A real published article', category: 'shopping-tips', excerptText: 'Excerpt', coverFileId: null, tags: [], authorName: 'Minh Anh', publishedAtUtc: '2026-11-12T00:00:00Z', totalViews: 0, contentMarkdown: 'Published content', updatedAtUtc: '2026-11-12T00:00:00Z' };
