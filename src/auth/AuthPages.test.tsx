@@ -119,6 +119,29 @@ describe('auth pages', () => {
     expect(screen.getByRole('heading', { name: 'Đăng nhập để trải nghiệm tốt hơn' })).toBeTruthy();
   });
 
+  it('keeps non-lockout HTTP errors in the generic login handling', async () => {
+    api.login.mockRejectedValue(new AuthApiError(503, 'service_unavailable', 'Yêu cầu chưa thể hoàn tất. Vui lòng thử lại.'));
+    renderAt('/login'); enter('email', 'mai@example.test'); enter('password', 'Shop-Safe-2026'); submit();
+
+    expect((await screen.findByRole('alert')).textContent).toBe('Yêu cầu chưa thể hoàn tất. Vui lòng thử lại.');
+    expect(screen.getByRole('heading', { name: 'Đăng nhập để trải nghiệm tốt hơn' })).toBeTruthy();
+  });
+
+  it('keeps a non-login HTTP 429 in the generic forgot-code state', async () => {
+    api.forgotPassword.mockResolvedValue({ accepted: true });
+    api.verifyResetCode.mockRejectedValue(new AuthApiError(429, 'rate_limited', 'Yêu cầu chưa thể hoàn tất. Vui lòng thử lại.'));
+    renderAt('/forgot-password');
+    enter('email', 'mai@example.test'); submit();
+    expect(await screen.findByRole('heading', { name: 'Nhập mã 6 số' })).toBeTruthy();
+
+    enter('pin', '482913'); submit();
+
+    expect((await screen.findByRole('alert')).textContent).toContain('Yêu cầu chưa thể hoàn tất. Vui lòng thử lại.');
+    expect(screen.getByRole('heading', { name: 'Nhập mã 6 số' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Thử lại sau ít phút' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Đặt lại mật khẩu' })).toBeNull();
+  });
+
   it('shows the Vietnamese temporary-lockout state for a login HTTP 429', async () => {
     api.login.mockRejectedValue(new AuthApiError(429, 'request_failed'));
     renderAt('/login');
