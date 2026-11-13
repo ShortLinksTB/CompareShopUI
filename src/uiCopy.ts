@@ -295,10 +295,6 @@ const englishCopy: Record<string, string> = {
   'Có quá nhiều lần đăng nhập không thành công. Hãy thử lại sau hoặc đặt lại mật khẩu.': 'There have been too many failed sign-in attempts. Try again later or reset your password.',
   'Xác minh bảo mật chưa được cấu hình.': 'Security verification is not configured.',
   'Quên mật khẩu?': 'Forgot password?',
-  'Ẩn mật khẩu': 'Hide password',
-  'Hiện mật khẩu': 'Show password',
-  'Ẩn': 'Hide',
-  'Hiện': 'Show',
 };
 
 export function uiText(language: Language, source: string): string {
