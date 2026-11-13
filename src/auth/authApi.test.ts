@@ -20,6 +20,13 @@ describe('typed auth API client', () => {
     await expect(authApi.register({ email: 'mai@example.test', password: 'private-password' })).resolves.toEqual({ accepted: true });
   });
 
+  it('treats HTTP 202 from resend-verification as accepted even with an empty body', async () => {
+    window.__APP_CONFIG__ = { AUTH_API_URL: 'https://auth.example.test' };
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(undefined, 202)));
+
+    await expect(authApi.resendVerification('mai@example.test')).resolves.toEqual({ accepted: true });
+  });
+
   it('treats an empty-body forgot-password HTTP 202 as generic acceptance', async () => {
     window.__APP_CONFIG__ = { AUTH_API_URL: 'https://auth.example.test' };
     const jsonMock = vi.fn().mockRejectedValue(new SyntaxError('empty response'));
@@ -42,6 +49,43 @@ describe('typed auth API client', () => {
     await expect(authApi.getAccessToken()).resolves.toBe('memory-token');
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ code: 'email_not_verified' }, 403)));
     await expect(authApi.login({ email: 'a@b.test', password: 'pw' })).rejects.toMatchObject({ code: 'email_not_verified', status: 403 });
+  });
+
+  it('maps an invalid reset token response to the expired reset session state', async () => {
+    window.__APP_CONFIG__ = { AUTH_API_URL: 'https://auth.example.test' };
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ code: 'reset_token_invalid' }, 400)));
+
+    await expect(authApi.resetPassword('private-reset-token', 'New-Shop-Safe-2026')).rejects.toMatchObject({
+      code: 'reset_session_expired', status: 400,
+      message: 'Phiên đặt lại mật khẩu đã hết hạn. Hãy yêu cầu mã mới.',
+    });
+  });
+
+  it('loads the authenticated user after login when the contract returns only an access token', async () => {
+    window.__APP_CONFIG__ = { AUTH_API_URL: 'https://auth.example.test' };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(response({ accessToken: 'memory-token' }))
+      .mockResolvedValueOnce(response({ id: 'u1', email: 'mai@example.test', displayName: 'Mai', emailVerified: true }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(authApi.login({ email: 'mai@example.test', password: 'private-password' })).resolves.toEqual({
+      accessToken: 'memory-token',
+      user: { id: 'u1', email: 'mai@example.test', displayName: 'Mai', emailVerified: true },
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1][0]).toBe('https://auth.example.test/api/v1/auth/me');
+    expect(fetchMock.mock.calls[1][1].headers).toMatchObject({ Authorization: 'Bearer memory-token' });
+    await expect(authApi.getAccessToken()).resolves.toBe('memory-token');
+  });
+
+  it('clears the in-memory token when the post-login user lookup fails', async () => {
+    window.__APP_CONFIG__ = { AUTH_API_URL: 'https://auth.example.test' };
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce(response({ accessToken: 'memory-token' }))
+      .mockResolvedValueOnce(response({ code: 'forbidden' }, 403)));
+
+    await expect(authApi.login({ email: 'mai@example.test', password: 'private-password' })).rejects.toMatchObject({ status: 403 });
+    await expect(authApi.getAccessToken()).resolves.toBeNull();
   });
 
   it('refreshes once and retries a protected request with the new bearer token', async () => {

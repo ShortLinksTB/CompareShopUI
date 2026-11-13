@@ -2,6 +2,7 @@ import { getAuthConfig } from './runtimeConfig';
 
 export interface AuthUser { id: string; email: string; displayName: string; emailVerified: boolean }
 export interface AuthResult { accessToken: string; user: AuthUser }
+interface LoginResponse { accessToken: string; user?: AuthUser }
 export type AuthOperation = 'register' | 'verify-email' | 'resend-verification' | 'login' | 'refresh' | 'logout' | 'forgot-password' | 'verify-reset-code' | 'reset-password' | 'me';
 
 export class AuthApiError extends Error {
@@ -50,7 +51,10 @@ async function request<T>(operation: AuthOperation, method: 'GET' | 'POST', body
   let data: Record<string, unknown> = {};
   try { data = await response.json() as Record<string, unknown>; } catch { /* use generic message */ }
   if (!response.ok) {
-    const code = typeof data.code === 'string' ? data.code : 'request_failed';
+    const responseCode = typeof data.code === 'string' ? data.code : 'request_failed';
+    // AuthAPI reports an expired or consumed reset session as
+    // `reset_token_invalid`; keep the UI contract provider-neutral.
+    const code = responseCode === 'reset_token_invalid' ? 'reset_session_expired' : responseCode;
     const messages: Record<string, string> = {
       invalid_credentials: 'Email hoặc mật khẩu chưa đúng.', email_not_verified: 'Bạn cần xác minh email trước khi đăng nhập.',
       account_locked: 'Tài khoản tạm thời bị khoá. Hãy đặt lại mật khẩu hoặc thử lại sau.', captcha_failed: 'Xác minh bảo mật chưa hoàn tất. Vui lòng thử lại.',
@@ -61,10 +65,12 @@ async function request<T>(operation: AuthOperation, method: 'GET' | 'POST', body
   if (operation === 'login' || operation === 'refresh') {
     const token = typeof data.accessToken === 'string' ? data.accessToken : '';
     const user = data.user as Record<string, unknown> | undefined;
-    if (!token || (operation === 'login' && (!user || typeof user.id !== 'string' || typeof user.email !== 'string' || typeof user.displayName !== 'string'))) {
+    if (!token || (operation === 'login' && user !== undefined && (!user || typeof user.id !== 'string' || typeof user.email !== 'string' || typeof user.displayName !== 'string'))) {
       throw new AuthApiError(502, 'invalid_response', 'Không thể xác nhận phiên đăng nhập. Vui lòng thử lại.');
     }
     accessToken = token;
+    if (operation === 'login' && user) return { accessToken: token, user: user as unknown as AuthUser } as T;
+    if (operation === 'login') return { accessToken: token } as T;
   }
   // These endpoints use HTTP 202 as the contract-level acceptance signal. Their
   // response body is intentionally generic and is not required to expose an
@@ -101,7 +107,16 @@ export const authApi = {
   register: (input: { email: string; password: string; displayName?: string; captchaToken?: string }) => request<{ accepted: true }>('register', 'POST', input),
   verifyEmail: (token: string) => request<{ verified: true }>('verify-email', 'POST', { token }),
   resendVerification: (email: string, captchaToken?: string) => request<{ accepted: true }>('resend-verification', 'POST', { email, ...(captchaToken ? { captchaToken } : {}) }),
-  login: (input: { email: string; password: string; captchaToken?: string }) => request<AuthResult>('login', 'POST', input),
+  async login(input: { email: string; password: string; captchaToken?: string }): Promise<AuthResult> {
+    const result = await request<LoginResponse>('login', 'POST', input);
+    if (result.user) return result as AuthResult;
+    try {
+      return { accessToken: result.accessToken, user: await authApi.me() };
+    } catch (error) {
+      accessToken = null;
+      throw error;
+    }
+  },
   refresh: () => request<{ accessToken: string }>('refresh', 'POST', {}),
   logout: () => request<Record<string, never>>('logout', 'POST', {}),
   forgotPassword: (email: string, captchaToken?: string) => request<{ accepted: true }>('forgot-password', 'POST', { email, ...(captchaToken ? { captchaToken } : {}) }),

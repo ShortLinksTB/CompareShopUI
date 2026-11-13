@@ -3,11 +3,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { AuthPages } from './AuthPages';
+import { AuthApiError } from './authApi';
 import { AuthSessionProvider, type AuthSessionValue } from './AuthSession';
 import { LanguageProvider } from '../i18n';
 
 const api = vi.hoisted(() => ({
-  register: vi.fn(), verifyEmail: vi.fn(), resendVerification: vi.fn(), login: vi.fn(), forgotPassword: vi.fn(), verifyResetCode: vi.fn(), resetPassword: vi.fn(),
+  register: vi.fn(), verifyEmail: vi.fn(), resendVerification: vi.fn(), login: vi.fn(), me: vi.fn(), forgotPassword: vi.fn(), verifyResetCode: vi.fn(), resetPassword: vi.fn(),
 }));
 vi.mock('./authApi', async importOriginal => {
   const actual = await importOriginal<typeof import('./authApi')>();
@@ -67,6 +68,50 @@ describe('auth pages', () => {
     expect(api.forgotPassword).toHaveBeenCalledWith('mai@example.test', undefined);
   });
 
+  it('localizes the unverified login state and shows accepted resend feedback in English', async () => {
+    localStorage.setItem('giatot-language', 'en');
+    api.login.mockRejectedValue(new AuthApiError(403, 'email_not_verified', 'Bạn cần xác minh email trước khi đăng nhập.'));
+    api.resendVerification.mockResolvedValue({ accepted: true });
+    renderAt('/login');
+
+    enter('email', 'mai@example.test'); enter('password', 'Shop-Safe-2026'); submit();
+
+    expect(await screen.findByRole('heading', { name: 'Verify your email to continue' })).toBeTruthy();
+    expect(screen.getByText('Verify your email before signing in.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Back to sign in' })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Resend verification email' }));
+
+    expect(await screen.findByText('If the email can receive requests, a new message has been sent.')).toBeTruthy();
+    expect(api.resendVerification).toHaveBeenCalledWith('mai@example.test', undefined);
+  });
+
+  it('keeps resend failures visible without showing accepted feedback', async () => {
+    api.login.mockRejectedValue(new AuthApiError(403, 'email_not_verified', 'Bạn cần xác minh email trước khi đăng nhập.'));
+    api.resendVerification.mockRejectedValue(new Error('Không thể gửi lại. Vui lòng thử lại.'));
+    renderAt('/login');
+    enter('email', 'mai@example.test'); enter('password', 'Shop-Safe-2026'); submit();
+    await screen.findByRole('heading', { name: 'Xác minh email để tiếp tục' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Gửi lại thư xác minh' }));
+
+    expect((await screen.findByRole('alert')).textContent).toContain('Không thể gửi lại. Vui lòng thử lại.');
+    expect(screen.queryByText('Nếu email có thể nhận yêu cầu, thư mới đã được gửi.')).toBeNull();
+  });
+
+  it('does not show accepted feedback when resend resolves without acceptance', async () => {
+    api.login.mockRejectedValue(new AuthApiError(403, 'email_not_verified', 'Bạn cần xác minh email trước khi đăng nhập.'));
+    api.resendVerification.mockResolvedValue({ accepted: false } as never);
+    renderAt('/login');
+    enter('email', 'mai@example.test'); enter('password', 'Shop-Safe-2026'); submit();
+    await screen.findByRole('heading', { name: 'Xác minh email để tiếp tục' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Gửi lại thư xác minh' }));
+
+    expect((await screen.findByRole('alert')).textContent).toContain('Không thể gửi lại. Vui lòng thử lại.');
+    expect(screen.queryByText('Nếu email có thể nhận yêu cầu, thư mới đã được gửi.')).toBeNull();
+  });
+
   it('keeps an API failure visible instead of showing a success state', async () => {
     api.login.mockRejectedValue(new Error('Auth service is unavailable.'));
     renderAt('/login'); enter('email', 'mai@example.test'); enter('password', 'password'); submit();
@@ -96,6 +141,44 @@ describe('auth pages', () => {
     await waitFor(() => expect(screen.getByTestId('current-path').textContent).toBe('/wishlist'));
   });
 
+  it('establishes the session from the token-only login contract using the /me profile', async () => {
+    api.login.mockResolvedValue({ accessToken: 'memory-token' });
+    api.me.mockResolvedValue({ id: 'u1', email: 'mai@example.test', displayName: 'Mai', emailVerified: true });
+    window.history.replaceState({}, '', '/login?returnTo=%2Fwishlist');
+    const sessionChanged = vi.fn(); window.addEventListener('compareshop:auth-session', sessionChanged);
+    render(<LanguageProvider><AuthSessionProvider value={anonymous}><MemoryRouter initialEntries={['/login?returnTo=%2Fwishlist']}><Routes><Route path="*" element={<><AuthPages /><CurrentPath /></>} /></Routes></MemoryRouter></AuthSessionProvider></LanguageProvider>);
+
+    enter('email', 'mai@example.test'); enter('password', 'Shop-Safe-2026'); submit();
+
+    await waitFor(() => expect(screen.getByTestId('current-path').textContent).toBe('/wishlist'));
+    expect(api.me).toHaveBeenCalledOnce();
+    expect(sessionChanged).toHaveBeenCalledWith(expect.objectContaining({ detail: { id: 'u1', email: 'mai@example.test', displayName: 'Mai', emailVerified: true } }));
+    window.removeEventListener('compareshop:auth-session', sessionChanged);
+  });
+
+  it('does not publish or navigate to an authenticated state when the /me lookup fails', async () => {
+    api.login.mockResolvedValue({ accessToken: 'memory-token' });
+    api.me.mockRejectedValue(new Error('sensitive response detail'));
+    renderAt('/login');
+    enter('email', 'mai@example.test'); enter('password', 'Shop-Safe-2026'); submit();
+
+    expect((await screen.findByRole('alert')).textContent).toContain('Không thể xác nhận phiên đăng nhập');
+    expect(document.body.textContent).not.toContain('sensitive response detail');
+    expect(screen.getByRole('heading', { name: 'Đăng nhập để trải nghiệm tốt hơn' })).toBeTruthy();
+  });
+
+  it('publishes the authenticated user to the shared AuthSession after login', async () => {
+    const user = { id: 'u1', email: 'mai@example.test', displayName: 'Mai', emailVerified: true };
+    api.login.mockResolvedValue({ accessToken: 'memory-token', user });
+    const onSession = vi.fn();
+    window.addEventListener('compareshop:auth-session', onSession);
+    renderAt('/login');
+    enter('email', 'mai@example.test'); enter('password', 'Shop-Safe-2026'); submit();
+
+    await waitFor(() => expect(onSession).toHaveBeenCalledWith(expect.objectContaining({ detail: user })));
+    window.removeEventListener('compareshop:auth-session', onSession);
+  });
+
   it('consumes verification token and removes it from browser history', async () => {
     api.verifyEmail.mockResolvedValue({ verified: true });
     renderAt('/verify-email?token=one-time-secret');
@@ -118,5 +201,26 @@ describe('auth pages', () => {
     expect(await screen.findByRole('heading', { name: 'Đã đổi mật khẩu' })).toBeTruthy();
     expect(api.resetPassword).toHaveBeenCalledWith('private-reset-token', 'New-Shop-Safe-2026');
     expect(document.body.textContent).not.toContain('private-reset-token');
+  });
+
+  it('shows the localized expired reset state when the API rejects an expired reset token', async () => {
+    localStorage.setItem('giatot-language', 'en');
+    api.resetPassword.mockRejectedValue(new AuthApiError(400, 'reset_token_invalid'));
+    renderAt('/forgot-password?step=reset');
+
+    enter('password', 'New-Shop-Safe-2026');
+    enter('confirmPassword', 'New-Shop-Safe-2026');
+    submit();
+
+    expect(await screen.findByRole('heading', { name: 'Password reset session expired' })).toBeTruthy();
+    expect(screen.getByText('The password reset session expired or was already used. You can request a new code.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Request a new code' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Back to sign in' })).toBeTruthy();
+    expect(document.body.textContent).not.toContain('Phiên đặt lại');
+    expect(document.body.textContent).not.toContain('New-Shop-Safe-2026');
+    expect(document.getElementById('password')).toBeNull();
+    expect(document.getElementById('confirmPassword')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Request a new code' }));
+    expect(screen.getByRole('heading', { name: 'Forgot password?' })).toBeTruthy();
   });
 });

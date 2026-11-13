@@ -98,7 +98,15 @@ export function AuthPages() {
     try {
       if (view === 'login' || view === 'expired') {
         const result = await authApi.login({ email: normalizedEmail, password, ...(captchaToken ? { captchaToken } : {}) });
-        setAuthSessionUser(result.user); navigate(safeReturnTo, { replace: true });
+        try {
+          const user = result.user ?? await authApi.me();
+          setAuthSessionUser(user);
+          navigate(safeReturnTo, { replace: true });
+        } catch (reason) {
+          authApi.clear();
+          if (reason instanceof AuthApiError) throw reason;
+          throw new AuthApiError(502, 'profile_unavailable', 'Không thể xác nhận phiên đăng nhập. Vui lòng thử lại.');
+        }
       } else if (view === 'register') {
         if (!rules.every(rule => rule.valid)) throw new Error('Mật khẩu chưa đạt các yêu cầu bên dưới.');
         await authApi.register({ email: normalizedEmail, password, ...(displayName.trim() ? { displayName: displayName.trim() } : {}), ...(captchaToken ? { captchaToken } : {}) });
@@ -118,7 +126,9 @@ export function AuthPages() {
       if (reason instanceof AuthApiError) {
         if (reason.code === 'email_not_verified') { setView('unverified'); setEmail(normalizedEmail); setError(text(reason.message)); }
         else if (reason.code === 'account_locked' || reason.code === 'temporarily_locked') setView('locked');
-        else if (reason.code === 'reset_session_expired') setView('reset-bad');
+        else if (reason.code === 'reset_session_expired' || reason.code === 'reset_token_invalid') {
+          setResetToken(''); setPassword(''); setConfirmPassword(''); setView('reset-bad');
+        }
         else if (view === 'forgot-code') { const next = remaining - 1; setRemaining(next); if (next <= 0) setView('code-locked'); else setError(`${text(reason.message)} Còn ${next} lần thử.`); }
         else setError(text(reason.message));
       } else setError(text(reason instanceof Error ? reason.message : 'Không thể hoàn tất yêu cầu. Vui lòng thử lại.'));
@@ -129,8 +139,12 @@ export function AuthPages() {
     setBusy(true); clearFeedback();
     try {
       if (getAuthConfig().turnstileEnabled && !captchaToken) throw new Error('Hoàn tất xác minh bảo mật để tiếp tục.');
-      if (view === 'verify-sent' || view === 'unverified' || view === 'verify-bad') await authApi.resendVerification(email, captchaToken || undefined);
-      else await authApi.forgotPassword(email, captchaToken || undefined);
+      if (view === 'verify-sent' || view === 'unverified' || view === 'verify-bad') {
+        const result = await authApi.resendVerification(email, captchaToken || undefined);
+        if (result.accepted !== true) throw new Error('Không thể gửi lại. Vui lòng thử lại.');
+      } else {
+        await authApi.forgotPassword(email, captchaToken || undefined);
+      }
       setCountdown(30); setMessage(text('Nếu email có thể nhận yêu cầu, thư mới đã được gửi.'));
     } catch (reason) { setError(text(reason instanceof Error ? reason.message : 'Không thể gửi lại. Vui lòng thử lại.')); }
     finally { setBusy(false); resetCaptcha(); }
@@ -159,7 +173,7 @@ export function AuthPages() {
     {view === 'code-locked' ? <><div className="auth-alert is-error" role="alert">{text('Mã đã bị huỷ sau 5 lần nhập sai. Yêu cầu mã mới để tiếp tục.')}</div>{action('Yêu cầu mã mới', () => go('forgot', '/forgot-password'), 'primary')}{action('Quay lại đăng nhập', () => go('login', '/login'))}</> : null}
     {view === 'reset' ? <form onSubmit={submit}>{passwordInput('password', 'Mật khẩu mới', password, setPassword)}<div className="auth-strength" aria-label={`${text('Độ mạnh mật khẩu')}: ${text(strengthLabel)}`}><div className="auth-strength-bars" data-strength={strength}>{[1, 2, 3, 4].map(level => <span key={level} />)}</div><span>{text(strengthLabel)}</span></div>{passwordFeedback()}<AuthField id="confirmPassword" label={text('Nhập lại mật khẩu')}><input id="confirmPassword" type={showPassword ? 'text' : 'password'} autoComplete="new-password" value={confirmPassword} onChange={event => setConfirmPassword(event.target.value)} required maxLength={128} /></AuthField><button className="auth-button auth-button-primary" disabled={busy}>{text('Đổi mật khẩu')}</button></form> : null}
     {view === 'reset-ok' ? <><div className="auth-state-icon is-success">✓</div><p className="auth-supporting">{text('Mật khẩu mới đã có hiệu lực. Các phiên khác đã bị đăng xuất.')}</p>{action('Đăng nhập', () => go('login', '/login'), 'primary')}</> : null}
-    {view === 'reset-bad' ? <><p className="auth-supporting">{text('Phiên đặt lại mật khẩu đã hết hạn hoặc đã được dùng. Bạn có thể yêu cầu mã mới.')}</p>{action('Yêu cầu mã mới', () => go('forgot', '/forgot-password'), 'primary')}</> : null}
+    {view === 'reset-bad' ? <><p className="auth-supporting">{text('Phiên đặt lại mật khẩu đã hết hạn hoặc đã được dùng. Bạn có thể yêu cầu mã mới.')}</p>{action('Yêu cầu mã mới', () => go('forgot', '/forgot-password'), 'primary')}{action('Quay lại đăng nhập', () => go('login', '/login'))}</> : null}
     {view === 'unverified' ? <><div className="auth-alert is-warning" role="status">{text('Bạn chưa xác minh email. Hãy kiểm tra thư đã gửi tới')} {email}.</div><Turnstile token={captchaToken} onToken={setCaptchaToken} clearToken={resetCaptcha} /><button className="auth-button auth-button-primary" onClick={() => void resend()} disabled={busy || countdown > 0}>{countdown ? `${text('Gửi lại thư xác minh')} (${countdown}s)` : text('Gửi lại thư xác minh')}</button>{action('Quay lại đăng nhập', () => go('login', '/login'))}</> : null}
     {view === 'locked' ? <><div className="auth-alert is-error" role="alert">{text('Có quá nhiều lần đăng nhập không thành công. Hãy thử lại sau hoặc đặt lại mật khẩu.')}</div>{action('Đặt lại mật khẩu', () => go('forgot', '/forgot-password'), 'primary')}{action('Quay lại đăng nhập', () => go('login', '/login'))}</> : null}
     {view === 'signedin' ? <>{signOutError && <div className="auth-alert is-error" role="alert">{text(signOutError)}</div>}<div className="auth-alert is-success" role="status">{text('Không cần đăng nhập lại.')}</div><p className="auth-email-chip">{session.user?.displayName} · {session.user?.email}</p><Link className="auth-button auth-button-secondary" to={safeReturnTo}>{text('Tiếp tục mua sắm')}</Link><Link className="auth-button auth-button-secondary" to="/wishlist">{text('Sản phẩm yêu thích')}</Link><Link className="auth-button auth-button-secondary" to="/account">{text('Tài khoản của tôi')}</Link><button className="auth-button auth-button-secondary" onClick={() => void signOut()}>{text('Đăng xuất')}</button></> : null}
