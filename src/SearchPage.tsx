@@ -27,7 +27,7 @@ export function SearchPage() {
   const query = params.get('q') || '';
   const categoryQuery = params.get('category') || '';
   const [categories, setCategories] = useState<SearchCategory[]>([]);
-  const [categoriesLoaded, setCategoriesLoaded] = useState(false);
+  const [categoriesLoadedFor, setCategoriesLoadedFor] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [data, setData] = useState<ProductPage | null>(null);
   const [loading, setLoading] = useState(true);
@@ -39,15 +39,18 @@ export function SearchPage() {
   useEffect(() => { setPage(1); }, [query, slug, categoryQuery, minPrice, maxPrice]);
   useEffect(() => {
     let active = true;
-    getCategories(slug || categoryQuery || undefined).then(items => { if (active) { setCategories(items); setCategoriesLoaded(true); setCategoryError(false); } }).catch(() => { if (active) { setCategoriesLoaded(true); setCategoryError(true); } });
+    const routeSlug = slug || categoryQuery;
+    setCategoryError(false);
+    getCategories(routeSlug || undefined).then(items => { if (active) { setCategories(items); setCategoriesLoadedFor(routeSlug); setCategoryError(false); } }).catch(() => { if (active) { setCategoriesLoadedFor(routeSlug); setCategoryError(true); } });
     return () => { active = false; };
-  }, []);
+  }, [slug, categoryQuery]);
 
   const selectedCategory = useMemo(() => {
     const routeSlug = slug || categoryQuery;
     return routeSlug ? categories.find(category => category.slug === routeSlug) : undefined;
   }, [categories, slug, categoryQuery]);
-  const categoryResolved = !(slug || categoryQuery) || categoriesLoaded;
+  const routeSlug = slug || categoryQuery;
+  const categoryResolved = !routeSlug || categoriesLoadedFor === routeSlug;
 
   useEffect(() => {
     if (!categoryResolved) return;
@@ -73,8 +76,9 @@ export function SearchPage() {
     if (categoryError) {
       setCategoryError(false);
       setCategories([]);
-      setCategoriesLoaded(false);
-      getCategories(slug || categoryQuery || undefined).then(items => { setCategories(items); setCategoriesLoaded(true); }).catch(() => { setCategoriesLoaded(true); setCategoryError(true); });
+      setCategoriesLoadedFor(null);
+      const retrySlug = slug || categoryQuery;
+      getCategories(retrySlug || undefined).then(items => { setCategories(items); setCategoriesLoadedFor(retrySlug); }).catch(() => { setCategoriesLoadedFor(retrySlug); setCategoryError(true); });
     } else {
       setError(false);
       setLoading(true);
