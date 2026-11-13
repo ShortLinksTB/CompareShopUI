@@ -52,6 +52,16 @@
 .home-shell .partner-mark.red { background: #b91c1c; }
 .home-shell .partner-mark.green { background: #15803d; }
 
+/* Keep featured row wishlist controls contained in the thumbnail. */
+.hero-featured-media { position: relative; display: block; width: 38px; height: 38px; }
+.hero-featured-media .hero-featured-image { width: 38px; height: 38px; }
+.hero-featured-media .hero-featured-heart { position: absolute; top: 1px; right: 1px; display: grid; place-items: center; width: 23px; height: 23px; padding: 0; border: 1px solid rgba(23,27,36,.12); border-radius: 50%; background: #fff; color: #555; font-size: 16px; line-height: 1; }
+.hero-featured-media .hero-featured-heart.liked { color: #c2410c; }
+.detail-gallery { position: relative; }
+.detail-image-heart { position: absolute; z-index: 2; top: 16px; right: 16px; display: grid; place-items: center; width: 42px; height: 42px; padding: 0; border: 1px solid rgba(23,27,36,.12); border-radius: 50%; background: #fff; color: #555; font-size: 24px; line-height: 1; box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+.detail-image-heart.liked { color: #c2410c; }
+@media(max-width:639px) { .detail-image-heart { top: 12px; right: 12px; } }
+
 /* Home hero and its home-scoped always-dark header. */
 .home-shell .site-header {
   color-scheme: dark;

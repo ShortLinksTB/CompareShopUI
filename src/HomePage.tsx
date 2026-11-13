@@ -30,7 +30,10 @@ function HeroFeaturedProduct({ product }: { product: HomeProduct }) {
   const { minPrice } = product.offerSummary;
 
   return <div className="hero-featured-product">
-    {product.imageUrl ? <SafeImage className="hero-featured-image" src={product.imageUrl} alt={product.name} fallbackLabel={t('noImage')} /> : <span className="hero-featured-image" role="img" aria-label={t('noImage')}><span>{t('noImage')}</span></span>}
+    <span className="hero-featured-media">
+      {product.imageUrl ? <SafeImage className="hero-featured-image" src={product.imageUrl} alt={product.name} fallbackLabel={t('noImage')} /> : <span className="hero-featured-image" role="img" aria-label={t('noImage')}><span>{t('noImage')}</span></span>}
+      <WishlistHeart productId={product.id} className="hero-featured-heart" />
+    </span>
     <span className="hero-featured-name">{product.name}</span>
     {minPrice > 0 && <strong className="hero-featured-price">{money(minPrice)}</strong>}
   </div>;
