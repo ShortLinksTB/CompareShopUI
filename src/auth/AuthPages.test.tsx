@@ -124,8 +124,9 @@ describe('auth pages', () => {
     renderAt('/login');
     enter('email', 'mai@example.test'); enter('password', 'Shop-Safe-2026'); submit();
 
-    expect(await screen.findByRole('heading', { name: 'Đăng nhập tạm khoá' })).toBeTruthy();
-    expect(screen.getByRole('alert').textContent).toContain('Hãy thử lại sau hoặc đặt lại mật khẩu.');
+    expect(await screen.findByRole('heading', { name: 'Thử lại sau ít phút' })).toBeTruthy();
+    expect(screen.getByRole('alert').textContent).toBe('Tạm khoá đăng nhập Có quá nhiều lần đăng nhập không thành công. Vui lòng thử lại sau 15 phút, hoặc đặt lại mật khẩu ngay.');
+    expect(screen.getByText('Việc tạm khoá giúp bảo vệ tài khoản của bạn khỏi người lạ.')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Đặt lại mật khẩu' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Quay lại đăng nhập' })).toBeTruthy();
     expect(screen.queryByText('The request could not be completed. Please try again.')).toBeNull();
@@ -137,8 +138,9 @@ describe('auth pages', () => {
     renderAt('/login');
     enter('email', 'mai@example.test'); enter('password', 'Shop-Safe-2026'); submit();
 
-    expect(await screen.findByRole('heading', { name: 'Sign-in temporarily locked' })).toBeTruthy();
-    expect(screen.getByRole('alert').textContent).toContain('Try again later or reset your password.');
+    expect(await screen.findByRole('heading', { name: 'Try again in a few minutes' })).toBeTruthy();
+    expect(screen.getByRole('alert').textContent).toBe('Sign-in temporarily locked There have been too many failed sign-in attempts. Please try again in 15 minutes or reset your password now.');
+    expect(screen.getByText('This temporary lock helps protect your account from unauthorized access.')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Reset password' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Back to sign in' })).toBeTruthy();
     expect(document.body.textContent).not.toContain('Đăng nhập tạm khoá');
