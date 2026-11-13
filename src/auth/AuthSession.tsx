@@ -59,7 +59,7 @@ export function setAuthSessionUser(next: AuthUser | null) {
   window.dispatchEvent(new CustomEvent('compareshop:auth-session', { detail: next }));
 }
 
-function toSessionUser(current: AuthUser): AuthSessionUser { return { id: current.id, email: current.email, displayName: current.displayName }; }
+function toSessionUser(current: AuthUser): AuthSessionUser { return { id: current.id, email: current.email, displayName: current.displayName?.trim() || current.email }; }
 
 export function useAuthSession() {
   return useContext(AuthSessionContext);

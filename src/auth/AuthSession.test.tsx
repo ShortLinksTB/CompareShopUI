@@ -14,6 +14,12 @@ it('restores the account from the refresh cookie through the shared session prov
   await waitFor(() => expect(screen.getByTestId('state').textContent).toBe('authenticated:Mai'));
 });
 
+it('uses the email as the shared session label when the profile has no display name', async () => {
+  auth.getAccessToken.mockResolvedValue('access'); auth.me.mockResolvedValue({ id: 'u1', email: 'mai@example.test' });
+  render(<AuthSessionProvider><Probe /></AuthSessionProvider>);
+  await waitFor(() => expect(screen.getByTestId('state').textContent).toBe('authenticated:mai@example.test'));
+});
+
 it('falls back to anonymous state when no refresh session is available', async () => {
   auth.getAccessToken.mockResolvedValue(null);
   render(<AuthSessionProvider><Probe /></AuthSessionProvider>);

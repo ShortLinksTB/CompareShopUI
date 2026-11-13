@@ -1,6 +1,6 @@
 import { getAuthConfig } from './runtimeConfig';
 
-export interface AuthUser { id: string; email: string; displayName: string; emailVerified: boolean }
+export interface AuthUser { id: string; email: string; displayName?: string; emailVerified?: boolean }
 export interface AuthResult { accessToken: string; user: AuthUser }
 interface LoginResponse { accessToken: string; user?: AuthUser }
 export type AuthOperation = 'register' | 'verify-email' | 'resend-verification' | 'login' | 'refresh' | 'logout' | 'forgot-password' | 'verify-reset-code' | 'reset-password' | 'me';
@@ -65,11 +65,12 @@ async function request<T>(operation: AuthOperation, method: 'GET' | 'POST', body
   if (operation === 'login' || operation === 'refresh') {
     const token = typeof data.accessToken === 'string' ? data.accessToken : '';
     const user = data.user as Record<string, unknown> | undefined;
-    if (!token || (operation === 'login' && user !== undefined && (!user || typeof user.id !== 'string' || typeof user.email !== 'string' || typeof user.displayName !== 'string'))) {
+    const normalizedUser = user === undefined ? undefined : normalizeAuthUser(user);
+    if (!token || (operation === 'login' && user !== undefined && !normalizedUser)) {
       throw new AuthApiError(502, 'invalid_response', 'Không thể xác nhận phiên đăng nhập. Vui lòng thử lại.');
     }
     accessToken = token;
-    if (operation === 'login' && user) return { accessToken: token, user: user as unknown as AuthUser } as T;
+    if (operation === 'login' && normalizedUser) return { accessToken: token, user: normalizedUser } as T;
     if (operation === 'login') return { accessToken: token } as T;
   }
   // These endpoints use HTTP 202 as the contract-level acceptance signal. Their
@@ -77,8 +78,26 @@ async function request<T>(operation: AuthOperation, method: 'GET' | 'POST', body
   // `accepted` field.
   if (acceptedOperations.includes(operation) && data.accepted !== true) throw new AuthApiError(502, 'invalid_response');
   if (operation === 'verify-reset-code' && typeof data.resetToken !== 'string') throw new AuthApiError(502, 'invalid_response');
-  if (operation === 'me' && (typeof data.id !== 'string' || typeof data.email !== 'string' || typeof data.displayName !== 'string')) throw new AuthApiError(502, 'invalid_response');
+  if (operation === 'me') {
+    const user = normalizeAuthUser(data);
+    if (!user) throw new AuthApiError(502, 'invalid_response');
+    return user as T;
+  }
   return data as T;
+}
+
+function normalizeAuthUser(value: unknown): AuthUser | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const user = value as Record<string, unknown>;
+  if (typeof user.id !== 'string' || typeof user.email !== 'string') return null;
+  if (user.displayName !== undefined && typeof user.displayName !== 'string') return null;
+  const displayName = typeof user.displayName === 'string' && user.displayName.trim() ? user.displayName : user.email;
+  return {
+    id: user.id,
+    email: user.email,
+    displayName,
+    ...(typeof user.emailVerified === 'boolean' ? { emailVerified: user.emailVerified } : {}),
+  };
 }
 
 async function mockRequest<T>(operation: AuthOperation, body: Record<string, unknown>): Promise<T> {
