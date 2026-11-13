@@ -44,6 +44,15 @@ describe('typed auth API client', () => {
     await expect(authApi.login({ email: 'a@b.test', password: 'pw' })).rejects.toMatchObject({ code: 'email_not_verified', status: 403 });
   });
 
+  it('accepts a successful token-only login response as defined by the AuthAPI contract', async () => {
+    window.__APP_CONFIG__ = { AUTH_API_URL: 'https://auth.example.test' };
+    const fetchMock = vi.fn().mockResolvedValue(response({ accessToken: 'memory-token' })); vi.stubGlobal('fetch', fetchMock);
+
+    await expect(authApi.login({ email: 'a@b.test', password: 'pw' })).resolves.toEqual({ accessToken: 'memory-token' });
+    await expect(authApi.getAccessToken()).resolves.toBe('memory-token');
+    expect(fetchMock).toHaveBeenCalledWith('https://auth.example.test/api/v1/auth/login', expect.objectContaining({ credentials: 'include' }));
+  });
+
   it('refreshes once and retries a protected request with the new bearer token', async () => {
     window.__APP_CONFIG__ = { AUTH_API_URL: 'https://auth.example.test' };
     const fetchMock = vi.fn().mockResolvedValueOnce(response({ code: 'expired' }, 401)).mockResolvedValueOnce(response({ accessToken: 'fresh-token' })).mockResolvedValueOnce(response({ id: 'u', email: 'a@b.test', displayName: 'Mai', emailVerified: true }));

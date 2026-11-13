@@ -7,7 +7,7 @@ import { AuthSessionProvider, type AuthSessionValue } from './AuthSession';
 import { LanguageProvider } from '../i18n';
 
 const api = vi.hoisted(() => ({
-  register: vi.fn(), verifyEmail: vi.fn(), resendVerification: vi.fn(), login: vi.fn(), forgotPassword: vi.fn(), verifyResetCode: vi.fn(), resetPassword: vi.fn(),
+  register: vi.fn(), verifyEmail: vi.fn(), resendVerification: vi.fn(), login: vi.fn(), me: vi.fn(), forgotPassword: vi.fn(), verifyResetCode: vi.fn(), resetPassword: vi.fn(),
 }));
 vi.mock('./authApi', async importOriginal => {
   const actual = await importOriginal<typeof import('./authApi')>();
@@ -92,6 +92,32 @@ describe('auth pages', () => {
     render(<LanguageProvider><AuthSessionProvider value={anonymous}><MemoryRouter initialEntries={['/login?returnTo=%2Fwishlist']}><Routes><Route path="*" element={<><AuthPages /><CurrentPath /></>} /></Routes></MemoryRouter></AuthSessionProvider></LanguageProvider>);
     enter('email', 'mai@example.test'); enter('password', 'Shop-Safe-2026'); submit();
     await waitFor(() => expect(screen.getByTestId('current-path').textContent).toBe('/wishlist'));
+  });
+
+  it('establishes the session from the token-only login contract using the /me profile', async () => {
+    api.login.mockResolvedValue({ accessToken: 'memory-token' });
+    api.me.mockResolvedValue({ id: 'u1', email: 'mai@example.test', displayName: 'Mai', emailVerified: true });
+    window.history.replaceState({}, '', '/login?returnTo=%2Fwishlist');
+    const sessionChanged = vi.fn(); window.addEventListener('compareshop:auth-session', sessionChanged);
+    render(<LanguageProvider><AuthSessionProvider value={anonymous}><MemoryRouter initialEntries={['/login?returnTo=%2Fwishlist']}><Routes><Route path="*" element={<><AuthPages /><CurrentPath /></>} /></Routes></MemoryRouter></AuthSessionProvider></LanguageProvider>);
+
+    enter('email', 'mai@example.test'); enter('password', 'Shop-Safe-2026'); submit();
+
+    await waitFor(() => expect(screen.getByTestId('current-path').textContent).toBe('/wishlist'));
+    expect(api.me).toHaveBeenCalledOnce();
+    expect(sessionChanged).toHaveBeenCalledWith(expect.objectContaining({ detail: { id: 'u1', email: 'mai@example.test', displayName: 'Mai', emailVerified: true } }));
+    window.removeEventListener('compareshop:auth-session', sessionChanged);
+  });
+
+  it('does not publish or navigate to an authenticated state when the /me lookup fails', async () => {
+    api.login.mockResolvedValue({ accessToken: 'memory-token' });
+    api.me.mockRejectedValue(new Error('sensitive response detail'));
+    renderAt('/login');
+    enter('email', 'mai@example.test'); enter('password', 'Shop-Safe-2026'); submit();
+
+    expect((await screen.findByRole('alert')).textContent).toContain('Không thể xác nhận phiên đăng nhập');
+    expect(document.body.textContent).not.toContain('sensitive response detail');
+    expect(screen.getByRole('heading', { name: 'Đăng nhập để trải nghiệm tốt hơn' })).toBeTruthy();
   });
 
   it('consumes verification token and removes it from browser history', async () => {

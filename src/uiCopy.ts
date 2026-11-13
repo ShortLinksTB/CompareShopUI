@@ -307,7 +307,6 @@ const englishCopy: Record<string, string> = {
   'Bạn chưa xác minh email. Hãy kiểm tra thư đã gửi tới': 'Your email is not verified. Check the message sent to',
   'Có quá nhiều lần đăng nhập không thành công. Hãy thử lại sau hoặc đặt lại mật khẩu.': 'There have been too many failed sign-in attempts. Try again later or reset your password.',
   'Xác minh bảo mật chưa được cấu hình.': 'Security verification is not configured.',
-  'Quên mật khẩu?': 'Forgot password?',
 };
 
 export function uiText(language: Language, source: string): string {
