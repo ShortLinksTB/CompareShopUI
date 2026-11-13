@@ -247,6 +247,7 @@ const englishCopy: Record<string, string> = {
   'Mở thư xác minh để kích hoạt tài khoản. Liên kết có hiệu lực trong 24 giờ.': 'Open the verification email to activate your account. The link is valid for 24 hours.',
   'Làm theo hướng dẫn bên dưới để tiếp tục.': 'Follow the instructions below to continue.',
   'Nhập email đã đăng ký. Chúng tôi sẽ gửi mã 6 số để bạn đặt lại mật khẩu.': 'Enter your registered email address. We will send a 6-digit code to reset your password.',
+  'Chọn mật khẩu mà bạn chưa dùng ở nơi khác. Sau khi đổi, bạn sẽ được đăng xuất khỏi các thiết bị khác.': 'Choose a password you have not used elsewhere. After changing it, you will be signed out of your other devices.',
   'Ít nhất 8 ký tự': 'At least 8 characters',
   'Không quá phổ biến': 'Not a commonly used password',
   'Không chứa phần trước @ trong email': 'Does not contain the part of your email before @',

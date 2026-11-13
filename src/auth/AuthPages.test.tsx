@@ -279,6 +279,18 @@ describe('auth pages', () => {
     expect(document.body.textContent).not.toContain('private-reset-token');
   });
 
+  it('localizes the reset form intro and exposes accessible names for both password fields', () => {
+    localStorage.setItem('giatot-language', 'en');
+    renderAt('/forgot-password?step=reset');
+
+    expect(screen.getByText('Choose a password you have not used elsewhere. After changing it, you will be signed out of your other devices.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Change password' })).toBeTruthy();
+    expect(screen.getByLabelText('New password').getAttribute('aria-label')).toBe('New password');
+    expect(screen.getByLabelText('Confirm password').getAttribute('aria-label')).toBe('Confirm password');
+    expect(document.body.textContent).not.toContain('Chọn mật khẩu mà bạn chưa dùng');
+    expect(document.body.textContent).not.toContain('Đổi mật khẩu');
+  });
+
   it('takes the Vietnamese forgot-password flow through PIN verification and a matching new password', async () => {
     api.forgotPassword.mockResolvedValue({ accepted: true });
     api.verifyResetCode.mockResolvedValue({ resetToken: 'private-reset-token' });
