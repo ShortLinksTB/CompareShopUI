@@ -323,6 +323,25 @@ describe('auth pages', () => {
     expect(window.location.search).toBe('');
   });
 
+  it('matches the approved expired verification state in Vietnamese and English without generic helper copy', async () => {
+    const path = '/verify-email';
+    window.history.replaceState({}, '', path);
+    render(<LanguageProvider><AuthSessionProvider value={anonymous}><MemoryRouter initialEntries={[path]}><Routes><Route path="*" element={<><AuthPages /><LanguageControls /></>} /></Routes></MemoryRouter></AuthSessionProvider></LanguageProvider>);
+
+    expect(await screen.findByRole('heading', { name: 'Liên kết không còn hiệu lực' })).toBeTruthy();
+    expect(document.querySelector('.auth-state-icon.is-warning svg')).toBeTruthy();
+    expect(screen.getByText('Liên kết xác minh đã hết hạn hoặc đã được dùng. Nhập email để nhận liên kết mới.')).toBeTruthy();
+    expect(screen.queryByText('Làm theo hướng dẫn bên dưới để tiếp tục.')).toBeNull();
+    expect(screen.getByLabelText('Email')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Gửi liên kết mới' })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'EN' }));
+    expect(screen.getByRole('heading', { name: 'This link is no longer valid' })).toBeTruthy();
+    expect(screen.getByText('The verification link expired or was already used. Enter your email to get a new link.')).toBeTruthy();
+    expect(screen.queryByText('Follow the instructions below to continue.')).toBeNull();
+    expect(document.querySelector('.auth-state-icon.is-warning svg')).toBeTruthy();
+  });
+
   it('localizes the verify-email success body when the locale changes', async () => {
     api.verifyEmail.mockResolvedValue({ verified: true });
     const path = '/verify-email?token=one-time-secret';
