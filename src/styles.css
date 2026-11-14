@@ -795,3 +795,141 @@
 @media(max-width:900px){.auth-page{grid-template-columns:minmax(0,1fr)}.auth-promo{display:none}}
 .auth-expired-alert{display:flex;align-items:flex-start;gap:10px}.auth-expired-alert svg{width:20px;height:20px;flex:none;margin-top:1px}.auth-expired-alert span{display:grid;gap:2px}
 .auth-page .auth-promo{color:#0f0800}.auth-page .auth-promo>p{color:#0f0800}
+
+/* Authentication pages follow the approved dark palette when the user prefers it. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .light-shell:has(.auth-page) {
+    --auth-bg:#0c141b;--auth-surface:#131e27;--auth-border:#34434e;--auth-text:#f4f7f9;--auth-muted:#c0ccd3;--auth-faint:#9aa9b4;--auth-brand:#ff7b38;--auth-brand-soft:#2a1a10;--auth-field:#0f1922;--auth-ok-bg:#183b29;--auth-ok-fg:#8ee0a5;--auth-bad-bg:#402322;--auth-bad-fg:#ffb4ab;--auth-warn-bg:#40300f;--auth-warn-fg:#ffd27a;--auth-info-bg:#172c47;--auth-info-fg:#a9cdf8;--auth-card:#18242f;--auth-meter-off:#34434e;
+    min-height:100vh;background:var(--auth-bg);color:var(--auth-text);color-scheme:dark
+  }
+}
+:root[data-theme="dark"] .light-shell:has(.auth-page) {
+  --auth-bg:#0c141b;--auth-surface:#131e27;--auth-border:#34434e;--auth-text:#f4f7f9;--auth-muted:#c0ccd3;--auth-faint:#9aa9b4;--auth-brand:#ff7b38;--auth-brand-soft:#2a1a10;--auth-field:#0f1922;--auth-ok-bg:#183b29;--auth-ok-fg:#8ee0a5;--auth-bad-bg:#402322;--auth-bad-fg:#ffb4ab;--auth-warn-bg:#40300f;--auth-warn-fg:#ffd27a;--auth-info-bg:#172c47;--auth-info-fg:#a9cdf8;--auth-card:#18242f;--auth-meter-off:#34434e;
+  min-height:100vh;background:var(--auth-bg);color:var(--auth-text);color-scheme:dark
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .light-shell:has(.auth-page) .site-header.auth-fixed-light,
+  :root[data-theme="dark"] .light-shell:has(.auth-page) .site-header.auth-fixed-light { --primary:#ff7b38;--primary-soft:var(--auth-brand-soft);--surface:var(--auth-surface);--border:var(--auth-border);--muted:var(--auth-muted);background:var(--auth-surface);border-color:var(--auth-border);color:var(--auth-text) }
+}
+:root[data-theme="dark"] .light-shell:has(.auth-page) .site-header.auth-fixed-light { --primary:#ff7b38;--primary-soft:var(--auth-brand-soft);--surface:var(--auth-surface);--border:var(--auth-border);--muted:var(--auth-muted);background:var(--auth-surface);border-color:var(--auth-border);color:var(--auth-text) }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .light-shell:has(.auth-page) .site-header.auth-fixed-light .brand,
+  :root[data-theme="dark"] .light-shell:has(.auth-page) .site-header.auth-fixed-light .brand,
+  :root:not([data-theme="light"]) .light-shell:has(.auth-page) .site-header.auth-fixed-light .desktop-nav,
+  :root[data-theme="dark"] .light-shell:has(.auth-page) .site-header.auth-fixed-light .desktop-nav,
+  :root:not([data-theme="light"]) .light-shell:has(.auth-page) .site-header.auth-fixed-light .header-links .header-action,
+  :root[data-theme="dark"] .light-shell:has(.auth-page) .site-header.auth-fixed-light .header-links .header-action { color:var(--auth-text) }
+  :root:not([data-theme="light"]) .light-shell:has(.auth-page) .site-header.auth-fixed-light .brand small,
+  :root[data-theme="dark"] .light-shell:has(.auth-page) .site-header.auth-fixed-light .brand small { color:var(--auth-muted) }
+  :root:not([data-theme="light"]) .light-shell:has(.auth-page) .site-header.auth-fixed-light .header-search,
+  :root[data-theme="dark"] .light-shell:has(.auth-page) .site-header.auth-fixed-light .header-search { border-color:var(--auth-border);background:var(--auth-field);color:var(--auth-muted) }
+  :root:not([data-theme="light"]) .light-shell:has(.auth-page) .site-header.auth-fixed-light .header-search input,
+  :root[data-theme="dark"] .light-shell:has(.auth-page) .site-header.auth-fixed-light .header-search input { color:var(--auth-text) }
+  :root:not([data-theme="light"]) .light-shell:has(.auth-page) .site-header.auth-fixed-light .language-trigger,
+  :root[data-theme="dark"] .light-shell:has(.auth-page) .site-header.auth-fixed-light .language-trigger { color:var(--auth-text);background:var(--auth-surface) }
+  :root:not([data-theme="light"]) .light-shell:has(.auth-page) .site-header.auth-fixed-light .language-menu,
+  :root[data-theme="dark"] .light-shell:has(.auth-page) .site-header.auth-fixed-light .language-menu { border-color:var(--auth-border);background:var(--auth-surface);color:var(--auth-text) }
+}
+:root[data-theme="dark"] .light-shell:has(.auth-page) .site-header.auth-fixed-light .brand,
+:root[data-theme="dark"] .light-shell:has(.auth-page) .site-header.auth-fixed-light .desktop-nav,
+:root[data-theme="dark"] .light-shell:has(.auth-page) .site-header.auth-fixed-light .header-links .header-action { color:var(--auth-text) }
+:root[data-theme="dark"] .light-shell:has(.auth-page) .site-header.auth-fixed-light .brand small { color:var(--auth-muted) }
+:root[data-theme="dark"] .light-shell:has(.auth-page) .site-header.auth-fixed-light .header-search { border-color:var(--auth-border);background:var(--auth-field);color:var(--auth-muted) }
+:root[data-theme="dark"] .light-shell:has(.auth-page) .site-header.auth-fixed-light .header-search input { color:var(--auth-text) }
+:root[data-theme="dark"] .light-shell:has(.auth-page) .site-header.auth-fixed-light .language-trigger { color:var(--auth-text);background:var(--auth-surface) }
+:root[data-theme="dark"] .light-shell:has(.auth-page) .site-header.auth-fixed-light .language-menu { border-color:var(--auth-border);background:var(--auth-surface);color:var(--auth-text) }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .auth-page,
+  :root[data-theme="dark"] .auth-page { background:var(--auth-bg);color:var(--auth-text);color-scheme:dark }
+  :root:not([data-theme="light"]) .auth-brand,
+  :root[data-theme="dark"] .auth-brand,
+  :root:not([data-theme="light"]) .auth-content h1,
+  :root[data-theme="dark"] .auth-content h1 { color:var(--auth-text)!important }
+  :root:not([data-theme="light"]) .auth-lead,
+  :root[data-theme="dark"] .auth-lead,
+  :root:not([data-theme="light"]) .auth-supporting,
+  :root[data-theme="dark"] .auth-supporting,
+  :root:not([data-theme="light"]) .auth-switch,
+  :root[data-theme="dark"] .auth-switch,
+  :root:not([data-theme="light"]) .auth-terms,
+  :root[data-theme="dark"] .auth-terms { color:var(--auth-muted) }
+  :root:not([data-theme="light"]) .auth-field label,
+  :root[data-theme="dark"] .auth-field label { color:var(--auth-text) }
+  :root:not([data-theme="light"]) .auth-field input,
+  :root[data-theme="dark"] .auth-field input { border-color:var(--auth-border);background:var(--auth-field);color:var(--auth-text);color-scheme:dark }
+  :root:not([data-theme="light"]) .auth-field input::placeholder,
+  :root[data-theme="dark"] .auth-field input::placeholder,
+  :root:not([data-theme="light"]) .auth-show-password,
+  :root[data-theme="dark"] .auth-show-password,
+  :root:not([data-theme="light"]) .auth-hint,
+  :root[data-theme="dark"] .auth-hint { color:var(--auth-faint) }
+  :root:not([data-theme="light"]) .auth-content a,
+  :root[data-theme="dark"] .auth-content a { color:var(--auth-brand) }
+  :root:not([data-theme="light"]) .auth-button-secondary,
+  :root[data-theme="dark"] .auth-button-secondary { border-color:var(--auth-border);background:var(--auth-surface);color:var(--auth-text) }
+  :root:not([data-theme="light"]) .auth-button-secondary:hover:not(:disabled),
+  :root[data-theme="dark"] .auth-button-secondary:hover:not(:disabled) { background:var(--auth-card);border-color:var(--auth-brand) }
+  :root:not([data-theme="light"]) .auth-alert.is-error,
+  :root[data-theme="dark"] .auth-alert.is-error { border-color:var(--auth-bad-fg);background:var(--auth-bad-bg);color:var(--auth-bad-fg) }
+  :root:not([data-theme="light"]) .auth-alert.is-success,
+  :root[data-theme="dark"] .auth-alert.is-success { border-color:var(--auth-ok-fg);background:var(--auth-ok-bg);color:var(--auth-ok-fg) }
+  :root:not([data-theme="light"]) .auth-alert.is-warning,
+  :root[data-theme="dark"] .auth-alert.is-warning { border-color:var(--auth-warn-fg);background:var(--auth-warn-bg);color:var(--auth-warn-fg) }
+  :root:not([data-theme="light"]) .auth-field-error,
+  :root[data-theme="dark"] .auth-field-error { color:var(--auth-bad-fg) }
+  :root:not([data-theme="light"]) .auth-password-rules,
+  :root[data-theme="dark"] .auth-password-rules,
+  :root:not([data-theme="light"]) .auth-strength,
+  :root[data-theme="dark"] .auth-strength { color:var(--auth-muted) }
+  :root:not([data-theme="light"]) .auth-password-rules li.is-valid,
+  :root[data-theme="dark"] .auth-password-rules li.is-valid { color:var(--auth-ok-fg) }
+  :root:not([data-theme="light"]) .auth-strength-bars span,
+  :root[data-theme="dark"] .auth-strength-bars span { background:var(--auth-meter-off) }
+  :root:not([data-theme="light"]) .auth-attempts,
+  :root[data-theme="dark"] .auth-attempts { color:var(--auth-warn-fg) }
+  :root:not([data-theme="light"]) .auth-state-icon,
+  :root[data-theme="dark"] .auth-state-icon { background:var(--auth-info-bg);color:var(--auth-info-fg) }
+  :root:not([data-theme="light"]) .auth-state-icon.is-success,
+  :root[data-theme="dark"] .auth-state-icon.is-success { background:var(--auth-ok-bg);color:var(--auth-ok-fg) }
+  :root:not([data-theme="light"]) .auth-state-icon.is-warning,
+  :root[data-theme="dark"] .auth-state-icon.is-warning { background:var(--auth-warn-bg);color:var(--auth-warn-fg) }
+  :root:not([data-theme="light"]) .auth-email-chip,
+  :root[data-theme="dark"] .auth-email-chip { border-color:var(--auth-border);background:var(--auth-surface);color:var(--auth-text) }
+  :root:not([data-theme="light"]) .auth-deal,
+  :root[data-theme="dark"] .auth-deal { background:var(--auth-card);color:var(--auth-text) }
+  :root:not([data-theme="light"]) .auth-deal-tag,
+  :root[data-theme="dark"] .auth-deal-tag { background:var(--auth-bg);color:var(--auth-brand) }
+  :root:not([data-theme="light"]) .auth-deal-name small,
+  :root[data-theme="dark"] .auth-deal-name small { color:var(--auth-muted) }
+}
+:root[data-theme="dark"] .auth-page { background:var(--auth-bg);color:var(--auth-text);color-scheme:dark }
+:root[data-theme="dark"] .auth-brand,
+:root[data-theme="dark"] .auth-content h1 { color:var(--auth-text)!important }
+:root[data-theme="dark"] .auth-lead,
+:root[data-theme="dark"] .auth-supporting,
+:root[data-theme="dark"] .auth-switch,
+:root[data-theme="dark"] .auth-terms { color:var(--auth-muted) }
+:root[data-theme="dark"] .auth-field label { color:var(--auth-text) }
+:root[data-theme="dark"] .auth-field input { border-color:var(--auth-border);background:var(--auth-field);color:var(--auth-text);color-scheme:dark }
+:root[data-theme="dark"] .auth-field input::placeholder,
+:root[data-theme="dark"] .auth-show-password,
+:root[data-theme="dark"] .auth-hint { color:var(--auth-faint) }
+:root[data-theme="dark"] .auth-content a { color:var(--auth-brand) }
+:root[data-theme="dark"] .auth-button-secondary { border-color:var(--auth-border);background:var(--auth-surface);color:var(--auth-text) }
+:root[data-theme="dark"] .auth-button-secondary:hover:not(:disabled) { background:var(--auth-card);border-color:var(--auth-brand) }
+:root[data-theme="dark"] .auth-alert.is-error { border-color:var(--auth-bad-fg);background:var(--auth-bad-bg);color:var(--auth-bad-fg) }
+:root[data-theme="dark"] .auth-alert.is-success { border-color:var(--auth-ok-fg);background:var(--auth-ok-bg);color:var(--auth-ok-fg) }
+:root[data-theme="dark"] .auth-alert.is-warning { border-color:var(--auth-warn-fg);background:var(--auth-warn-bg);color:var(--auth-warn-fg) }
+:root[data-theme="dark"] .auth-field-error { color:var(--auth-bad-fg) }
+:root[data-theme="dark"] .auth-password-rules,
+:root[data-theme="dark"] .auth-strength { color:var(--auth-muted) }
+:root[data-theme="dark"] .auth-password-rules li.is-valid { color:var(--auth-ok-fg) }
+:root[data-theme="dark"] .auth-strength-bars span { background:var(--auth-meter-off) }
+:root[data-theme="dark"] .auth-attempts { color:var(--auth-warn-fg) }
+:root[data-theme="dark"] .auth-state-icon { background:var(--auth-info-bg);color:var(--auth-info-fg) }
+:root[data-theme="dark"] .auth-state-icon.is-success { background:var(--auth-ok-bg);color:var(--auth-ok-fg) }
+:root[data-theme="dark"] .auth-state-icon.is-warning { background:var(--auth-warn-bg);color:var(--auth-warn-fg) }
+:root[data-theme="dark"] .auth-email-chip { border-color:var(--auth-border);background:var(--auth-surface);color:var(--auth-text) }
+:root[data-theme="dark"] .auth-deal { background:var(--auth-card);color:var(--auth-text) }
+:root[data-theme="dark"] .auth-deal-tag { background:var(--auth-bg);color:var(--auth-brand) }
+:root[data-theme="dark"] .auth-deal-name small { color:var(--auth-muted) }
