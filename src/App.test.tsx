@@ -672,15 +672,17 @@ describe('English copy for route controls and accessible labels', () => {
 
   it('renders the wishlist loading region label in English until the request resolves', async () => {
     authMock.getToken.mockResolvedValue('access-token');
-    let resolveRequest!: (value: Response) => void;
-    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(resolve => { resolveRequest = resolve; })));
+    let resolveWishlistRequest!: (value: Response) => void;
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => String(input).endsWith('/wishlist')
+      ? new Promise<Response>(resolve => { resolveWishlistRequest = resolve; })
+      : response({ items: [] })));
     renderAppAt('/wishlist', 'authenticated');
 
     const loadingRegion = screen.getByLabelText('Loading wishlist products');
     expect(loadingRegion.getAttribute('aria-busy')).toBe('true');
     expect(screen.queryByLabelText('Đang tải sản phẩm yêu thích')).toBeNull();
-    await waitFor(() => expect(resolveRequest).toBeTruthy());
-    resolveRequest(await response({ items: [] }));
+    await waitFor(() => expect(resolveWishlistRequest).toBeTruthy());
+    resolveWishlistRequest(await response({ items: [] }));
     expect(await screen.findByText('Your wishlist is empty')).toBeTruthy();
   });
 });
