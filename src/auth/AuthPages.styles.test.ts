@@ -13,6 +13,15 @@ function contrastRatio(first: string, second: string) {
 }
 
 describe('authentication presentation CSS', () => {
+  it('applies the approved dark tokens to auth routes and their fixed-light header', () => {
+    expect(stylesheet).toMatch(/@media\s*\(prefers-color-scheme:\s*dark\)[\s\S]*?:root:not\(\[data-theme="light"\]\) \.light-shell:has\(\.auth-page\)\s*\{[^}]*--auth-bg:#0c141b;[^}]*color-scheme:dark/);
+    expect(stylesheet).toMatch(/:root\[data-theme="dark"\] \.light-shell:has\(\.auth-page\)\s*\{[^}]*--auth-bg:#0c141b;[^}]*color-scheme:dark/);
+    expect(stylesheet).toMatch(/\.light-shell:has\(\.auth-page\) \.site-header\.auth-fixed-light\s*\{[^}]*background:var\(--auth-surface\)/);
+    expect(stylesheet).toMatch(/\.auth-page\s*\{[^}]*background:var\(--auth-bg\);[^}]*color-scheme:dark/);
+    expect(stylesheet).toMatch(/\.auth-field input\s*\{[^}]*background:var\(--auth-field\);[^}]*color-scheme:dark/);
+    expect(stylesheet).toMatch(/\.auth-alert\.is-warning\s*\{[^}]*background:var\(--auth-warn-bg\);[^}]*color:var\(--auth-warn-fg\)/);
+  });
+
   it('keeps promotional panel heading and body text at WCAG AA contrast across the orange gradient', () => {
     const colors = stylesheet.match(/\.auth-page \.auth-promo\{color:(#[0-9a-f]{6})\}\.auth-page \.auth-promo>p\{color:(#[0-9a-f]{6})\}/i);
     expect(colors).toBeTruthy();
