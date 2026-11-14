@@ -18,7 +18,7 @@ vi.mock('./authApi', async importOriginal => {
 const anonymous: AuthSessionValue = { status: 'anonymous', user: null, getAccessToken: async () => null, signIn: vi.fn(), signOut: vi.fn() };
 function renderAt(path: string) {
   window.history.replaceState({}, '', path);
-  return render(<LanguageProvider><AuthSessionProvider value={anonymous}><MemoryRouter initialEntries={[path]}><Routes><Route path="*" element={<AuthPages />} /></Routes></MemoryRouter></AuthSessionProvider></LanguageProvider>);
+  return render(<LanguageProvider><AuthSessionProvider value={anonymous}><MemoryRouter initialEntries={[path]}><Routes><Route path="/login" element={<AuthPages />} /><Route path="/register" element={<AuthPages />} /><Route path="/verify-email" element={<AuthPages />} /><Route path="/forgot-password" element={<AuthPages />} /><Route path="/" element={null} /><Route path="*" element={null} /></Routes></MemoryRouter></AuthSessionProvider></LanguageProvider>);
 }
 function enter(id: string, value: string) { fireEvent.change(document.getElementById(id)!, { target: { value } }); }
 function submit() { fireEvent.submit(document.querySelector('form')!); }
@@ -235,6 +235,30 @@ describe('auth pages', () => {
     window.history.replaceState({}, '', '/login?returnTo=%2Fwishlist');
     render(<LanguageProvider><AuthSessionProvider value={anonymous}><MemoryRouter initialEntries={['/login?returnTo=%2Fwishlist']}><Routes><Route path="*" element={<><AuthPages /><CurrentPath /></>} /></Routes></MemoryRouter></AuthSessionProvider></LanguageProvider>);
     enter('email', 'mai@example.test'); enter('password', 'Shop-Safe-2026'); submit();
+    await waitFor(() => expect(screen.getByTestId('current-path').textContent).toBe('/wishlist'));
+  });
+
+  it('renders the expired-session alert and sign-in-again action on the actual login route', () => {
+    renderAt('/login?state=expired&returnTo=%2Fwishlist');
+
+    expect(screen.getByRole('heading', { name: 'Đăng nhập lại' })).toBeTruthy();
+    expect(screen.getByRole('alert').textContent).toBe('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại. Danh sách yêu thích của bạn vẫn được giữ nguyên.');
+    expect(screen.getByRole('button', { name: 'Đăng nhập lại' })).toBeTruthy();
+    expect(screen.getByText('Bạn sẽ quay về trang đang xem sau khi đăng nhập.')).toBeTruthy();
+  });
+
+  it('localizes the expired-session alert and returns to the safe path after signing in', async () => {
+    window.localStorage.setItem('giatot-language', 'en');
+    api.login.mockResolvedValue({ accessToken: 'memory-token', user: { id: 'u1', email: 'mai@example.test', displayName: 'Mai', emailVerified: true } });
+    const path = '/login?state=expired&returnTo=%2Fwishlist';
+    render(<LanguageProvider><AuthSessionProvider value={anonymous}><MemoryRouter initialEntries={[path]}><Routes><Route path="/login" element={<><AuthPages /><CurrentPath /></>} /><Route path="*" element={<CurrentPath />} /></Routes></MemoryRouter></AuthSessionProvider></LanguageProvider>);
+
+    expect(screen.getByRole('heading', { name: 'Sign in again' })).toBeTruthy();
+    expect(screen.getByRole('alert').textContent).toBe('Your session has expired. Please sign in again. Your wishlist is still here.');
+    expect(screen.getByText('You will return to the page you were viewing after signing in.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Sign in again' })).toBeTruthy();
+    enter('email', 'mai@example.test'); enter('password', 'Shop-Safe-2026'); submit();
+
     await waitFor(() => expect(screen.getByTestId('current-path').textContent).toBe('/wishlist'));
   });
 

@@ -145,6 +145,8 @@ const englishCopy: Record<string, string> = {
   'Sản phẩm đã lưu': 'Saved products',
   'Theo dõi giá': 'Price alerts',
   'Phiên đăng nhập đã hết hạn hoặc không hợp lệ. Vui lòng đăng nhập lại.': 'Your session has expired or is invalid. Please sign in again.',
+  'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại. Danh sách yêu thích của bạn vẫn được giữ nguyên.': 'Your session has expired. Please sign in again. Your wishlist is still here.',
+  'Bạn sẽ quay về trang đang xem sau khi đăng nhập.': 'You will return to the page you were viewing after signing in.',
   'Đăng nhập lại': 'Sign in again',
   'Đăng nhập để xem sản phẩm đã lưu': 'Sign in to view saved products',
   'Danh sách yêu thích chỉ hiển thị cho tài khoản đã xác thực.': 'Your wishlist is only available to signed-in customers.',
