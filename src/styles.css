@@ -802,11 +802,20 @@
     --auth-bg:#0c141b;--auth-surface:#131e27;--auth-border:#34434e;--auth-text:#f4f7f9;--auth-muted:#c0ccd3;--auth-faint:#9aa9b4;--auth-brand:#ff7b38;--auth-brand-soft:#2a1a10;--auth-field:#0f1922;--auth-ok-bg:#183b29;--auth-ok-fg:#8ee0a5;--auth-bad-bg:#402322;--auth-bad-fg:#ffb4ab;--auth-warn-bg:#40300f;--auth-warn-fg:#ffd27a;--auth-info-bg:#172c47;--auth-info-fg:#a9cdf8;--auth-card:#18242f;--auth-meter-off:#34434e;
     min-height:100vh;background:var(--auth-bg);color:var(--auth-text);color-scheme:dark
   }
+  :root:not([data-theme="light"]) .light-shell:has(.auth-page) .bottom-nav,
+  :root[data-theme="dark"] .light-shell:has(.auth-page) .bottom-nav { border-color:var(--auth-border);background:var(--auth-surface) }
+  :root:not([data-theme="light"]) .light-shell:has(.auth-page) .bottom-nav a,
+  :root[data-theme="dark"] .light-shell:has(.auth-page) .bottom-nav a { color:var(--auth-muted) }
+  :root:not([data-theme="light"]) .light-shell:has(.auth-page) .bottom-nav a.active,
+  :root[data-theme="dark"] .light-shell:has(.auth-page) .bottom-nav a.active { color:var(--auth-brand) }
 }
 :root[data-theme="dark"] .light-shell:has(.auth-page) {
   --auth-bg:#0c141b;--auth-surface:#131e27;--auth-border:#34434e;--auth-text:#f4f7f9;--auth-muted:#c0ccd3;--auth-faint:#9aa9b4;--auth-brand:#ff7b38;--auth-brand-soft:#2a1a10;--auth-field:#0f1922;--auth-ok-bg:#183b29;--auth-ok-fg:#8ee0a5;--auth-bad-bg:#402322;--auth-bad-fg:#ffb4ab;--auth-warn-bg:#40300f;--auth-warn-fg:#ffd27a;--auth-info-bg:#172c47;--auth-info-fg:#a9cdf8;--auth-card:#18242f;--auth-meter-off:#34434e;
   min-height:100vh;background:var(--auth-bg);color:var(--auth-text);color-scheme:dark
 }
+:root[data-theme="dark"] .light-shell:has(.auth-page) .bottom-nav { border-color:var(--auth-border);background:var(--auth-surface) }
+:root[data-theme="dark"] .light-shell:has(.auth-page) .bottom-nav a { color:var(--auth-muted) }
+:root[data-theme="dark"] .light-shell:has(.auth-page) .bottom-nav a.active { color:var(--auth-brand) }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .light-shell:has(.auth-page) .site-header.auth-fixed-light,
   :root[data-theme="dark"] .light-shell:has(.auth-page) .site-header.auth-fixed-light { --primary:#ff7b38;--primary-soft:var(--auth-brand-soft);--surface:var(--auth-surface);--border:var(--auth-border);--muted:var(--auth-muted);background:var(--auth-surface);border-color:var(--auth-border);color:var(--auth-text) }
