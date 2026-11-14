@@ -1,6 +1,7 @@
 import type { Language } from './i18n';
 
 const englishCopy: Record<string, string> = {
+  'GiaTot — trang chủ': 'GiaTot — home page',
   'Vui lòng thử lại sau.': 'Please try again later.',
   'Xem ngay': 'View now',
   'Biểu đồ lịch sử giá': 'Price history chart',
@@ -159,7 +160,6 @@ const englishCopy: Record<string, string> = {
   'Không tìm thấy cửa hàng': 'Shop not found',
   'Kiểm tra lại đường dẫn cửa hàng.': 'Check the shop URL and try again.',
   'Về trang chủ': 'Back to home',
-  'GiaTot — trang chủ': 'GiaTot — home page',
   'Đang hoạt động': 'Active',
   'Tạm dừng': 'Paused',
   'Ngừng hoạt động': 'Inactive',
