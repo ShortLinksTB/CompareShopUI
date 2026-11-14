@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { AuthPages } from './AuthPages';
+import '../styles.css';
 import { AuthApiError } from './authApi';
 import { AuthSessionProvider, type AuthSessionValue } from './AuthSession';
 import { LanguageProvider, useLanguage } from '../i18n';
@@ -29,10 +30,48 @@ function renderExpiredRoute(path: string) {
   window.history.replaceState({}, '', path);
   return render(<LanguageProvider><LanguageControls /><AuthSessionProvider value={anonymous}><MemoryRouter initialEntries={[path]}><Routes><Route path="/login" element={<><AuthPages /><CurrentLocation /></>} /><Route path="*" element={<CurrentLocation />} /></Routes></MemoryRouter></AuthSessionProvider></LanguageProvider>);
 }
+function luminance(hex: string) {
+  const channels = hex.slice(1).match(/../g)!.map(channel => parseInt(channel, 16) / 255).map(value => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+  return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+}
+function contrastRatio(first: string, second: string) {
+  const values = [luminance(first), luminance(second)].sort((a, b) => b - a);
+  return (values[0] + 0.05) / (values[1] + 0.05);
+}
 
 afterEach(() => { cleanup(); vi.clearAllMocks(); localStorage.clear(); window.__APP_CONFIG__ = undefined; });
 
 describe('auth pages', () => {
+  it('renders promo text with WCAG AA contrast across the orange gradient stops', () => {
+    renderAt('/login');
+    const promo = document.querySelector<HTMLElement>('.auth-promo')!;
+    const heading = document.querySelector<HTMLElement>('.auth-promo h2')!;
+    const paragraph = document.querySelector<HTMLElement>('.auth-promo > p')!;
+    const stops = [...getComputedStyle(promo).backgroundImage.matchAll(/#[\da-f]{6}/gi)].map(match => match[0]);
+    const headingColor = getComputedStyle(heading).color;
+    const paragraphColor = getComputedStyle(paragraph).color;
+    const toHex = (rgb: string) => `#${rgb.match(/\d+/g)!.slice(0, 3).map(value => Number(value).toString(16).padStart(2, '0')).join('')}`;
+
+    expect(stops).toEqual(['#ff7a2e', '#ff5a00', '#e34f00']);
+    expect(stops.every(stop => contrastRatio(toHex(headingColor), stop) >= 3)).toBe(true);
+    expect(stops.every(stop => contrastRatio(toHex(paragraphColor), stop) >= 4.5)).toBe(true);
+  });
+
+  it('matches the approved tokenless verify-email expired composition in VI and EN', async () => {
+    render(<LanguageProvider><LanguageControls /><AuthSessionProvider value={anonymous}><MemoryRouter initialEntries={['/verify-email']}><Routes><Route path="*" element={<AuthPages />} /></Routes></MemoryRouter></AuthSessionProvider></LanguageProvider>);
+
+    expect(await screen.findByRole('heading', { name: 'Liên kết không còn hiệu lực' })).toBeTruthy();
+    expect(document.querySelector('.auth-state-icon.is-warning svg')).toBeTruthy();
+    expect(screen.getByText('Liên kết xác minh đã hết hạn hoặc đã được dùng. Nhập email để nhận liên kết mới.')).toBeTruthy();
+    expect(screen.queryByText('Làm theo hướng dẫn bên dưới để tiếp tục.')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'EN' }));
+    expect(await screen.findByRole('heading', { name: 'This link is no longer valid' })).toBeTruthy();
+    expect(document.querySelector('.auth-state-icon.is-warning svg')).toBeTruthy();
+    expect(screen.getByText('The verification link expired or was already used. Enter your email to get a new link.')).toBeTruthy();
+    expect(screen.queryByText('Follow the instructions below to continue.')).toBeNull();
+  });
+
   it('renders the approved expired-session alert and sign-in action on the actual login route in Vietnamese and English', () => {
     renderExpiredRoute('/login?state=expired&returnTo=%2Fwishlist');
 
