@@ -23,11 +23,50 @@ function renderAt(path: string) {
 function enter(id: string, value: string) { fireEvent.change(document.getElementById(id)!, { target: { value } }); }
 function submit() { fireEvent.submit(document.querySelector('form')!); }
 function CurrentPath() { return <span data-testid="current-path">{useLocation().pathname}</span>; }
+function CurrentLocation() { const location = useLocation(); return <span data-testid="current-location">{location.pathname}{location.search}</span>; }
 function LanguageControls() { const { setLanguage } = useLanguage(); return <><button onClick={() => setLanguage('vi')}>VI</button><button onClick={() => setLanguage('en')}>EN</button></>; }
+function renderExpiredRoute(path: string) {
+  window.history.replaceState({}, '', path);
+  return render(<LanguageProvider><LanguageControls /><AuthSessionProvider value={anonymous}><MemoryRouter initialEntries={[path]}><Routes><Route path="/login" element={<><AuthPages /><CurrentLocation /></>} /><Route path="*" element={<CurrentLocation />} /></Routes></MemoryRouter></AuthSessionProvider></LanguageProvider>);
+}
 
 afterEach(() => { cleanup(); vi.clearAllMocks(); localStorage.clear(); window.__APP_CONFIG__ = undefined; });
 
 describe('auth pages', () => {
+  it('renders the approved expired-session alert and sign-in action on the actual login route in Vietnamese and English', () => {
+    renderExpiredRoute('/login?state=expired&returnTo=%2Fwishlist');
+
+    const alert = screen.getByRole('alert');
+    expect(alert.textContent).toBe('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại. Danh sách yêu thích của bạn vẫn được giữ nguyên.');
+    expect(screen.getByRole('heading', { name: 'Đăng nhập lại' })).toBeTruthy();
+    expect(screen.getByText('Bạn sẽ quay về trang đang xem sau khi đăng nhập.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Đăng nhập lại' })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'EN' }));
+    expect(screen.getByRole('alert').textContent).toBe('Your session has expired. Please sign in again. Your wishlist is still saved.');
+    expect(screen.getByRole('heading', { name: 'Sign in again' })).toBeTruthy();
+    expect(screen.getByText('You will return to the page you were viewing after signing in.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Sign in again' })).toBeTruthy();
+  });
+
+  it('keeps the safe returnTo destination when signing in from the expired-session route', async () => {
+    api.login.mockResolvedValue({ accessToken: 'memory-token', user: { id: 'u1', email: 'mai@example.test', displayName: 'Mai', emailVerified: true } });
+    renderExpiredRoute('/login?state=expired&returnTo=%2Fwishlist%3Ftab%3Dprice');
+
+    enter('email', 'mai@example.test'); enter('password', 'Shop-Safe-2026');
+    fireEvent.click(screen.getByRole('button', { name: 'Đăng nhập lại' }));
+    await waitFor(() => expect(screen.getByTestId('current-location').textContent).toBe('/wishlist?tab=price'));
+  });
+
+  it('falls back to the site root for an unsafe returnTo on the expired-session route', async () => {
+    api.login.mockResolvedValue({ accessToken: 'memory-token', user: { id: 'u1', email: 'mai@example.test', displayName: 'Mai', emailVerified: true } });
+    renderExpiredRoute('/login?state=expired&returnTo=https%3A%2F%2Fevil.example');
+
+    enter('email', 'mai@example.test'); enter('password', 'Shop-Safe-2026');
+    fireEvent.click(screen.getByRole('button', { name: 'Đăng nhập lại' }));
+    await waitFor(() => expect(screen.getByTestId('current-location').textContent).toBe('/'));
+  });
+
   it('localizes the auth brand accessible name when the locale changes', () => {
     render(<LanguageProvider><LanguageControls /><AuthSessionProvider value={anonymous}><MemoryRouter initialEntries={['/login']}><Routes><Route path="*" element={<AuthPages />} /></Routes></MemoryRouter></AuthSessionProvider></LanguageProvider>);
 
