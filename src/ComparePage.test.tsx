@@ -57,6 +57,10 @@ describe('Compare page', () => {
     expect(stylesheet).toMatch(/@media\s*\(max-width:\s*639px\)\s*\{\.compare-empty-state__cta\s*\{margin-top:\s*32px\}\}/);
   });
 
+  it('constrains the product selector to the available page width', () => {
+    expect(stylesheet).toMatch(/\.compare-add select\s*\{\s*width:\s*min\(100%,\s*32rem\);\s*max-width:\s*100%;\s*min-width:\s*0;\s*\}/);
+  });
+
   it('handles malformed saved data without crashing', async () => {
     localStorage.setItem('compare-products', '{invalid');
     vi.stubGlobal('fetch', vi.fn());
