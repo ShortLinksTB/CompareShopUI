@@ -650,14 +650,14 @@ describe('English route copy', () => {
 describe('English copy for route controls and accessible labels', () => {
   beforeEach(() => localStorage.setItem('giatot-language', 'en'));
 
-  it('renders the product offer action and price-history chart label in English', async () => {
+  it('renders product detail without price-history chart copy in English', async () => {
     vi.stubGlobal('fetch', detailFetch());
     renderAppAt('/product/sample-product-01');
 
     expect(await screen.findByRole('link', { name: 'View now ↗' })).toBeTruthy();
-    expect(screen.getByRole('img', { name: 'Price history chart' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Product specifications' })).toBeTruthy();
     expect(screen.queryByRole('link', { name: 'Xem ngay ↗' })).toBeNull();
-    expect(screen.queryByRole('img', { name: 'Biểu đồ lịch sử giá' })).toBeNull();
+    expect(screen.queryByText('6-month price history')).toBeNull();
   });
 
   it('renders the missing shop review-count fallback in English', async () => {
@@ -1122,12 +1122,11 @@ const detail = {
   specificationGroups: [{ name: 'Main', items: [{ name: 'Storage', value: '128 GB' }] }],
 };
 
-function detailFetch({ productResponse = detail, offers = [{ id: 9, price: 1200000, url: null, updatedAt: '2026-10-19T08:00:00Z', shopId: 2, shopSlug: 'shop-two', shopName: 'Shop Two' }], history = [{ date: '2026-09-01T00:00:00Z', minPrice: 1300000, shopId: 2 }], related = [] }: { productResponse?: unknown; offers?: unknown[]; history?: unknown[]; related?: unknown[] } = {}) {
+function detailFetch({ productResponse = detail, offers = [{ id: 9, price: 1200000, url: null, updatedAt: '2026-10-19T08:00:00Z', shopId: 2, shopSlug: 'shop-two', shopName: 'Shop Two' }], related = [] }: { productResponse?: unknown; offers?: unknown[]; related?: unknown[] } = {}) {
   return vi.fn((input: RequestInfo | URL) => {
     const url = String(input);
     if (url.endsWith('/products/sample-product-01')) return response(productResponse);
     if (url.endsWith('/products/1/offers')) return response({ items: offers });
-    if (url.includes('/products/1/price-history')) return response({ items: history });
     if (url.includes('/products?categoryId=7')) return response({ items: related });
     return response({}, false);
   });
@@ -1171,7 +1170,6 @@ describe('Product Detail API data', () => {
       if (url.includes('/products?page=1&pageSize=15')) return response({ items: [product], page: 1, pageSize: 15, totalItems: 1, totalPages: 1 });
       if (url.endsWith('/products/sample-product-01')) return response(detail);
       if (url.endsWith('/products/1/offers')) return response({ items: [] });
-      if (url.includes('/products/1/price-history')) return response({ items: [] });
       return response({ items: [] });
     }));
 
@@ -1193,7 +1191,6 @@ describe('Product Detail API data', () => {
       if (url.includes('/products?page=1&pageSize=15')) return response({ items: [product], page: 1, pageSize: 15, totalItems: 1, totalPages: 1 });
       if (url.endsWith('/products/sample-product-01')) return response(detail);
       if (url.endsWith('/products/1/offers')) return response({ items: [] });
-      if (url.includes('/products/1/price-history')) return response({ items: [] });
       return response({ items: [] });
     });
     vi.stubGlobal('fetch', fetchMock);
@@ -1204,7 +1201,7 @@ describe('Product Detail API data', () => {
     expect(window.location.pathname).toBe('/product/sample-product-01');
   });
 
-  it('loads a valid slug directly and requests detail, offers, history, and related products', async () => {
+  it('loads a valid slug and requests detail, offers, and related products without price history', async () => {
     const fetchMock = detailFetch();
     vi.stubGlobal('fetch', fetchMock);
     renderAppAt('/product/sample-product-01');
@@ -1216,17 +1213,20 @@ describe('Product Detail API data', () => {
     expect(screen.getByText('Storage')).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products/sample-product-01');
     expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products/1/offers');
-    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/products/1/price-history?from='))).toBe(true);
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/price-history'))).toBe(false);
     expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products?categoryId=7&page=1&pageSize=5');
-    expect(screen.getByRole('img', { name: 'Biểu đồ lịch sử giá' })).toBeTruthy();
+    expect(screen.queryByText('Lịch sử giá 6 tháng')).toBeNull();
+    expect(screen.getByText('Thông số sản phẩm')).toBeTruthy();
+    expect(screen.getByText('Giá được cập nhật')).toBeTruthy();
   });
 
-  it('shows empty offers and price history from empty API responses', async () => {
-    vi.stubGlobal('fetch', detailFetch({ offers: [], history: [] }));
+  it('shows the empty offers state without affecting product specifications or transparency content', async () => {
+    vi.stubGlobal('fetch', detailFetch({ offers: [] }));
     renderAppAt('/product/sample-product-01');
 
     expect(await screen.findByText('Chưa có cửa hàng niêm yết giá')).toBeTruthy();
-    expect(screen.getByText('Chưa có dữ liệu lịch sử giá.')).toBeTruthy();
+    expect(screen.getByText('Thông số sản phẩm')).toBeTruthy();
+    expect(screen.getByText('Giá được cập nhật')).toBeTruthy();
     expect(screen.queryByRole('img', { name: 'Biểu đồ lịch sử giá' })).toBeNull();
   });
 
@@ -1238,7 +1238,6 @@ describe('Product Detail API data', () => {
       }
       if (String(input).endsWith('/products/sample-product-01')) return response(detail);
       if (String(input).endsWith('/products/1/offers')) return response({ items: [] });
-      if (String(input).includes('/products/1/price-history')) return response({ items: [] });
       return response({ items: [] });
     });
     vi.stubGlobal('fetch', fetchMock);
@@ -1254,7 +1253,7 @@ describe('Product Detail API data', () => {
     renderAppAt('/product/sample-product-01');
     const retry = await screen.findByRole('button', { name: 'Thử lại' });
     expect(screen.getByRole('alert').textContent).toContain('Không thể tải');
-    vi.stubGlobal('fetch', detailFetch({ offers: [], history: [] }));
+    vi.stubGlobal('fetch', detailFetch({ offers: [] }));
     fireEvent.click(retry);
     expect(await screen.findByText('Chưa có cửa hàng niêm yết giá')).toBeTruthy();
   });
@@ -1266,7 +1265,7 @@ describe('Product Detail API data', () => {
       const url = String(input);
       if (url.endsWith('/products/sample-product-01')) return new Promise<Response>(resolve => { resolveFirst = resolve; });
       if (url.endsWith('/products/other-product')) return response(otherProduct);
-      if (url.endsWith('/products/2/offers') || url.includes('/products/2/price-history')) return response({ items: [] });
+      if (url.endsWith('/products/2/offers')) return response({ items: [] });
       if (url.includes('/products?categoryId=7')) return response({ items: [] });
       return response({}, false);
     }));
