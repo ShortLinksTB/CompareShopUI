@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getHomeData, type HomeCategory, type HomeProduct } from './homeApi';
 import { useLanguage } from './i18n';
@@ -66,6 +66,16 @@ function CategoryIcon({ slug }: { slug: string }) {
   </svg>;
 }
 
+function getPreviewToken(hash: string): string | null {
+  const fragment = hash.replace(/^#/, '');
+  if (!fragment) return null;
+  const values = new URLSearchParams(fragment);
+  const token = values.get('token') ?? values.get('previewToken') ?? values.get('preview');
+  if (token?.trim()) return token.trim();
+  if (fragment.includes('=')) return null;
+  try { return decodeURIComponent(fragment).trim() || null; } catch { return null; }
+}
+
 export function HomePage({ partners, footer }: { partners: React.ReactNode; footer: React.ReactNode }) {
   const { t } = useLanguage();
   const [categories, setCategories] = useState<HomeCategory[]>([]);
@@ -73,11 +83,20 @@ export function HomePage({ partners, footer }: { partners: React.ReactNode; foot
   const [computerProducts, setComputerProducts] = useState<HomeProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [previewMode, setPreviewMode] = useState(false);
+  const previewToken = useRef<string | null>(null);
 
   const load = () => {
+    if (!previewToken.current) {
+      previewToken.current = getPreviewToken(window.location.hash);
+      if (previewToken.current) {
+        window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}`);
+        setPreviewMode(true);
+      }
+    }
     setLoading(true);
     setError(false);
-    getHomeData()
+    getHomeData(previewToken.current ?? undefined)
       .then(data => {
         setCategories(data.categories);
         setProducts(data.products);
@@ -87,7 +106,29 @@ export function HomePage({ partners, footer }: { partners: React.ReactNode; foot
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
+
+  useEffect(() => {
+    if (!previewMode) return;
+    let robots = document.querySelector<HTMLMetaElement>('meta[name="robots"]');
+    const created = !robots;
+    const previousContent = robots?.getAttribute('content') ?? null;
+    if (!robots) {
+      robots = document.createElement('meta');
+      robots.name = 'robots';
+      document.head.append(robots);
+    }
+    robots.content = 'noindex, nofollow';
+    return () => {
+      if (created) robots?.remove();
+      else if (robots) {
+        if (previousContent === null) robots.removeAttribute('content');
+        else robots.content = previousContent;
+      }
+    };
+  }, [previewMode]);
 
   const heroProducts = products.slice(0, 3);
   const submitHeroSearch = (event: React.FormEvent<HTMLFormElement>) => {

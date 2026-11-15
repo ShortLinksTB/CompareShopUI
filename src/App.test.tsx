@@ -403,13 +403,40 @@ describe('fixed route themes', () => {
 });
 
 describe('Home API data', () => {
+  it('exchanges a URL-fragment preview token without leaving it in history and marks the page noindex', async () => {
+    const draftProduct = { ...products.items[0], id: 77, slug: 'draft-phone', name: 'Draft Phone' };
+    window.history.replaceState({}, '', '/#preview=one-time-secret');
+    let previewRequest: RequestInit | undefined;
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith('/partners')) return response([]);
+      if (url.endsWith('/categories')) return response({ items: [] });
+      if (url.endsWith('/home/showcase/preview')) {
+        previewRequest = init;
+        return response({ featured: [draftProduct], interestedComputers: [] });
+      }
+      return Promise.reject(new Error(`Unexpected request: ${url}`));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderApp();
+
+    expect(await screen.findByRole('link', { name: 'Draft Phone' })).toBeTruthy();
+    expect(window.location.hash).toBe('');
+    expect(document.querySelector('meta[name="robots"]')?.getAttribute('content')).toBe('noindex, nofollow');
+    expect(previewRequest?.method).toBe('POST');
+    expect(previewRequest?.cache).toBe('no-store');
+    expect(previewRequest?.body).toBe(JSON.stringify({ token: 'one-time-secret' }));
+    expect(fetchMock.mock.calls.some(([url, init]) => String(url).endsWith('/home/showcase') && !init?.method)).toBe(false);
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('one-time-secret'))).toBe(false);
+  });
+
   it('renders complete English home copy while preserving source-provided catalog names', async () => {
     localStorage.setItem('giatot-language', 'en');
     vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
       if (url.endsWith('/partners')) return response([{ name: 'CellphoneS', slug: 'cellphones', websiteUrl: null }]);
       if (url.endsWith('/categories')) return response({ items: [{ ...categories.items[0], productCount: 1 }] });
-      if (url.endsWith('/products?page=1&pageSize=15')) return response(products);
+      if (url.endsWith('/home/showcase')) return response({ featured: products.items, interestedComputers: [] });
       return response({ items: [], page: 1, pageSize: 1, totalItems: 1, totalPages: 1 });
     }));
     renderApp();
@@ -453,7 +480,7 @@ describe('Home API data', () => {
       const url = String(input);
       if (url.endsWith('/partners')) return response([]);
       if (url.endsWith('/categories')) return response(categories);
-      if (url.endsWith('/products?page=1&pageSize=15')) return response(products);
+      if (url.endsWith('/home/showcase')) return response({ featured: products.items, interestedComputers: [] });
       return response({ items: [], page: 1, pageSize: 1, totalItems: 42, totalPages: 42 });
     });
     vi.stubGlobal('fetch', fetchMock);
@@ -470,7 +497,7 @@ describe('Home API data', () => {
     expect(screen.queryByText('Apple')).toBeNull();
     expect(screen.queryByText(/★/)).toBeNull();
     expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/categories');
-    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products?page=1&pageSize=15');
+    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/home/showcase');
     expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products?categoryId=1&page=1&pageSize=1');
   });
 
@@ -479,13 +506,13 @@ describe('Home API data', () => {
     vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
       if (url.endsWith('/categories')) return response(categories);
-      if (url.endsWith('/products?page=1&pageSize=15')) return response({ ...products, items: [withImage] });
+      if (url.endsWith('/home/showcase')) return response({ featured: [withImage], interestedComputers: [withImage] });
       return response({ items: [], page: 1, pageSize: 1, totalItems: 0, totalPages: 0 });
     }));
     renderAppAt('/');
 
     const images = await screen.findAllByRole('img', { name: 'Sample Phone' });
-    expect(images).toHaveLength(2);
+    expect(images).toHaveLength(3);
     expect(images.every(image => image instanceof HTMLImageElement && image.src === 'https://cdn.example/phone.jpg')).toBe(true);
     expect(screen.queryByText('Chưa có hình ảnh')).toBeNull();
   });
@@ -507,7 +534,7 @@ describe('Home API data', () => {
         { id: 3, slug: 'computers', name: 'Computers' },
         { id: 4, slug: 'home-goods', name: 'Home goods' },
       ] });
-      if (url.endsWith('/products?page=1&pageSize=15')) return response({ ...products, items: featuredItems });
+      if (url.endsWith('/home/showcase')) return response({ featured: featuredItems, interestedComputers: [] });
       if (url.includes('categoryId=1')) return response({ ...products, items: [], totalItems: 0 });
       if (url.includes('categoryId=2')) return response({ ...products, items: [], totalItems: 7 });
       if (url.includes('categoryId=')) return response({ ...products, items: [], totalItems: 3 });
@@ -549,8 +576,7 @@ describe('Home API data', () => {
       if (url.endsWith('/categories')) return response({ items: [
         { id: 1, slug: 'phones', name: 'Phones' }, { id: 2, slug: 'computers', name: 'Computers' },
       ] });
-      if (url.endsWith('/products?page=1&pageSize=15')) return response({ ...products, items: mixedCatalog });
-      if (url.endsWith('/products?categoryId=2&page=1&pageSize=15')) return response({ ...products, items: computers });
+      if (url.endsWith('/home/showcase')) return response({ featured: mixedCatalog, interestedComputers: computers });
       return response({ ...products, items: [], totalItems: 0 });
     });
     vi.stubGlobal('fetch', fetchMock);
@@ -564,7 +590,7 @@ describe('Home API data', () => {
     expect(Array.from(grids[1].querySelectorAll('.product-name')).map(node => node.textContent)).toEqual(
       Array.from({ length: 15 }, (_, index) => `Computer ${index + 1}`),
     );
-    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products?categoryId=2&page=1&pageSize=15');
+    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/home/showcase');
     expect(grids[0].querySelector('.product-card')?.querySelectorAll('.product-card-body > *')).toHaveLength(3);
     expect(grids[0].querySelector('.product-card')?.querySelector('.product-name')).toBeTruthy();
     expect(grids[0].querySelector('.product-card')?.querySelector('.price')).toBeTruthy();
@@ -599,7 +625,7 @@ describe('Home API data', () => {
           ? Promise.reject(new Error('offline'))
           : response(categories);
       }
-      if (url.endsWith('/products?page=1&pageSize=15')) return response(products);
+      if (url.endsWith('/home/showcase')) return response({ featured: products.items, interestedComputers: [] });
       if (url.endsWith('/products?categoryId=1&page=1&pageSize=1')) {
         return response({ items: [], page: 1, pageSize: 1, totalItems: 42, totalPages: 42 });
       }
@@ -615,7 +641,7 @@ describe('Home API data', () => {
     expect(await screen.findByRole('link', { name: 'Sample Phone' })).toBeTruthy();
     const requestedUrls = fetchMock.mock.calls.map(([url]) => String(url));
     expect(requestedUrls.filter(url => url.endsWith('/categories')).length).toBeGreaterThanOrEqual(2);
-    expect(requestedUrls).toContain('https://api-compareshop-dev.giamha.online/api/v1/products?page=1&pageSize=15');
+    expect(requestedUrls).toContain('https://api-compareshop-dev.giamha.online/api/v1/home/showcase');
     expect(requestedUrls).toContain('https://api-compareshop-dev.giamha.online/api/v1/products?categoryId=1&page=1&pageSize=1');
   });
 });
@@ -715,7 +741,7 @@ it('renders the storefront and opens the saved products page', async () => {
     const url = String(input);
     if (url.endsWith('/partners')) return response([]);
     if (url.endsWith('/categories')) return response(categories);
-    if (url.endsWith('/products?page=1&pageSize=15')) return response(products);
+    if (url.endsWith('/home/showcase')) return response({ featured: products.items, interestedComputers: [] });
     if (url.endsWith('/wishlist')) return response({ items: [] });
     return response({ items: [], page: 1, pageSize: 1, totalItems: 42, totalPages: 42 });
   });
@@ -1180,7 +1206,7 @@ describe('Product Detail API data', () => {
       const url = String(input);
       if (url.endsWith('/categories')) return response({ items: [{ id: 7, slug: 'phones', name: 'Phones' }] });
       if (url.includes('/products?categoryId=7')) return response({ items: [product], page: 1, pageSize: 10, totalItems: 1, totalPages: 1 });
-      if (url.includes('/products?page=1&pageSize=15')) return response({ items: [product], page: 1, pageSize: 15, totalItems: 1, totalPages: 1 });
+      if (url.endsWith('/home/showcase')) return response({ featured: [product], interestedComputers: [] });
       if (url.endsWith('/products/sample-product-01')) return response(detail);
       if (url.endsWith('/products/1/offers')) return response({ items: [] });
       return response({ items: [] });
@@ -1201,7 +1227,7 @@ describe('Product Detail API data', () => {
       const url = String(input);
       if (url.endsWith('/categories')) return response({ items: [{ id: 7, slug: 'phones', name: 'Phones' }] });
       if (url.includes('/products?categoryId=7')) return response({ items: [product], page: 1, pageSize: 10, totalItems: 1, totalPages: 1 });
-      if (url.includes('/products?page=1&pageSize=15')) return response({ items: [product], page: 1, pageSize: 15, totalItems: 1, totalPages: 1 });
+      if (url.endsWith('/home/showcase')) return response({ featured: [product], interestedComputers: [] });
       if (url.endsWith('/products/sample-product-01')) return response(detail);
       if (url.endsWith('/products/1/offers')) return response({ items: [] });
       return response({ items: [] });
