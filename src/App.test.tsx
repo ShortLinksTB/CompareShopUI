@@ -405,10 +405,13 @@ describe('fixed route themes', () => {
 describe('Home API data', () => {
   it('renders complete English home copy while preserving source-provided catalog names', async () => {
     localStorage.setItem('giatot-language', 'en');
-    vi.stubGlobal('fetch', vi.fn()
-      .mockResolvedValueOnce(response({ items: [{ ...categories.items[0], productCount: 1 }] }))
-      .mockResolvedValueOnce(response(products))
-      .mockResolvedValueOnce(response({ items: [], page: 1, pageSize: 1, totalItems: 1, totalPages: 1 })));
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith('/partners')) return response([{ name: 'CellphoneS', slug: 'cellphones', websiteUrl: null }]);
+      if (url.endsWith('/categories')) return response({ items: [{ ...categories.items[0], productCount: 1 }] });
+      if (url.endsWith('/products?page=1&pageSize=15')) return response(products);
+      return response({ items: [], page: 1, pageSize: 1, totalItems: 1, totalPages: 1 });
+    }));
     renderApp();
 
     expect((await screen.findAllByRole('link', { name: 'Phones' })).length).toBeGreaterThan(0);
@@ -433,9 +436,10 @@ describe('Home API data', () => {
 
   it('shows English empty states when home collections contain no data', async () => {
     localStorage.setItem('giatot-language', 'en');
-    vi.stubGlobal('fetch', vi.fn()
-      .mockResolvedValueOnce(response({ items: [] }))
-      .mockResolvedValueOnce(response({ items: [], page: 1, pageSize: 10, totalItems: 0, totalPages: 0 })));
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => String(input).endsWith('/partners')
+      ? response([])
+      : String(input).endsWith('/categories') ? response({ items: [] })
+        : response({ items: [], page: 1, pageSize: 10, totalItems: 0, totalPages: 0 })));
     renderApp();
 
     expect(await screen.findByText('No categories yet')).toBeTruthy();
@@ -445,10 +449,13 @@ describe('Home API data', () => {
   });
 
   it('loads categories and products from the catalog endpoints and renders API fields', async () => {
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce(response(categories))
-      .mockResolvedValueOnce(response(products))
-      .mockResolvedValueOnce(response({ items: [], page: 1, pageSize: 1, totalItems: 42, totalPages: 42 }));
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith('/partners')) return response([]);
+      if (url.endsWith('/categories')) return response(categories);
+      if (url.endsWith('/products?page=1&pageSize=15')) return response(products);
+      return response({ items: [], page: 1, pageSize: 1, totalItems: 42, totalPages: 42 });
+    });
     vi.stubGlobal('fetch', fetchMock);
     renderApp();
 
@@ -462,9 +469,9 @@ describe('Home API data', () => {
     expect(document.querySelectorAll('.product-card .heart').length).toBeGreaterThan(0);
     expect(screen.queryByText('Apple')).toBeNull();
     expect(screen.queryByText(/★/)).toBeNull();
-    expect(fetchMock).toHaveBeenNthCalledWith(1, 'https://api-compareshop-dev.giamha.online/api/v1/categories');
-    expect(fetchMock).toHaveBeenNthCalledWith(2, 'https://api-compareshop-dev.giamha.online/api/v1/products?page=1&pageSize=15');
-    expect(fetchMock).toHaveBeenNthCalledWith(3, 'https://api-compareshop-dev.giamha.online/api/v1/products?categoryId=1&page=1&pageSize=1');
+    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/categories');
+    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products?page=1&pageSize=15');
+    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products?categoryId=1&page=1&pageSize=1');
   });
 
   it('renders API product images in both homepage featured surfaces', async () => {
@@ -493,6 +500,7 @@ describe('Home API data', () => {
     }));
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
+      if (url.endsWith('/partners')) return response(Array.from({ length: 12 }, (_, index) => ({ name: `Partner ${index + 1}`, slug: `partner-${index + 1}`, websiteUrl: null })));
       if (url.endsWith('/categories')) return response({ items: [
         { id: 1, slug: 'phones', name: 'Phones' },
         { id: 2, slug: 'audio', name: 'Audio' },
@@ -537,6 +545,7 @@ describe('Home API data', () => {
     }));
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
+      if (url.endsWith('/partners')) return response(Array.from({ length: 12 }, (_, index) => ({ name: `Partner ${index + 1}`, slug: `partner-${index + 1}`, websiteUrl: null })));
       if (url.endsWith('/categories')) return response({ items: [
         { id: 1, slug: 'phones', name: 'Phones' }, { id: 2, slug: 'computers', name: 'Computers' },
       ] });
@@ -567,9 +576,10 @@ describe('Home API data', () => {
   });
 
   it('shows empty states when both API collections are empty', async () => {
-    vi.stubGlobal('fetch', vi.fn()
-      .mockResolvedValueOnce(response({ items: [] }))
-      .mockResolvedValueOnce(response({ items: [], page: 1, pageSize: 10, totalItems: 0, totalPages: 0 })));
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => String(input).endsWith('/partners')
+      ? response([])
+      : String(input).endsWith('/categories') ? response({ items: [] })
+        : response({ items: [], page: 1, pageSize: 10, totalItems: 0, totalPages: 0 })));
     renderApp();
 
     expect(await screen.findByText('Chưa có danh mục')).toBeTruthy();
@@ -701,17 +711,20 @@ describe('localized shared header search placeholder', () => {
 
 
 it('renders the storefront and opens the saved products page', async () => {
-  const fetchMock = vi.fn()
-    .mockResolvedValueOnce(response(categories))
-    .mockResolvedValueOnce(response(products))
-    .mockResolvedValueOnce(response({ items: [], page: 1, pageSize: 1, totalItems: 42, totalPages: 42 }))
-    .mockResolvedValueOnce(response({ items: [] }));
+  const fetchMock = vi.fn((input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url.endsWith('/partners')) return response([]);
+    if (url.endsWith('/categories')) return response(categories);
+    if (url.endsWith('/products?page=1&pageSize=15')) return response(products);
+    if (url.endsWith('/wishlist')) return response({ items: [] });
+    return response({ items: [], page: 1, pageSize: 1, totalItems: 42, totalPages: 42 });
+  });
   vi.stubGlobal('fetch', fetchMock);
   renderApp();
 
   expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('So sánh giá');
   expect(await screen.findByRole('link', { name: 'Sample Phone' })).toBeTruthy();
-  expect(fetchMock).toHaveBeenCalledTimes(3);
+  expect(fetchMock).toHaveBeenCalledTimes(4);
   fireEvent.click(screen.getAllByRole('link', { name: /Yêu thích/ })[0]);
   expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Sản phẩm yêu thích');
   expect(await screen.findByRole('heading', { name: 'Đăng nhập để xem sản phẩm đã lưu' })).toBeTruthy();
