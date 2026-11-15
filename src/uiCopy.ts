@@ -3,7 +3,6 @@ import type { Language } from './i18n';
 const englishCopy: Record<string, string> = {
   'Vui lòng thử lại sau.': 'Please try again later.',
   'Xem ngay': 'View now',
-  'Biểu đồ lịch sử giá': 'Price history chart',
   'Số lượt đánh giá chưa có': 'Review count unavailable',
   'Đang tải sản phẩm yêu thích': 'Loading wishlist products',
   'Không thể tải danh mục': 'Could not load categories',
@@ -86,9 +85,6 @@ const englishCopy: Record<string, string> = {
   'Chi tiết': 'Details',
   'Thông số sản phẩm': 'Product specifications',
   'Chưa có thông số kỹ thuật cho sản phẩm này.': 'No specifications are available for this product.',
-  'Theo dõi biến động': 'Track price changes',
-  'Lịch sử giá 6 tháng': '6-month price history',
-  'Chưa có dữ liệu lịch sử giá.': 'No price history is available yet.',
   'Giá được cập nhật': 'Price updates',
   'Giá có thể thay đổi theo từng cửa hàng. Hãy kiểm tra lại giá cuối cùng trước khi mua.': 'Prices may vary by store. Check the final price before purchasing.',
   'Minh bạch & an toàn': 'Transparent and secure',
