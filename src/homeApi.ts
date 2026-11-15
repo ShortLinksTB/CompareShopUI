@@ -25,25 +25,41 @@ interface PageDto<T> {
   totalPages: number;
 }
 
-async function get<T>(path: string): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`);
+interface HomeShowcaseDto {
+  featured: HomeProduct[];
+  interestedComputers: HomeProduct[];
+}
+
+async function get<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = init ? await fetch(`${API_BASE_URL}${path}`, init) : await fetch(`${API_BASE_URL}${path}`);
   if (!response.ok) throw new Error(`API request failed (${response.status})`);
   return response.json() as Promise<T>;
 }
 
-export async function getHomeData() {
+async function getHomeShowcase(previewToken?: string): Promise<HomeShowcaseDto> {
+  if (!previewToken) return get<HomeShowcaseDto>('/home/showcase');
+
+  return get<HomeShowcaseDto>('/home/showcase/preview', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: previewToken }),
+    cache: 'no-store',
+  });
+}
+
+export async function getHomeData(previewToken?: string) {
   const categoryResponse = await get<{ items: Omit<HomeCategory, 'productCount'>[] }>('/categories');
-  const computerCategory = categoryResponse.items.find(category => category.slug === 'computers');
-  const [productResponse, computerResponse, ...categoryCounts] = await Promise.all([
-    get<PageDto<HomeProduct>>('/products?page=1&pageSize=15'),
-    computerCategory
-      ? get<PageDto<HomeProduct>>(`/products?categoryId=${computerCategory.id}&page=1&pageSize=15`)
-      : Promise.resolve({ items: [], page: 1, pageSize: 15, totalItems: 0, totalPages: 0 }),
+  const [showcase, ...categoryCounts] = await Promise.all([
+    getHomeShowcase(previewToken),
     ...categoryResponse.items.map(category => get<PageDto<HomeProduct>>(`/products?categoryId=${category.id}&page=1&pageSize=1`)),
   ]);
   const categories = categoryResponse.items.map((category, index) => ({
     ...category,
     productCount: categoryCounts[index].totalItems,
   }));
-  return { categories, products: productResponse.items, computerProducts: computerResponse.items };
+  return {
+    categories,
+    products: Array.isArray(showcase.featured) ? showcase.featured : [],
+    computerProducts: Array.isArray(showcase.interestedComputers) ? showcase.interestedComputers : [],
+  };
 }
