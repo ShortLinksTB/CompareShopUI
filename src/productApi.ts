@@ -5,11 +5,19 @@ export interface ProductDetail {
   slug: string;
   name: string;
   imageUrl: string | null;
+  images?: ProductDetailImage[] | null;
   brand: string | null;
   description: string | null;
   category: { id: number; slug: string; name: string };
   offerSummary: { minPrice: number | null; maxPrice: number | null; offerCount: number };
   specificationGroups: { name: string; items: { name: string; value: string }[] }[];
+}
+
+export interface ProductDetailImage {
+  url1000?: string | null;
+  url600?: string | null;
+  imageUrl?: string | null;
+  alt?: string | null;
 }
 
 export interface DetailOffer {
