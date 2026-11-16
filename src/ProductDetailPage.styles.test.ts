@@ -13,4 +13,9 @@ describe('Product Detail presentation CSS', () => {
   it('keeps the product error actions in a centered column with a 12px gap', () => {
     expect(stylesheet).toMatch(/\.product-error-state\s*\{\s*display:\s*flex;\s*flex-direction:\s*column;\s*align-items:\s*center;\s*gap:\s*12px;?\s*\}/);
   });
+
+  it('contains the main product image at tablet widths without changing other breakpoints', () => {
+    expect(stylesheet).toMatch(/@media\s*\(min-width:\s*640px\)\s*and\s*\(max-width:\s*900px\)\s*\{\s*\.detail-gallery>img\.detail-image-placeholder\s*\{\s*object-fit:\s*contain;?\s*\}\s*\}/);
+    expect(stylesheet).toMatch(/\.detail-gallery img\s*\{[^}]*object-fit:\s*cover/);
+  });
 });
