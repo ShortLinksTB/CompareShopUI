@@ -407,10 +407,12 @@ describe('Home API data', () => {
     const draftProduct = { ...products.items[0], id: 77, slug: 'draft-phone', name: 'Draft Phone' };
     window.history.replaceState({}, '', '/#homeShowcasePreview=one-time-secret');
     let previewRequest: RequestInit | undefined;
+    let firstFetch: { url: string; hash: string } | undefined;
     let resolvePreview!: (result: Response) => void;
     const previewResponse = new Promise<Response>(resolve => { resolvePreview = resolve; });
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
+      firstFetch ??= { url, hash: window.location.hash };
       if (url.endsWith('/partners')) return response([]);
       if (url.endsWith('/categories')) return response({ items: [] });
       if (url.endsWith('/home/showcase/preview')) {
@@ -422,6 +424,8 @@ describe('Home API data', () => {
     vi.stubGlobal('fetch', fetchMock);
     renderApp();
 
+    expect(firstFetch).toBeTruthy();
+    expect(firstFetch?.hash).toBe('');
     await waitFor(() => expect(previewRequest).toBeTruthy());
     expect(window.location.hash).toBe('');
     expect(document.querySelector('meta[name="robots"]')?.getAttribute('content')).toBe('noindex, nofollow');

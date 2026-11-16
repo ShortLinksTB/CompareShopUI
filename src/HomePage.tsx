@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getHomeData, type HomeCategory, type HomeProduct } from './homeApi';
 import { useLanguage } from './i18n';
@@ -102,14 +102,6 @@ export function HomePage({ partners, footer }: { partners: React.ReactNode; foot
   };
 
   const load = () => {
-    if (!previewToken.current) {
-      previewToken.current = getPreviewToken(window.location.hash);
-      if (previewToken.current) {
-        window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}`);
-        markPreviewNoindex();
-        setPreviewMode(true);
-      }
-    }
     setLoading(true);
     setError(false);
     getHomeData(previewToken.current ?? undefined)
@@ -121,6 +113,15 @@ export function HomePage({ partners, footer }: { partners: React.ReactNode; foot
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   };
+
+  useLayoutEffect(() => {
+    if (previewToken.current) return;
+    previewToken.current = getPreviewToken(window.location.hash);
+    if (!previewToken.current) return;
+    window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}`);
+    markPreviewNoindex();
+    setPreviewMode(true);
+  }, []);
 
   useEffect(() => {
     load();
