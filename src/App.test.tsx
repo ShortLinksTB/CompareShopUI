@@ -1195,6 +1195,51 @@ describe('Product Detail API data', () => {
     expect((screen.getByRole('img', { name: 'Related Product' }) as HTMLImageElement).src).toBe(relatedImage);
   });
 
+  it('renders ordered product gallery images and changes the main image when a thumbnail is selected', async () => {
+    vi.stubGlobal('fetch', detailFetch({ productResponse: {
+      ...detail,
+      imageUrl: 'https://cdn.example/legacy.jpg',
+      images: [
+        { url1000: 'https://cdn.example/front-1000.jpg', url600: 'https://cdn.example/front-600.jpg', alt: 'Front view' },
+        { url1000: 'https://cdn.example/back-1000.jpg', url600: 'https://cdn.example/back-600.jpg', alt: 'Back view' },
+      ],
+    } }));
+    renderAppAt('/product/sample-product-01');
+
+    const mainImage = await screen.findByRole('img', { name: 'Front view' }) as HTMLImageElement;
+    expect(mainImage.src).toBe('https://cdn.example/front-1000.jpg');
+    const thumbnails = screen.getAllByRole('button', { name: /view/ });
+    expect(thumbnails.map(button => button.getAttribute('aria-pressed'))).toEqual(['true', 'false']);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back view' }));
+    expect((screen.getByRole('img', { name: 'Back view' }) as HTMLImageElement).src).toBe('https://cdn.example/back-1000.jpg');
+    expect(screen.getByRole('button', { name: 'Back view' }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByText('2/2')).toBeTruthy();
+  });
+
+  it('falls back to the legacy product image when a gallery image has no detail URL', async () => {
+    vi.stubGlobal('fetch', detailFetch({ productResponse: {
+      ...detail,
+      imageUrl: 'https://cdn.example/legacy.jpg',
+      images: [{ url600: 'https://cdn.example/card.jpg', alt: 'Product view' }],
+    } }));
+    renderAppAt('/product/sample-product-01');
+
+    expect((await screen.findByRole('img', { name: 'Product view' }) as HTMLImageElement).src).toBe('https://cdn.example/legacy.jpg');
+  });
+
+  it('keeps the no-image state when the API gallery is explicitly empty', async () => {
+    vi.stubGlobal('fetch', detailFetch({ productResponse: {
+      ...detail,
+      imageUrl: 'https://cdn.example/legacy.jpg',
+      images: [],
+    } }));
+    renderAppAt('/product/sample-product-01');
+
+    expect(await screen.findByRole('img', { name: 'Chưa có hình ảnh' })).toBeTruthy();
+    expect(document.querySelector('.gallery-thumbs')).toBeNull();
+  });
+
   it.each(['light', 'dark'] as const)('applies fixed light Product Detail shell for direct navigation in %s OS preference', async theme => {
     setColorScheme(theme);
     vi.stubGlobal('fetch', detailFetch());

@@ -32,12 +32,36 @@ function OfferRow({ offer }: { offer: DetailOffer }) {
 function ProductDetailContent({ data }: { data: DetailData }) {
   const { language } = useLanguage();
   const { product, offers, related } = data;
+  const images = product.images ?? [];
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  useEffect(() => setSelectedImageIndex(0), [product.id]);
+  const activeImageIndex = Math.min(selectedImageIndex, Math.max(images.length - 1, 0));
+  const selectedImage = images[activeImageIndex];
+  const selectedImageUrl = selectedImage
+    ? selectedImage.url1000 || selectedImage.imageUrl || product.imageUrl
+    : product.images == null ? product.imageUrl : null;
   const minPrice = product.offerSummary.minPrice;
   const sortedOffers = [...offers].sort((a, b) => a.price - b.price);
   return <>
     <div className="breadcrumbs"><Link to="/">{uiText(language, 'Trang chủ')}</Link><span>/</span><Link to={`/category/${product.category.slug}`}>{product.category.name}</Link><span>/</span><strong>{product.name}</strong></div>
     <section className="product-detail">
-      <div className="detail-gallery"><div className="gallery-thumbs"><div className="product-image-placeholder" aria-label={uiText(language, 'Chưa có hình ảnh')}>{uiText(language, 'Ảnh sản phẩm')}</div><div className="product-image-placeholder" aria-hidden="true">{uiText(language, 'Ảnh sản phẩm')}</div><div className="product-image-placeholder" aria-hidden="true">{uiText(language, 'Ảnh sản phẩm')}</div></div>{product.imageUrl ? <SafeImage className="product-image-placeholder detail-image-placeholder" src={product.imageUrl} alt={product.name} fallbackLabel={uiText(language, 'Chưa có hình ảnh')} /> : <div className="product-image-placeholder detail-image-placeholder" role="img" aria-label={uiText(language, 'Chưa có hình ảnh')}>{uiText(language, 'Chưa có hình ảnh')}</div>}<WishlistHeart productId={product.id} className="button button-ghost detail-wishlist-heart" /><span className="gallery-count">{uiText(language, 'Ảnh chưa có')}</span></div>
+      <div className={`detail-gallery${images.length ? '' : ' is-empty'}`}>
+        {images.length > 0 && <div className="gallery-thumbs" aria-label={uiText(language, 'Ảnh sản phẩm')}>
+          {images.map((image, index) => <button
+            className={`gallery-thumb${index === activeImageIndex ? ' is-selected' : ''}`}
+            type="button"
+            key={`${image.url1000 ?? image.imageUrl ?? index}-${index}`}
+            aria-label={image.alt || `${uiText(language, 'Ảnh sản phẩm')} ${index + 1}`}
+            aria-pressed={index === activeImageIndex}
+            onClick={() => setSelectedImageIndex(index)}
+          >
+            {(image.url1000 || image.url600 || image.imageUrl) ? <SafeImage src={image.url1000 || image.url600 || image.imageUrl!} alt="" /> : <span className="product-image-placeholder" aria-hidden="true">{uiText(language, 'Ảnh sản phẩm')}</span>}
+          </button>)}
+        </div>}
+        {selectedImageUrl ? <SafeImage className="product-image-placeholder detail-image-placeholder" src={selectedImageUrl} alt={selectedImage?.alt || product.name} fallbackLabel={uiText(language, 'Chưa có hình ảnh')} /> : <div className="product-image-placeholder detail-image-placeholder" role="img" aria-label={uiText(language, 'Chưa có hình ảnh')}>{uiText(language, 'Chưa có hình ảnh')}</div>}
+        <WishlistHeart productId={product.id} className="button button-ghost detail-wishlist-heart" />
+        <span className="gallery-count">{images.length ? `${activeImageIndex + 1}/${images.length}` : uiText(language, 'Ảnh chưa có')}</span>
+      </div>
       <div className="detail-copy"><span className="eyebrow">{product.brand || product.category.name}</span><h1>{product.name}</h1><p>{product.description || uiText(language, 'Thông tin mô tả chưa được cung cấp.')}</p><div className="detail-price"><small>{uiText(language, 'Giá tham khảo từ')}</small>{minPrice !== null ? <strong>{money(minPrice)}</strong> : <strong>{uiText(language, 'Chưa có giá')}</strong>}<span>· {product.offerSummary.offerCount} {uiText(language, 'cửa hàng')}</span></div><div className="detail-actions"><button className="button button-primary button-large" onClick={() => document.getElementById('offers')?.scrollIntoView({ behavior: 'smooth' })}>{uiText(language, 'Xem giá tốt nhất ↓')}</button></div></div>
     </section>
     <div className="detail-tabs"><a className="active" href="#offers">{uiText(language, 'So sánh giá')} ({product.offerSummary.offerCount})</a><a href="#specs">{uiText(language, 'Thông số kỹ thuật')}</a><a href="#reviews">{uiText(language, 'Đánh giá')}</a><a href="#questions">{uiText(language, 'Hỏi đáp')}</a></div>
