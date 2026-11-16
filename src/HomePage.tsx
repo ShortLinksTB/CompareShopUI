@@ -70,7 +70,7 @@ function getPreviewToken(hash: string): string | null {
   const fragment = hash.replace(/^#/, '');
   if (!fragment) return null;
   const values = new URLSearchParams(fragment);
-  const token = values.get('token') ?? values.get('previewToken') ?? values.get('preview');
+  const token = values.get('homeShowcasePreview') ?? values.get('token') ?? values.get('previewToken') ?? values.get('preview');
   if (token?.trim()) return token.trim();
   if (fragment.includes('=')) return null;
   try { return decodeURIComponent(fragment).trim() || null; } catch { return null; }
@@ -85,12 +85,28 @@ export function HomePage({ partners, footer }: { partners: React.ReactNode; foot
   const [error, setError] = useState(false);
   const [previewMode, setPreviewMode] = useState(false);
   const previewToken = useRef<string | null>(null);
+  const previewRobots = useRef<{ element: HTMLMetaElement; created: boolean; previousContent: string | null } | null>(null);
+
+  const markPreviewNoindex = () => {
+    if (previewRobots.current) return;
+    let robots = document.querySelector<HTMLMetaElement>('meta[name="robots"]');
+    const created = !robots;
+    const previousContent = robots?.getAttribute('content') ?? null;
+    if (!robots) {
+      robots = document.createElement('meta');
+      robots.name = 'robots';
+      document.head.append(robots);
+    }
+    robots.content = 'noindex, nofollow';
+    previewRobots.current = { element: robots, created, previousContent };
+  };
 
   const load = () => {
     if (!previewToken.current) {
       previewToken.current = getPreviewToken(window.location.hash);
       if (previewToken.current) {
         window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}`);
+        markPreviewNoindex();
         setPreviewMode(true);
       }
     }
@@ -112,21 +128,16 @@ export function HomePage({ partners, footer }: { partners: React.ReactNode; foot
 
   useEffect(() => {
     if (!previewMode) return;
-    let robots = document.querySelector<HTMLMetaElement>('meta[name="robots"]');
-    const created = !robots;
-    const previousContent = robots?.getAttribute('content') ?? null;
-    if (!robots) {
-      robots = document.createElement('meta');
-      robots.name = 'robots';
-      document.head.append(robots);
-    }
-    robots.content = 'noindex, nofollow';
+    markPreviewNoindex();
     return () => {
-      if (created) robots?.remove();
-      else if (robots) {
-        if (previousContent === null) robots.removeAttribute('content');
-        else robots.content = previousContent;
+      const previous = previewRobots.current;
+      if (!previous) return;
+      if (previous.created) previous.element.remove();
+      else if (previous.previousContent === null) previous.element.removeAttribute('content');
+      else {
+        previous.element.content = previous.previousContent;
       }
+      previewRobots.current = null;
     };
   }, [previewMode]);
 
