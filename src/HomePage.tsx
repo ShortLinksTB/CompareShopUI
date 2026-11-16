@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { getHomeData, type HomeCategory, type HomeProduct } from './homeApi';
 import { useLanguage } from './i18n';
 import { SafeImage } from './components/SafeImage';
+import { ProductCardImage } from './components/ProductCardImage';
 import { WishlistHeart } from './wishlist/WishlistHeart';
 
 const money = (value: number) => new Intl.NumberFormat('vi-VN', {
@@ -16,7 +17,7 @@ function HomeProductCard({ product }: { product: HomeProduct }) {
   const { minPrice } = product.offerSummary;
 
   return <article className="product-card">
-    <div className="product-image">{product.imageUrl ? <SafeImage src={product.imageUrl} alt={product.name} fallbackLabel={t('noImage')} /> : <div role="img" aria-label={t('noImage')}><span className="muted">{t('noImage')}</span></div>}<WishlistHeart productId={product.id} /></div>
+    <div className="product-image"><ProductCardImage imageUrl={product.imageUrl} productName={product.name} noImageLabel={t('noImage')} placeholderTextClassName="muted" /><WishlistHeart productId={product.id} /></div>
     <div className="product-card-body">
       <Link to={`/product/${product.slug}`} className="product-name">{product.name}</Link>
       {minPrice > 0 && <strong className="price">{t('from')} {money(minPrice)}</strong>}

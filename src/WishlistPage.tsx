@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuthSession } from './auth/AuthSession';
 import { useLanguage } from './i18n';
 import { uiText } from './uiCopy';
-import { SafeImage } from './components/SafeImage';
+import { ProductCardImage } from './components/ProductCardImage';
 import { useWishlist } from './wishlist/WishlistContext';
 
 function WishlistSkeleton() {
@@ -38,7 +38,7 @@ export function WishlistPage() {
     {status === 'anonymous' && <div className="empty-state wishlist-unauthenticated-state"><span>♡</span><h3>{uiText(language, 'Đăng nhập để xem sản phẩm đã lưu')}</h3><div className="wishlist-unauthenticated__actions"><p>{uiText(language, 'Danh sách yêu thích chỉ hiển thị cho tài khoản đã xác thực.')}</p>{signInFailed && <p role="alert">{uiText(language, 'Không thể mở đăng nhập. Vui lòng thử lại.')}</p>}<button className="button button-primary wishlist-unauthenticated__cta" type="button" onClick={() => void startSignIn()} disabled={signInStarting}>{signInStarting ? uiText(language, 'Đang chuyển đến đăng nhập…') : uiText(language, 'Đăng nhập')}</button></div></div>}
     {status === 'error' && <div className="empty-state" role="alert"><h3>{uiText(language, 'Không thể tải sản phẩm yêu thích')}</h3><p>{uiText(language, 'Vui lòng thử lại.')}</p><button className="button button-primary" type="button" onClick={reload}>{uiText(language, 'Thử lại')}</button></div>}
     {status === 'loaded' && (items.length ? <div className="wishlist-list">{items.map(item => <div className="wishlist-item" key={item.productId}>
-      {item.imageUrl ? <SafeImage className="safe-image-fallback" src={item.imageUrl} alt={item.name} fallbackLabel={uiText(language, 'Chưa có hình ảnh')} /> : <div className="safe-image-fallback" role="img" aria-label={item.name}><span>{uiText(language, 'Chưa có hình ảnh')}</span></div>}
+      <ProductCardImage imageUrl={item.imageUrl} productName={item.name} noImageLabel={uiText(language, 'Chưa có hình ảnh')} imageClassName="safe-image-fallback" placeholderClassName="safe-image-fallback" placeholderAriaLabel={item.name} />
       <div><Link to={`/product/${item.slug}`}><strong>{item.name}</strong></Link><span className="price">{uiText(language, 'Giá hiện tại chưa có dữ liệu')}</span></div>
       <button className="button button-ghost" type="button" onClick={() => void remove(item.productId)} disabled={busyIds.has(item.productId)} aria-label={`${uiText(language, 'Xóa')} ${item.name}`}>{busyIds.has(item.productId) ? '…' : '×'}</button>
     </div>)}</div> : <div className="empty-state"><span>♡</span><h3>{uiText(language, 'Chưa có sản phẩm yêu thích')}</h3><p>{uiText(language, 'Nhấn biểu tượng trái tim trên sản phẩm để lưu lại.')}</p><Link className="button button-primary" to="/search">{uiText(language, 'Khám phá sản phẩm')}</Link></div>)}
