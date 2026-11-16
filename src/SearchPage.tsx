@@ -3,7 +3,7 @@ import { useLanguage } from './i18n';
 import { uiText } from './uiCopy';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { getCategories, getProducts, type ProductPage, type SearchCategory } from './searchApi';
-import { SafeImage } from './components/SafeImage';
+import { ProductCardImage } from './components/ProductCardImage';
 import { WishlistHeart } from './wishlist/WishlistHeart';
 
 const PAGE_SIZE = 12;
@@ -12,7 +12,7 @@ const money = (value: number) => new Intl.NumberFormat('vi-VN', { style: 'curren
 function ProductCard({ product }: { product: ProductPage['items'][number] }) {
   const { language } = useLanguage();
   const { minPrice, offerCount } = product.offerSummary;
-  return <article className="product-card"><div className="product-image">{product.imageUrl ? <SafeImage src={product.imageUrl} alt={product.name} fallbackLabel={uiText(language, 'Chưa có hình ảnh')} /> : <span className="muted" role="img" aria-label={uiText(language, 'Chưa có hình ảnh')}>{uiText(language, 'Chưa có hình ảnh')}</span>}<WishlistHeart productId={product.id} /></div><div className="product-card-body"><Link to={`/product/${product.slug}`} className="product-name">{product.name}</Link>{product.brand && <span className="muted">{product.brand}</span>}{minPrice !== null && <strong className="price">{uiText(language, 'Từ')} {money(minPrice)}</strong>}<span className="offer-count"><span className="shop-dot" />{offerCount} {uiText(language, 'cửa hàng đang bán')}</span><div className="card-actions"><Link className="button button-primary" to={`/product/${product.slug}`}>{uiText(language, 'Xem giá')}</Link><button className="button button-ghost" onClick={() => { const saved = JSON.parse(localStorage.getItem('compare-products') || '[]') as string[]; if (!saved.includes(product.slug) && saved.length < 4) localStorage.setItem('compare-products', JSON.stringify([...saved, product.slug])); }}>{uiText(language, '+ So sánh')}</button></div></div></article>;
+  return <article className="product-card"><div className="product-image"><ProductCardImage imageUrl={product.imageUrl} productName={product.name} noImageLabel={uiText(language, 'Chưa có hình ảnh')} placeholderTag="span" placeholderClassName="muted" /><WishlistHeart productId={product.id} /></div><div className="product-card-body"><Link to={`/product/${product.slug}`} className="product-name">{product.name}</Link>{product.brand && <span className="muted">{product.brand}</span>}{minPrice !== null && <strong className="price">{uiText(language, 'Từ')} {money(minPrice)}</strong>}<span className="offer-count"><span className="shop-dot" />{offerCount} {uiText(language, 'cửa hàng đang bán')}</span><div className="card-actions"><Link className="button button-primary" to={`/product/${product.slug}`}>{uiText(language, 'Xem giá')}</Link><button className="button button-ghost" onClick={() => { const saved = JSON.parse(localStorage.getItem('compare-products') || '[]') as string[]; if (!saved.includes(product.slug) && saved.length < 4) localStorage.setItem('compare-products', JSON.stringify([...saved, product.slug])); }}>{uiText(language, '+ So sánh')}</button></div></div></article>;
 }
 
 function PriceFilters({ minPrice, maxPrice, setPrice }: { minPrice?: number; maxPrice?: number; setPrice: (min?: number, max?: number) => void }) {
