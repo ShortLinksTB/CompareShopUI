@@ -403,31 +403,41 @@ describe('fixed route themes', () => {
 });
 
 describe('Home API data', () => {
-  it('exchanges a URL-fragment preview token without leaving it in history and marks the page noindex', async () => {
+  it('exchanges the Admin Home Showcase fragment before requests and stays noindex while the preview is pending', async () => {
     const draftProduct = { ...products.items[0], id: 77, slug: 'draft-phone', name: 'Draft Phone' };
-    window.history.replaceState({}, '', '/#preview=one-time-secret');
+    window.history.replaceState({}, '', '/#homeShowcasePreview=one-time-secret');
     let previewRequest: RequestInit | undefined;
+    let firstFetch: { url: string; hash: string } | undefined;
+    let resolvePreview!: (result: Response) => void;
+    const previewResponse = new Promise<Response>(resolve => { resolvePreview = resolve; });
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
+      firstFetch ??= { url, hash: window.location.hash };
       if (url.endsWith('/partners')) return response([]);
       if (url.endsWith('/categories')) return response({ items: [] });
       if (url.endsWith('/home/showcase/preview')) {
         previewRequest = init;
-        return response({ featured: [draftProduct], interestedComputers: [] });
+        return previewResponse;
       }
       return Promise.reject(new Error(`Unexpected request: ${url}`));
     });
     vi.stubGlobal('fetch', fetchMock);
     renderApp();
 
-    expect(await screen.findByRole('link', { name: 'Draft Phone' })).toBeTruthy();
+    expect(firstFetch).toBeTruthy();
+    expect(firstFetch?.hash).toBe('');
+    await waitFor(() => expect(previewRequest).toBeTruthy());
     expect(window.location.hash).toBe('');
     expect(document.querySelector('meta[name="robots"]')?.getAttribute('content')).toBe('noindex, nofollow');
     expect(previewRequest?.method).toBe('POST');
     expect(previewRequest?.cache).toBe('no-store');
     expect(previewRequest?.body).toBe(JSON.stringify({ token: 'one-time-secret' }));
-    expect(fetchMock.mock.calls.some(([url, init]) => String(url).endsWith('/home/showcase') && !init?.method)).toBe(false);
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/home/showcase'))).toBe(false);
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes('one-time-secret'))).toBe(false);
+
+    await act(async () => resolvePreview(await response({ featured: [draftProduct], interestedComputers: [] })));
+    expect(await screen.findByRole('link', { name: 'Draft Phone' })).toBeTruthy();
+    expect(document.querySelector('meta[name="robots"]')?.getAttribute('content')).toBe('noindex, nofollow');
   });
 
   it('renders complete English home copy while preserving source-provided catalog names', async () => {
