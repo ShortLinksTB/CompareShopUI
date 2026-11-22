@@ -6,6 +6,8 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ComparePage } from './ComparePage';
 import stylesheet from './styles.css?inline';
+import { CountryProvider } from './country';
+import { TEST_COUNTRIES } from './testCountryData';
 
 const product = (slug: string, name: string) => ({
   id: slug.length, slug, name, imageUrl: 'https://cdn.example/compare.jpg', brand: null, description: null,
@@ -14,26 +16,26 @@ const product = (slug: string, name: string) => ({
   specificationGroups: [{ name: 'Cấu hình', items: [{ name: 'Dung lượng', value: '128 GB' }] }],
 });
 const response = (body: unknown, ok = true) => Promise.resolve({ ok, status: ok ? 200 : 500, json: () => Promise.resolve(body) } as Response);
-const renderPage = () => render(<LanguageProvider><MemoryRouter><ComparePage /></MemoryRouter></LanguageProvider>);
+const renderPage = () => render(<CountryProvider initialCountries={TEST_COUNTRIES}><LanguageProvider><MemoryRouter><ComparePage /></MemoryRouter></LanguageProvider></CountryProvider>);
 
 afterEach(() => { cleanup(); localStorage.clear(); vi.unstubAllGlobals(); });
 
 describe('Compare page', () => {
   it('loads each saved slug separately and renders only API product fields', async () => {
     localStorage.setItem('compare-products', JSON.stringify(['phone-one', 'phone-two']));
-    const fetchMock = vi.fn((input: string) => input.endsWith('/products?page=1&pageSize=20')
+    const fetchMock = vi.fn((input: string) => input.endsWith('/products?page=1&pageSize=20&country=VN')
       ? response({ items: [{ slug: 'candidate', name: 'Candidate' }] })
-      : response(product(input.split('/').at(-1)!, `Product ${input.split('/').at(-1)}`)));
+      : response(product(input.split('/').at(-1)!.split('?')[0], `Product ${input.split('/').at(-1)!.split('?')[0]}`)));
     vi.stubGlobal('fetch', fetchMock);
     renderPage();
 
-    expect(screen.getByRole('status').textContent).toContain('Đang tải');
+    expect(screen.getByRole('status').textContent).toContain('Đang tải sản phẩm so sánh');
     expect(await screen.findByText('Product phone-one')).toBeTruthy();
     expect(screen.getByText('Product phone-two')).toBeTruthy();
     expect(screen.getAllByRole('img', { name: /Product phone-/ }).every(image => (image as HTMLImageElement).src === 'https://cdn.example/compare.jpg')).toBe(true);
     expect(fetchMock).toHaveBeenCalledTimes(3);
-    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products/phone-one');
-    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products?page=1&pageSize=20');
+    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products/phone-one?country=VN');
+    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products?page=1&pageSize=20&country=VN');
     expect(screen.getAllByText(/1\.200\.000/)).toHaveLength(2);
     expect(screen.getAllByText('Dung lượng: 128 GB')).toHaveLength(2);
     expect(screen.getAllByText('Chưa có thương hiệu')).toHaveLength(2);
@@ -46,7 +48,7 @@ describe('Compare page', () => {
     renderPage();
     expect(await screen.findByText('Chưa có sản phẩm để so sánh')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Khám phá sản phẩm' }).classList.contains('compare-empty-state__cta')).toBe(true);
-    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products?page=1&pageSize=20');
+    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products?page=1&pageSize=20&country=VN');
   });
 
   it('keeps the empty-state CTA in its own block below the description', () => {
@@ -82,7 +84,7 @@ describe('Compare page', () => {
     localStorage.setItem('compare-products', JSON.stringify(['phone-one']));
     let detailCalls = 0;
     const fetchMock = vi.fn((input: string) => {
-      if (input.endsWith('/products?page=1&pageSize=20')) return response({ items: [] });
+      if (input.endsWith('/products?page=1&pageSize=20&country=VN')) return response({ items: [] });
       detailCalls += 1;
       return detailCalls === 1 ? response({}, false) : response(product('phone-one', 'Retry Product'));
     });
@@ -95,7 +97,7 @@ describe('Compare page', () => {
 
   it('removes a product from the table and saved slug list', async () => {
     localStorage.setItem('compare-products', JSON.stringify(['phone-one']));
-    vi.stubGlobal('fetch', vi.fn((input: string) => input.endsWith('/products?page=1&pageSize=20')
+    vi.stubGlobal('fetch', vi.fn((input: string) => input.endsWith('/products?page=1&pageSize=20&country=VN')
       ? response({ items: [] })
       : response(product('phone-one', 'Removable Product'))));
     renderPage();

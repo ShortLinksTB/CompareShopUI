@@ -1,3 +1,5 @@
+import { withCountryContext } from './countryApi';
+
 const API_BASE_URL = 'https://api-compareshop-dev.giamha.online/api/v1';
 
 export interface ProductDetail {
@@ -46,11 +48,11 @@ async function get<T>(path: string): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export async function getProductDetail(slug: string) {
-  const product = await get<ProductDetail>(`/products/${encodeURIComponent(slug)}`);
+export async function getProductDetail(slug: string, country = 'VN') {
+  const product = await get<ProductDetail>(withCountryContext(`/products/${encodeURIComponent(slug)}`, country));
   const [offers, related] = await Promise.all([
-    get<{ items: DetailOffer[] }>(`/products/${product.id}/offers`),
-    get<{ items: RelatedProduct[] }>(`/products?categoryId=${product.category.id}&page=1&pageSize=5`).catch(() => ({ items: [] as RelatedProduct[] })),
+    get<{ items: DetailOffer[] }>(withCountryContext(`/products/${product.id}/offers`, country)),
+    get<{ items: RelatedProduct[] }>(withCountryContext(`/products?categoryId=${product.category.id}&page=1&pageSize=5`, country)).catch(() => ({ items: [] as RelatedProduct[] })),
   ]);
 
   return {

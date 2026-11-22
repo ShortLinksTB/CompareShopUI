@@ -8,6 +8,7 @@ import { CountryProvider } from './country';
 import { ShopPage } from './ShopPage';
 import stylesheet from './styles.css?inline';
 import './styles.css';
+import { TEST_COUNTRIES } from './testCountryData';
 
 const api = 'https://api-compareshop-dev.giamha.online/api/v1';
 const shop = { id: 24, slug: 'sample-shop', name: 'Sample Shop', logoUrl: null, websiteUrl: null };
@@ -19,11 +20,11 @@ function response(body: unknown, ok = true) {
 }
 
 function renderShop() {
-  return render(<LanguageProvider><MemoryRouter initialEntries={['/shops/sample-shop']}><Routes><Route path="/shops/:slug" element={<ShopPage />} /></Routes></MemoryRouter></LanguageProvider>);
+  return render(<CountryProvider initialCountries={TEST_COUNTRIES}><LanguageProvider><MemoryRouter initialEntries={['/shops/sample-shop']}><Routes><Route path="/shops/:slug" element={<ShopPage />} /></Routes></MemoryRouter></LanguageProvider></CountryProvider>);
 }
 
 function renderShopRoute() {
-  return render(<CountryProvider><LanguageProvider><MemoryRouter initialEntries={['/shops/sample-shop']}><App /></MemoryRouter></LanguageProvider></CountryProvider>);
+  return render(<CountryProvider initialCountries={TEST_COUNTRIES}><LanguageProvider><MemoryRouter initialEntries={['/shops/sample-shop']}><App /></MemoryRouter></LanguageProvider></CountryProvider>);
 }
 
 function setColorScheme(theme: 'light' | 'dark') {
@@ -43,13 +44,13 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe('Partner Shop API data', () => {
   it('loads a shop by route slug, then its products by shop ID', async () => {
-    const fetchMock = vi.fn((input: RequestInfo | URL) => String(input).endsWith('/shops/sample-shop')
+    const fetchMock = vi.fn((input: RequestInfo | URL) => String(input).endsWith('/shops/sample-shop?country=VN')
       ? response(shop)
       : response({ items: [product], page: 1, pageSize: 12, totalItems: 1, totalPages: 1 }));
     vi.stubGlobal('fetch', fetchMock);
 
     renderShop();
-    expect(screen.getByRole('status').textContent).toContain('Đang tải');
+    expect(screen.getByRole('status').textContent).toContain('Đang tải thông tin cửa hàng');
     expect(await screen.findByRole('heading', { name: 'Sample Shop' })).toBeTruthy();
     expect(screen.getByText('Chưa có đánh giá')).toBeTruthy();
     expect(screen.getByText('(Số lượt đánh giá chưa có)')).toBeTruthy();
@@ -59,13 +60,13 @@ describe('Partner Shop API data', () => {
     expect((screen.getByRole('img', { name: 'Sample Product' }) as HTMLImageElement).src).toBe('https://cdn.example/shop-product.jpg');
     expect(screen.getByText((_content, element) => element?.className === 'price' && element.textContent?.includes('1.200.000') === true)).toBeTruthy();
     expect(screen.queryByText(/1\.3M/)).toBeNull();
-    expect(fetchMock).toHaveBeenNthCalledWith(1, `${api}/shops/sample-shop`);
-    expect(fetchMock).toHaveBeenNthCalledWith(2, `${api}/products?shopId=24&page=1&pageSize=12`);
+    expect(fetchMock).toHaveBeenNthCalledWith(1, `${api}/shops/sample-shop?country=VN`);
+    expect(fetchMock).toHaveBeenNthCalledWith(2, `${api}/products?shopId=24&page=1&pageSize=12&country=VN`);
   });
 
   it('preserves API rating, status, and the active website action when those fields exist', async () => {
     const shopWithDetails = { ...shop, rating: 4.8, reviewCount: 1200, status: 'active', websiteUrl: 'https://shop.example' };
-    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => String(input).endsWith('/shops/sample-shop')
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => String(input).endsWith('/shops/sample-shop?country=VN')
       ? response(shopWithDetails)
       : response({ items: [], page: 1, pageSize: 12, totalItems: 0, totalPages: 0 })));
     renderShop();
@@ -78,7 +79,7 @@ describe('Partner Shop API data', () => {
 
   it.each(['light', 'dark'] as const)('keeps the Shop route fixed light under %s OS preference', async theme => {
     setColorScheme(theme);
-    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => String(input).endsWith('/shops/sample-shop')
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => String(input).endsWith('/shops/sample-shop?country=VN')
       ? response(shop)
       : response({ items: [], page: 1, pageSize: 12, totalItems: 0, totalPages: 0 })));
     renderShopRoute();
@@ -94,7 +95,7 @@ describe('Partner Shop API data', () => {
   });
 
   it('uses neutral fallbacks for absent logo and price, and renders the empty catalog state', async () => {
-    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => String(input).endsWith('/shops/sample-shop')
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => String(input).endsWith('/shops/sample-shop?country=VN')
       ? response(shop)
       : response({ items: [], page: 1, pageSize: 12, totalItems: 0, totalPages: 0 })));
     renderShop();
@@ -105,7 +106,7 @@ describe('Partner Shop API data', () => {
   });
 
   it('filters the loaded products with category fields returned by the API', async () => {
-    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => String(input).endsWith('/shops/sample-shop')
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => String(input).endsWith('/shops/sample-shop?country=VN')
       ? response(shop)
       : response({ items: [product, laptop], page: 1, pageSize: 12, totalItems: 2, totalPages: 1 })));
     renderShop();
