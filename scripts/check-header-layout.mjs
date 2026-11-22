@@ -32,7 +32,50 @@ try {
   });
   await page.goto(origin, { waitUntil: 'networkidle' });
 
+  for (const colorScheme of ['light', 'dark']) {
+    await page.emulateMedia({ colorScheme });
+    await page.goto(origin, { waitUntil: 'networkidle' });
+    const palette = await page.evaluate(() => {
+      const style = selector => {
+        const element = document.querySelector(selector);
+        const computed = getComputedStyle(element);
+        return { background: computed.backgroundColor, color: computed.color, border: computed.borderColor };
+      };
+      return {
+        header: style('.site-header'),
+        logo: style('.brand-mark'),
+        activeNav: style('.desktop-nav a.active'),
+        search: style('.header-search'),
+        country: style('.country-selection'),
+        language: style('.header-language-control'),
+      };
+    });
+    if (colorScheme === 'light') {
+      assert.deepEqual(palette.header, { background: 'rgb(255, 255, 255)', color: 'rgb(23, 27, 36)', border: 'rgb(229, 231, 235)' });
+      assert.equal(palette.logo.background, 'rgb(255, 90, 0)');
+      assert.equal(palette.activeNav.background, 'rgb(255, 243, 235)');
+      assert.equal(palette.activeNav.color, 'rgb(255, 90, 0)');
+      assert.equal(palette.search.background, 'rgb(248, 249, 250)');
+      assert.equal(palette.country.background, 'rgb(255, 255, 255)');
+      assert.equal(palette.country.color, 'rgb(23, 27, 36)');
+      assert.equal(palette.language.background, 'rgb(255, 255, 255)');
+      assert.equal(palette.language.color, 'rgb(255, 90, 0)');
+    } else {
+      assert.deepEqual(palette.header, { background: 'rgb(19, 21, 26)', color: 'rgb(238, 240, 243)', border: 'rgb(42, 46, 55)' });
+      assert.equal(palette.logo.background, 'rgb(255, 122, 51)');
+      assert.equal(palette.activeNav.background, 'rgb(42, 27, 18)');
+      assert.equal(palette.activeNav.color, 'rgb(255, 122, 51)');
+      assert.equal(palette.search.background, 'rgb(29, 32, 40)');
+      assert.equal(palette.country.background, 'rgb(19, 21, 26)');
+      assert.equal(palette.country.color, 'rgb(238, 240, 243)');
+      assert.equal(palette.language.background, 'rgb(19, 21, 26)');
+      assert.equal(palette.language.color, 'rgb(255, 122, 51)');
+    }
+    console.log(`PASS ${colorScheme} home header palette: approved header, search, Country and language surfaces`);
+  }
+
   for (const width of [1440, 1024, 900, 768, 640, 390, 320]) {
+    await page.emulateMedia({ colorScheme: 'light' });
     await page.setViewportSize({ width, height: 900 });
     const layout = await page.evaluate(() => {
       const rect = selector => {
@@ -121,9 +164,34 @@ try {
     await page.getByRole('option', { name: 'VI — Tiếng Việt' }).click();
   }
 
+  await page.emulateMedia({ colorScheme: 'dark' });
+  for (const width of [1440, 820, 390, 320]) {
+    await page.setViewportSize({ width, height: 900 });
+    const layout = await page.evaluate(() => {
+      const bounds = selector => {
+        const rect = document.querySelector(selector).getBoundingClientRect();
+        return { left: rect.left, right: rect.right, width: rect.width };
+      };
+      return {
+        documentWidth: document.documentElement.scrollWidth,
+        country: bounds('.country-selection'),
+        language: bounds('.header-language-control'),
+        divider: bounds('.header-actions-divider'),
+      };
+    });
+    assert(layout.documentWidth <= width, `Dark header overflows at ${width}px: ${JSON.stringify(layout)}`);
+    assert(layout.country.width > 0 && layout.country.left >= 0 && layout.country.right <= width,
+      `Dark Country control fits at ${width}px: ${JSON.stringify(layout.country)}`);
+    assert(layout.language.width > 0 && layout.language.left >= 0 && layout.language.right <= width,
+      `Dark language control fits at ${width}px: ${JSON.stringify(layout.language)}`);
+    assert(layout.country.right < layout.divider.left && layout.divider.right < layout.language.left,
+      `Dark Country remains separate from language at ${width}px: ${JSON.stringify(layout)}`);
+    console.log(`PASS dark header layout ${width}px: no overflow; Country and language controls fit independently`);
+  }
+
   await page.setViewportSize({ width: 390, height: 844 });
   await page.emulateMedia({ colorScheme: 'dark' });
-  await page.goto(`${origin}/search`, { waitUntil: 'networkidle' });
+  await page.goto(origin, { waitUntil: 'networkidle' });
   const darkMobileHeader = await page.evaluate(() => {
     const color = element => getComputedStyle(element).color.match(/[\d.]+/g).slice(0, 3).map(Number);
     const background = element => getComputedStyle(element).backgroundColor.match(/[\d.]+/g).slice(0, 3).map(Number);
@@ -154,9 +222,9 @@ try {
     headerBackground: getComputedStyle(document.querySelector('.site-header')).backgroundColor,
     searchColor: getComputedStyle(document.querySelector('.mobile-search')).color,
   }));
-  assert.deepEqual(lightMobileHeader, { headerBackground: 'rgb(255, 255, 255)', searchColor: 'rgb(0, 0, 0)' },
-    `Light mobile header colors remain unchanged: ${JSON.stringify(lightMobileHeader)}`);
-  console.log('PASS light mobile header colors remain unchanged');
+  assert.deepEqual(lightMobileHeader, { headerBackground: 'rgb(255, 255, 255)', searchColor: 'rgb(23, 27, 36)' },
+    `Light home mobile header colors match the approved foreground: ${JSON.stringify(lightMobileHeader)}`);
+  console.log('PASS light home mobile header palette');
 
   for (const colorScheme of ['light', 'dark']) {
     await page.setViewportSize({ width: 1440, height: 900 });

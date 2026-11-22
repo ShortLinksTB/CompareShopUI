@@ -339,12 +339,16 @@ describe('fixed route themes', () => {
     expect(contrastRatio('#b93800', '#ffffff')).toBeGreaterThanOrEqual(3);
   });
 
-  it('keeps the dark 72px header override scoped to the home shell', () => {
-    expect(stylesheet).toMatch(/\.home-shell \.site-header\s*\{[^}]*color-scheme:\s*dark[^}]*height:\s*72px[^}]*background:\s*#15171c/);
-    expect(stylesheet).toMatch(/\.home-shell \.site-header \.desktop-nav a\.active\s*\{[^}]*background:\s*#ff5a00[^}]*color:\s*#fff/);
-    expect(stylesheet).toContain('.home-shell .site-header .header-links .header-language-control');
-    expect(stylesheet).toContain('background: #15171c;');
-    expect(stylesheet).not.toMatch(/(?:^|})\s*\.site-header\s*\{[^}]*background:\s*#15171c/);
+  it('matches the approved light and dark home header palettes', () => {
+    expect(stylesheet).toMatch(/\.home-shell \.site-header\s*\{[^}]*color-scheme:\s*light[^}]*height:\s*72px[^}]*background:\s*#fff/);
+    expect(stylesheet).toMatch(/\.home-shell \.site-header \.header-links \.header-language-control\s*\{[^}]*border-color:\s*#ff5a00[^}]*background:\s*#fff[^}]*color:\s*#ff5a00/);
+    expect(stylesheet).toMatch(/\.home-shell \.site-header \.header-links \.country-selection\s*\{[^}]*border-color:\s*#e5e7eb[^}]*background:\s*#fff[^}]*color:\s*#171b24/);
+    expect(stylesheet).toMatch(/@media\s*\(prefers-color-scheme:\s*dark\)[\s\S]*?\.home-shell \.site-header\s*\{[^}]*color-scheme:\s*dark[^}]*--border:\s*#2a2e37/);
+    expect(stylesheet).toMatch(/\.home-shell \.site-header \.header-links \.header-language-control\s*\{[^}]*border-color:\s*#ff7a33[^}]*background:\s*#13151a[^}]*color:\s*#ff7a33/);
+    expect(stylesheet).toMatch(/\.home-shell \.site-header \.header-links \.country-selection\s*\{[^}]*border-color:\s*#2a2e37[^}]*background:\s*#13151a[^}]*color:\s*#eef0f3/);
+    expect(stylesheet).toMatch(/\.home-shell \.site-header \.brand-mark\s*\{[^}]*background:\s*var\(--primary\)/);
+    expect(stylesheet).toMatch(/\.home-shell \.site-header \.desktop-nav a\.active\s*\{[^}]*background:\s*var\(--primary-soft\)[^}]*color:\s*var\(--primary\)/);
+    expect(stylesheet).not.toMatch(/\.home-shell \.site-header\s*\{[^}]*background:\s*#15171c/);
   });
 
   it('keeps popular category cards in a contained mobile grid', () => {
