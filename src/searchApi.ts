@@ -1,3 +1,5 @@
+import { withCountryContext } from './countryApi';
+
 const API_BASE_URL = 'https://api-compareshop-dev.giamha.online/api/v1';
 
 export interface SearchCategory {
@@ -31,8 +33,8 @@ async function get<T>(path: string): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export async function getCategories(): Promise<SearchCategory[]> {
-  const result = await get<{ items: SearchCategory[] }>('/categories');
+export async function getCategories(country = 'VN'): Promise<SearchCategory[]> {
+  const result = await get<{ items: SearchCategory[] }>(withCountryContext('/categories', country));
   if (!result || !Array.isArray(result.items)) throw new Error('Invalid categories response');
 
   // The API returns root categories by default. Category pages can target
@@ -48,7 +50,7 @@ export async function getCategories(): Promise<SearchCategory[]> {
       categories.push(category);
     });
     const childResults = await Promise.all(level.map(async category => {
-      const children = await get<{ items: SearchCategory[] }>(`/categories?parentId=${category.id}`);
+      const children = await get<{ items: SearchCategory[] }>(withCountryContext(`/categories?parentId=${category.id}`, country));
       if (!children || !Array.isArray(children.items)) throw new Error('Invalid categories response');
       return children.items.filter(child => child.parentId === category.id
         && Number.isInteger(child.id)
@@ -61,6 +63,7 @@ export async function getCategories(): Promise<SearchCategory[]> {
 }
 
 export async function getProducts(options: {
+  country?: string;
   page: number;
   pageSize: number;
   search?: string;
@@ -73,13 +76,15 @@ export async function getProducts(options: {
   if (options.categoryId !== undefined) params.set('categoryId', String(options.categoryId));
   if (options.minPrice !== undefined) params.set('minPrice', String(options.minPrice));
   if (options.maxPrice !== undefined) params.set('maxPrice', String(options.maxPrice));
+  params.set('country', options.country ?? 'VN');
   const result = await get<ProductPage>(`/products?${params}`);
   if (!result || !Array.isArray(result.items)) throw new Error('Invalid products response');
   return result;
 }
 
-export async function getSearchSuggestions(query: string, limit = 5): Promise<string[]> {
+export async function getSearchSuggestions(query: string, limit = 5, country = 'VN'): Promise<string[]> {
   const params = new URLSearchParams({ q: query, limit: String(limit) });
+  params.set('country', country);
   const result = await get<{ items: unknown[] }>(`/search/suggestions?${params}`);
   if (!result || !Array.isArray(result.items)) throw new Error('Invalid suggestions response');
   // The API returns product objects for matching products; older responses may

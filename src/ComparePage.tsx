@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { getCompareCandidates, getCompareProduct, type CompareProduct } from './compareApi';
 import { SafeImage } from './components/SafeImage';
 import { WishlistHeart } from './wishlist/WishlistHeart';
+import { useCountry } from './country';
 
 const STORAGE_KEY = 'compare-products';
 const money = (value: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(value);
@@ -20,6 +21,7 @@ function readSavedSlugs(): string[] {
 
 export function ComparePage() {
   const { language } = useLanguage();
+  const { country } = useCountry();
   const [slugs, setSlugs] = useState(readSavedSlugs);
   const [products, setProducts] = useState<CompareProduct[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,6 +29,7 @@ export function ComparePage() {
   const [candidates, setCandidates] = useState<{ slug: string; name: string }[]>([]);
   const [candidatesError, setCandidatesError] = useState(false);
   const request = useRef(0);
+  const candidateRequest = useRef(0);
 
   const load = useCallback(() => {
     const current = ++request.current;
@@ -35,7 +38,7 @@ export function ComparePage() {
     setProducts([]);
     setError(false);
     setLoading(true);
-    Promise.all(saved.map(slug => getCompareProduct(slug).then(product => ({ slug, product }))))
+    Promise.all(saved.map(slug => getCompareProduct(slug, country).then(product => ({ slug, product }))))
       .then(results => {
         if (current === request.current) setProducts(results.map(({ product }) => product));
       })
@@ -45,13 +48,17 @@ export function ComparePage() {
       .finally(() => {
         if (current === request.current) setLoading(false);
       });
-  }, []);
+  }, [country]);
 
   useEffect(() => { load(); }, [load]);
   const loadCandidates = useCallback(() => {
+    const current = ++candidateRequest.current;
+    setCandidates([]);
     setCandidatesError(false);
-    getCompareCandidates().then(setCandidates).catch(() => { setCandidates([]); setCandidatesError(true); });
-  }, []);
+    getCompareCandidates(country).then(result => { if (current === candidateRequest.current) setCandidates(result); }).catch(() => {
+      if (current === candidateRequest.current) { setCandidates([]); setCandidatesError(true); }
+    });
+  }, [country]);
   useEffect(() => { loadCandidates(); }, [loadCandidates]);
 
   const add = (slug: string) => {

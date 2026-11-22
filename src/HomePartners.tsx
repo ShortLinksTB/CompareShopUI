@@ -1,26 +1,36 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from './i18n';
 import { getHomePartners, type HomePartner } from './partnersApi';
+import { useCountry } from './country';
 
 export function HomePartners() {
   const { t } = useLanguage();
+  const { country } = useCountry();
   const [partners, setPartners] = useState<HomePartner[] | null>(null);
+  const [error, setError] = useState(false);
+  const requestId = useRef(0);
+  const load = (selectedCountry = country) => {
+    const currentRequestId = ++requestId.current;
+    setPartners(null);
+    setError(false);
+    getHomePartners(selectedCountry).then(result => {
+      if (currentRequestId === requestId.current) setPartners(result);
+    }).catch(() => {
+      if (currentRequestId === requestId.current) { setPartners(null); setError(true); }
+    });
+  };
 
   useEffect(() => {
-    let active = true;
-    getHomePartners().then(result => {
-      if (active) setPartners(result);
-    }).catch(() => {
-      if (active) setPartners([]);
-    });
-    return () => { active = false; };
-  }, []);
+    load(country);
+    return () => { requestId.current += 1; };
+  }, [country]);
 
-  if (partners?.length === 0) return null;
+  if (partners?.length === 0 && !error) return null;
 
   return <section className="partners" aria-label={t('partnersTitle')}>
     <div className="partners-heading"><span className="eyebrow">{t('trustedPlaces')}</span><h2>{t('partnersTitle')}</h2><p>{t('partnerDescription')}</p></div>
+    {error && <p role="alert">{t('searchSuggestionsUnavailable')} <button type="button" className="button button-ghost" onClick={() => load()}>{t('tryAgain')}</button></p>}
     <div className="partner-grid" aria-busy={partners === null}>
       {partners === null
         ? Array.from({ length: 12 }, (_, index) => <span className="partner-card partner-placeholder" key={index} aria-hidden="true" />)

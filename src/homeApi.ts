@@ -1,3 +1,5 @@
+import { withCountryContext } from './countryApi';
+
 const API_BASE_URL = 'https://api-compareshop-dev.giamha.online/api/v1';
 
 export interface HomeCategory {
@@ -36,10 +38,10 @@ async function get<T>(path: string, fetcher: typeof fetch, init?: RequestInit): 
   return response.json() as Promise<T>;
 }
 
-async function getHomeShowcase(previewToken: string | undefined, fetcher: typeof fetch): Promise<HomeShowcaseDto> {
-  if (!previewToken) return get<HomeShowcaseDto>('/home/showcase', fetcher);
+async function getHomeShowcase(previewToken: string | undefined, fetcher: typeof fetch, country: string): Promise<HomeShowcaseDto> {
+  if (!previewToken) return get<HomeShowcaseDto>(withCountryContext('/home/showcase', country), fetcher);
 
-  return get<HomeShowcaseDto>('/home/showcase/preview', fetcher, {
+  return get<HomeShowcaseDto>(withCountryContext('/home/showcase/preview', country), fetcher, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ token: previewToken }),
@@ -47,12 +49,12 @@ async function getHomeShowcase(previewToken: string | undefined, fetcher: typeof
   });
 }
 
-export async function getHomeData(previewToken?: string) {
+export async function getHomeData(previewToken?: string, country = 'VN') {
   const fetcher = globalThis.fetch.bind(globalThis);
-  const categoryResponse = await get<{ items: Omit<HomeCategory, 'productCount'>[] }>('/categories', fetcher);
+  const categoryResponse = await get<{ items: Omit<HomeCategory, 'productCount'>[] }>(withCountryContext('/categories', country), fetcher);
   const [showcase, ...categoryCounts] = await Promise.all([
-    getHomeShowcase(previewToken, fetcher),
-    ...categoryResponse.items.map(category => get<PageDto<HomeProduct>>(`/products?categoryId=${category.id}&page=1&pageSize=1`, fetcher)),
+    getHomeShowcase(previewToken, fetcher, country),
+    ...categoryResponse.items.map(category => get<PageDto<HomeProduct>>(withCountryContext(`/products?categoryId=${category.id}&page=1&pageSize=1`, country), fetcher)),
   ]);
   const categories = categoryResponse.items.map((category, index) => ({
     ...category,

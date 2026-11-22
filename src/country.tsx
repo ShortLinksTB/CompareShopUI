@@ -1,99 +1,125 @@
-import { createContext, useContext, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
+import { getActiveCountries, type ActiveCountry } from './countryApi';
 
-export const ENABLED_COUNTRIES = [
-  { code: 'VN', name: 'Vietnam' },
-  { code: 'ID', name: 'Indonesia' },
-] as const;
-
-export type CountryCode = (typeof ENABLED_COUNTRIES)[number]['code'];
-
-const DEFAULT_COUNTRY: CountryCode = 'VN';
+const DEFAULT_COUNTRY = 'VN';
 const COUNTRY_STORAGE_KEY = 'compareshop.country';
 
 type CountryState = {
-  country: CountryCode;
-  suggestion: CountryCode | null;
+  country: string;
+  countries: ActiveCountry[];
+  suggestion: string | null;
   persistenceError: boolean;
-  selectCountry: (country: CountryCode) => void;
+  selectCountry: (country: string) => void;
   dismissSuggestion: () => void;
 };
 
 const CountryContext = createContext<CountryState | null>(null);
 
-function isEnabledCountry(value: unknown): value is CountryCode {
-  return typeof value === 'string' && ENABLED_COUNTRIES.some(country => country.code === value);
-}
-
-function getLocaleRegion(locale: unknown): CountryCode | null {
+function getLocaleRegion(locale: unknown): string | null {
   if (typeof locale !== 'string' || !locale.trim()) return null;
-  try {
-    const region = new Intl.Locale(locale).region?.toUpperCase();
-    return isEnabledCountry(region) ? region : null;
-  } catch {
-    return null;
-  }
+  try { return new Intl.Locale(locale).region?.toUpperCase() ?? null; } catch { return null; }
 }
 
-function getLocaleSuggestion(): CountryCode | null {
+function getLocaleSuggestion(countries: ActiveCountry[]): string | null {
+  const supported = new Set(countries.map(country => country.code));
   try {
-    const locales = navigator.languages;
-    if (Array.isArray(locales)) {
-      for (const locale of locales) {
+    if (Array.isArray(navigator.languages)) {
+      for (const locale of navigator.languages) {
         const region = getLocaleRegion(locale);
-        if (region) return region;
+        if (region && supported.has(region)) return region;
       }
     }
-  } catch {
-    // A restricted or unavailable locale list must not block the page.
-  }
-
+  } catch { /* Restricted locale access must not block country selection. */ }
   try {
-    return getLocaleRegion(navigator.language);
-  } catch {
-    return null;
-  }
+    const region = getLocaleRegion(navigator.language);
+    return region && supported.has(region) ? region : null;
+  } catch { return null; }
 }
 
-function readSavedCountry(): CountryCode | null {
-  try {
-    const stored = window.localStorage.getItem(COUNTRY_STORAGE_KEY);
-    return isEnabledCountry(stored) ? stored : null;
-  } catch {
-    return null;
-  }
+function readSavedCountry(): string | null {
+  try { return window.localStorage.getItem(COUNTRY_STORAGE_KEY); } catch { return null; }
 }
 
-function initializeCountry() {
-  const savedCountry = readSavedCountry();
-  if (savedCountry) return { country: savedCountry, suggestion: null };
-  return { country: DEFAULT_COUNTRY, suggestion: getLocaleSuggestion() };
+function CountryLoadState({ retry, loading }: { retry: () => void; loading: boolean }) {
+  return <main className="country-load-state" role={loading ? 'status' : undefined}>
+    {loading ? <p>Loading available countries…</p> : <div role="alert">
+      <h1>Country selection is unavailable</h1>
+      <p>We couldn’t load the active countries and catalog. Please try again.</p>
+      <button className="button button-primary" type="button" onClick={retry}>Try again</button>
+    </div>}
+  </main>;
 }
 
-export function CountryProvider({ children }: { children: ReactNode }) {
-  const [initial] = useState(initializeCountry);
-  const [country, setCountry] = useState<CountryCode>(initial.country);
-  const [suggestion, setSuggestion] = useState<CountryCode | null>(initial.suggestion);
+export function CountryProvider({ children, initialCountries }: { children: ReactNode; initialCountries?: ActiveCountry[] }) {
+  const [countries, setCountries] = useState<ActiveCountry[]>(initialCountries ?? []);
+  const [country, setCountry] = useState(() => {
+    const savedCountry = readSavedCountry();
+    return savedCountry && initialCountries?.some(item => item.code === savedCountry) ? savedCountry : DEFAULT_COUNTRY;
+  });
+  const [suggestion, setSuggestion] = useState<string | null>(() => {
+    const savedCountry = readSavedCountry();
+    return initialCountries && !(savedCountry && initialCountries.some(item => item.code === savedCountry))
+      ? getLocaleSuggestion(initialCountries)
+      : null;
+  });
   const [persistenceError, setPersistenceError] = useState(false);
+  const [loading, setLoading] = useState(initialCountries === undefined);
+  const [loadError, setLoadError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+
+  useEffect(() => {
+    if (initialCountries) {
+      if (!initialCountries.some(item => item.code === DEFAULT_COUNTRY)) {
+        setLoadError(true);
+        setLoading(false);
+        return;
+      }
+      setCountries(initialCountries);
+      setLoading(false);
+      return;
+    }
+    let active = true;
+    setLoading(true);
+    setLoadError(false);
+    getActiveCountries().then(activeCountries => {
+      if (!active) return;
+      if (!activeCountries.some(item => item.code === DEFAULT_COUNTRY)) throw new Error('VN is unavailable');
+      setCountries(activeCountries);
+      const savedCountry = readSavedCountry();
+      if (savedCountry && activeCountries.some(item => item.code === savedCountry)) {
+        setCountry(savedCountry);
+        setSuggestion(null);
+      } else {
+        setCountry(DEFAULT_COUNTRY);
+        setSuggestion(getLocaleSuggestion(activeCountries));
+      }
+    }).catch(() => {
+      if (active) setLoadError(true);
+    }).finally(() => {
+      if (active) setLoading(false);
+    });
+    return () => { active = false; };
+  }, [initialCountries, loadAttempt]);
+
+  const selectCountry = useCallback((nextCountry: string) => {
+    if (!countries.some(item => item.code === nextCountry)) return;
+    setCountry(nextCountry);
+    setSuggestion(null);
+    setPersistenceError(false);
+    try { window.localStorage.setItem(COUNTRY_STORAGE_KEY, nextCountry); } catch { setPersistenceError(true); }
+  }, [countries]);
 
   const value = useMemo<CountryState>(() => ({
     country,
+    countries,
     suggestion,
     persistenceError,
-    selectCountry: nextCountry => {
-      if (!isEnabledCountry(nextCountry)) return;
-      setCountry(nextCountry);
-      setSuggestion(null);
-      setPersistenceError(false);
-      try {
-        window.localStorage.setItem(COUNTRY_STORAGE_KEY, nextCountry);
-      } catch {
-        setPersistenceError(true);
-      }
-    },
+    selectCountry,
     dismissSuggestion: () => setSuggestion(null),
-  }), [country, suggestion, persistenceError]);
+  }), [country, countries, suggestion, persistenceError, selectCountry]);
 
+  if (loading || loadError) return <CountryLoadState loading={loading} retry={() => setLoadAttempt(attempt => attempt + 1)} />;
   return <CountryContext.Provider value={value}>{children}</CountryContext.Provider>;
 }
 

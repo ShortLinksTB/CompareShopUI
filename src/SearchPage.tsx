@@ -5,6 +5,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { getCategories, getProducts, type ProductPage, type SearchCategory } from './searchApi';
 import { ProductCardImage } from './components/ProductCardImage';
 import { WishlistHeart } from './wishlist/WishlistHeart';
+import { useCountry } from './country';
 
 const PAGE_SIZE = 12;
 const money = (value: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(value);
@@ -22,12 +23,13 @@ function PriceFilters({ minPrice, maxPrice, setPrice }: { minPrice?: number; max
 
 export function SearchPage() {
   const { language } = useLanguage();
+  const { country } = useCountry();
   const { slug } = useParams();
   const [params] = useSearchParams();
   const query = params.get('q') || '';
   const categoryQuery = params.get('category') || '';
   const [categories, setCategories] = useState<SearchCategory[]>([]);
-  const [categoriesLoaded, setCategoriesLoaded] = useState(false);
+  const [categoriesLoadedFor, setCategoriesLoadedFor] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [data, setData] = useState<ProductPage | null>(null);
   const [loading, setLoading] = useState(true);
@@ -39,15 +41,20 @@ export function SearchPage() {
   useEffect(() => { setPage(1); }, [query, slug, categoryQuery, minPrice, maxPrice]);
   useEffect(() => {
     let active = true;
-    getCategories().then(items => { if (active) { setCategories(items); setCategoriesLoaded(true); setCategoryError(false); } }).catch(() => { if (active) { setCategoriesLoaded(true); setCategoryError(true); } });
+    setCategories([]);
+    setCategoriesLoadedFor(null);
+    setCategoryError(false);
+    setData(null);
+    setLoading(true);
+    getCategories(country).then(items => { if (active) { setCategories(items); setCategoriesLoadedFor(country); setCategoryError(false); } }).catch(() => { if (active) { setCategoriesLoadedFor(country); setCategoryError(true); } });
     return () => { active = false; };
-  }, []);
+  }, [country]);
 
   const selectedCategory = useMemo(() => {
     const routeSlug = slug || categoryQuery;
     return routeSlug ? categories.find(category => category.slug === routeSlug) : undefined;
   }, [categories, slug, categoryQuery]);
-  const categoryResolved = !(slug || categoryQuery) || categoriesLoaded;
+  const categoryResolved = !(slug || categoryQuery) || categoriesLoadedFor === country;
 
   useEffect(() => {
     if (!categoryResolved) return;
@@ -60,12 +67,12 @@ export function SearchPage() {
     let active = true;
     setLoading(true);
     setError(false);
-    getProducts({ page, pageSize: PAGE_SIZE, ...(query ? { search: query } : {}), ...(selectedCategory ? { categoryId: selectedCategory.id } : {}), ...(minPrice !== undefined ? { minPrice } : {}), ...(maxPrice !== undefined ? { maxPrice } : {}) })
+    getProducts({ country, page, pageSize: PAGE_SIZE, ...(query ? { search: query } : {}), ...(selectedCategory ? { categoryId: selectedCategory.id } : {}), ...(minPrice !== undefined ? { minPrice } : {}), ...(maxPrice !== undefined ? { maxPrice } : {}) })
       .then(result => { if (active) setData(result); })
       .catch(() => { if (active) { setData(null); setError(true); } })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [page, query, selectedCategory, categoryResolved, slug, categoryQuery, categoryError, minPrice, maxPrice]);
+  }, [page, query, selectedCategory, categoryResolved, slug, categoryQuery, categoryError, minPrice, maxPrice, country]);
 
   const totalPages = Math.max(1, data?.totalPages || 0);
   const filterProps = { minPrice, maxPrice, setPrice: (min?: number, max?: number) => { setMinPrice(min); setMaxPrice(max); } };
@@ -73,12 +80,12 @@ export function SearchPage() {
     if (categoryError) {
       setCategoryError(false);
       setCategories([]);
-      setCategoriesLoaded(false);
-      getCategories().then(items => { setCategories(items); setCategoriesLoaded(true); }).catch(() => { setCategoriesLoaded(true); setCategoryError(true); });
+      setCategoriesLoadedFor(null);
+      getCategories(country).then(items => { setCategories(items); setCategoriesLoadedFor(country); }).catch(() => { setCategoriesLoadedFor(country); setCategoryError(true); });
     } else {
       setError(false);
       setLoading(true);
-      getProducts({ page, pageSize: PAGE_SIZE, ...(query ? { search: query } : {}), ...(selectedCategory ? { categoryId: selectedCategory.id } : {}), ...(minPrice !== undefined ? { minPrice } : {}), ...(maxPrice !== undefined ? { maxPrice } : {}) }).then(setData).catch(() => setError(true)).finally(() => setLoading(false));
+      getProducts({ country, page, pageSize: PAGE_SIZE, ...(query ? { search: query } : {}), ...(selectedCategory ? { categoryId: selectedCategory.id } : {}), ...(minPrice !== undefined ? { minPrice } : {}), ...(maxPrice !== undefined ? { maxPrice } : {}) }).then(setData).catch(() => setError(true)).finally(() => setLoading(false));
     }
   };
 

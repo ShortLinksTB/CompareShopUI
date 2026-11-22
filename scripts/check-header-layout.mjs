@@ -24,7 +24,12 @@ try {
 
   browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-  await page.route('**/api/v1/**', route => route.fulfill({ json: { items: [], page: 1, pageSize: 10, totalItems: 0, totalPages: 0 } }));
+  await page.route('**/api/v1/**', route => {
+    const pathname = new URL(route.request().url()).pathname;
+    return route.fulfill({ json: pathname.endsWith('/countries')
+      ? { items: [{ id: 1, code: 'VN', name: 'Vietnam' }, { id: 2, code: 'ID', name: 'Indonesia' }] }
+      : { items: [], page: 1, pageSize: 10, totalItems: 0, totalPages: 0 } });
+  });
   await page.goto(origin, { waitUntil: 'networkidle' });
 
   for (const width of [1440, 1024, 900, 768, 640, 390, 320]) {
@@ -56,7 +61,9 @@ try {
           value: language.querySelector('b')?.textContent,
         } : null,
         searchPlaceholder: document.querySelector('.header-search input')?.placeholder,
-        countryPicker: document.querySelector('#country-selection'),
+        countryControl: rect('.country-selection'),
+        countryPicker: document.querySelector('.country-switcher')?.textContent,
+        countryCode: document.querySelector('.country-code')?.textContent,
         search: rect('.header-search-wrap'),
         controls,
         actionStyles: [...document.querySelectorAll('.header-action, .language-trigger')].map(element => {
@@ -74,11 +81,14 @@ try {
     assert.notEqual(layout.languageDisplay, 'none', `Language selector stays visible at ${width}px`);
     assert(layout.languageControl?.width > 0 && layout.languageControl.left >= 0 && layout.languageControl.right <= width,
       `Language selector fits at ${width}px: ${JSON.stringify(layout.languageControl)}`);
-    assert.equal(layout.countryPicker, null, 'Header does not render country selection');
+    assert(layout.countryControl?.width > 0 && layout.countryControl.left >= 0 && layout.countryControl.right <= width,
+      `Country selector fits at ${width}px: ${JSON.stringify(layout.countryControl)}`);
+    assert.equal(layout.countryPicker?.trim(), 'VN', 'Country selector shows the default Country code');
+    assert.equal(layout.countryCode, 'VN', 'Country code is visible in the selector');
     assert.equal(layout.searchPlaceholder, 'Tìm sản phẩm, thương hiệu, mã SKU…', 'Search uses the approved placeholder');
     if (width === 1440) {
       assert.notEqual(layout.desktopNav, 'none', 'Wide desktop keeps desktop navigation visible');
-      assert.deepEqual(layout.controls, ['header-action', 'header-action', 'header-actions-divider', 'header-language-control']);
+      assert.deepEqual(layout.controls, ['header-action header-sign-in', 'country-selection', 'header-actions-divider', 'header-language-control']);
     }
     if (width === 1024) {
       assert.equal(layout.desktopNav, 'none', 'Desktop navigation collapses at 1024px');
@@ -106,7 +116,7 @@ try {
       selectedLanguage: document.querySelector('.language-trigger b')?.textContent?.toLowerCase(),
     }));
     assert.deepEqual(languageState, { documentLanguage: 'en', country: null, selectedLanguage: 'en' },
-      `Language selection persists without country UI at ${width}px`);
+      `Language selection remains independent from the default Country at ${width}px`);
     await page.locator('.language-trigger').click();
     await page.getByRole('option', { name: 'VI — Tiếng Việt' }).click();
   }
@@ -147,6 +157,50 @@ try {
   assert.deepEqual(lightMobileHeader, { headerBackground: 'rgb(255, 255, 255)', searchColor: 'rgb(0, 0, 0)' },
     `Light mobile header colors remain unchanged: ${JSON.stringify(lightMobileHeader)}`);
   console.log('PASS light mobile header colors remain unchanged');
+
+  for (const colorScheme of ['light', 'dark']) {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.emulateMedia({ colorScheme });
+    await page.goto(`${origin}/search`, { waitUntil: 'networkidle' });
+    const countryButton = page.getByRole('button', { name: 'Country: Vietnam' });
+    await countryButton.click();
+    const headerVisual = await page.evaluate(() => {
+      const bounds = selector => {
+        const rect = document.querySelector(selector).getBoundingClientRect();
+        return { left: rect.left, right: rect.right, width: rect.width };
+      };
+      const color = selector => getComputedStyle(document.querySelector(selector)).color;
+      const background = selector => getComputedStyle(document.querySelector(selector)).backgroundColor;
+      const border = selector => getComputedStyle(document.querySelector(selector)).borderColor;
+      return {
+        country: bounds('.country-selection'),
+        divider: bounds('.header-actions-divider'),
+        language: bounds('.header-language-control'),
+        countryColor: color('.country-selection'),
+        countryBackground: background('.country-selection'),
+        countryBorder: border('.country-selection'),
+        menuBackground: background('.country-menu'),
+        menuColor: color('.country-menu'),
+        selectedBackground: background('.country-option.selected'),
+        countryPin: getComputedStyle(document.querySelector('.country-pin')).color,
+      };
+    });
+    assert(headerVisual.country.right < headerVisual.divider.left, `${colorScheme} Country selector precedes the language divider: ${JSON.stringify(headerVisual)}`);
+    assert(headerVisual.divider.right < headerVisual.language.left, `${colorScheme} language selector remains separate: ${JSON.stringify(headerVisual)}`);
+    assert(headerVisual.country.width > 70 && headerVisual.country.right <= 1440, `${colorScheme} Country pill fits at desktop width: ${JSON.stringify(headerVisual)}`);
+    if (colorScheme === 'light') {
+      assert.equal(headerVisual.countryBackground, 'rgb(255, 255, 255)');
+      assert.equal(headerVisual.menuBackground, 'rgb(255, 255, 255)');
+      assert.equal(headerVisual.countryColor, 'rgb(23, 27, 36)');
+    } else {
+      assert.equal(headerVisual.countryBackground, 'rgb(19, 21, 26)');
+      assert.equal(headerVisual.menuBackground, 'rgb(19, 21, 26)');
+      assert.equal(headerVisual.countryColor, 'rgb(238, 240, 243)');
+    }
+    assert.notEqual(headerVisual.countryBorder, 'rgba(0, 0, 0, 0)', `${colorScheme} Country pill keeps a visible outline`);
+    assert.notEqual(headerVisual.selectedBackground, headerVisual.menuBackground, `${colorScheme} selected Country is distinguished in the menu`);
+    console.log(`PASS ${colorScheme} header Country pill and open menu match the approved ordering and theme`);
+  }
 } finally {
   await browser?.close();
   server.kill();

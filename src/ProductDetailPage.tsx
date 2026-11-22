@@ -5,6 +5,7 @@ import { Link, useParams } from 'react-router-dom';
 import { getProductDetail, productApiBaseUrl, type DetailOffer, type ProductDetail, type RelatedProduct } from './productApi';
 import { SafeImage } from './components/SafeImage';
 import { WishlistHeart } from './wishlist/WishlistHeart';
+import { useCountry } from './country';
 
 const money = (value: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(value);
 const age = (value: string, language: Language) => {
@@ -75,6 +76,7 @@ function ProductDetailContent({ data }: { data: DetailData }) {
 
 export function ProductDetailPage() {
   const { language } = useLanguage();
+  const { country } = useCountry();
   const { slug = '' } = useParams();
   const [data, setData] = useState<DetailData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -84,7 +86,7 @@ export function ProductDetailPage() {
     const currentRequestId = ++requestId.current;
     setLoading(true);
     setError(false);
-    getProductDetail(slug).then(result => {
+    getProductDetail(slug, country).then(result => {
       if (currentRequestId === requestId.current) setData(result);
     }).catch(() => {
       if (currentRequestId === requestId.current) { setData(null); setError(true); }
@@ -92,7 +94,7 @@ export function ProductDetailPage() {
       if (currentRequestId === requestId.current) setLoading(false);
     });
   };
-  useEffect(() => { load(); }, [slug]);
+  useEffect(() => { load(); }, [slug, country]);
 
   if (loading) return <p className="detail-state" role="status">{uiText(language, 'Đang tải thông tin sản phẩm...')}</p>;
   if (error || !data) return <div className="empty-state product-error-state" role="alert"><h2>{uiText(language, error ? 'Không thể tải thông tin sản phẩm' : 'Không tìm thấy sản phẩm')}</h2><p>{uiText(language, 'Vui lòng thử lại sau.')}</p><button className="button button-primary" onClick={load}>{uiText(language, 'Thử lại')}</button><Link to="/search">{uiText(language, 'Quay lại tìm kiếm')}</Link></div>;

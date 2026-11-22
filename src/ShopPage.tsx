@@ -4,6 +4,7 @@ import { uiText } from './uiCopy';
 import { Link, useParams } from 'react-router-dom';
 import { getShop, getShopProducts, type Shop, type ShopProduct, type ShopProductPage } from './shopApi';
 import { ProductCardImage } from './components/ProductCardImage';
+import { useCountry } from './country';
 
 const money = (value: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(value);
 
@@ -45,6 +46,7 @@ function ShopContent({ shop, products }: { shop: Shop; products: ShopProductPage
 
 export function ShopPage() {
   const { language } = useLanguage();
+  const { country } = useCountry();
   const { slug = '' } = useParams();
   const [shop, setShop] = useState<Shop | null>(null);
   const [products, setProducts] = useState<ShopProductPage | null>(null);
@@ -56,8 +58,8 @@ export function ShopPage() {
     const currentRequestId = ++requestId.current;
     setLoading(true);
     setError(false);
-    getShop(slug).then(async result => {
-      const shopProducts = await getShopProducts(result.id);
+    getShop(slug, country).then(async result => {
+      const shopProducts = await getShopProducts(result.id, 1, 12, country);
       if (currentRequestId === requestId.current) { setShop(result); setProducts(shopProducts); }
     }).catch(() => {
       if (currentRequestId === requestId.current) { setShop(null); setProducts(null); setError(true); }
@@ -66,7 +68,7 @@ export function ShopPage() {
     });
   };
 
-  useEffect(() => { load(); return () => { requestId.current += 1; }; }, [slug]);
+  useEffect(() => { load(); return () => { requestId.current += 1; }; }, [slug, country]);
 
   if (loading) return <p className="detail-state" role="status">{uiText(language, 'Đang tải thông tin cửa hàng...')}</p>;
   if (error) return <div className="empty-state" role="alert"><h2>{uiText(language, 'Không thể tải thông tin cửa hàng')}</h2><p>{uiText(language, 'Vui lòng thử lại sau.')}</p><button className="button button-primary" onClick={load}>{uiText(language, 'Thử lại')}</button></div>;
