@@ -1,4 +1,5 @@
 const API_BASE_URL = 'https://api-compareshop-dev.giamha.online/api/v1';
+import { withCountryContext } from './countryApi';
 
 export interface HomePartner {
   name: string;
@@ -6,8 +7,8 @@ export interface HomePartner {
   websiteUrl: string | null;
 }
 
-export async function getHomePartners(): Promise<HomePartner[]> {
-  const response = await fetch(`${API_BASE_URL}/partners`);
+export async function getHomePartners(country = 'VN'): Promise<HomePartner[]> {
+  const response = await fetch(`${API_BASE_URL}${withCountryContext('/partners', country)}`);
   if (!response.ok) throw new Error(`API request failed (${response.status})`);
   const result: unknown = await response.json();
   if (!Array.isArray(result) || !result.every(isHomePartner)) throw new Error('Invalid partners response');

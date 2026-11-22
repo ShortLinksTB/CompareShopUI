@@ -8,6 +8,7 @@ import { CountryProvider } from './country';
 import { AuthSessionProvider, type AuthSessionValue } from './auth/AuthSession';
 import { ProductDetailPage } from './ProductDetailPage';
 import stylesheet from './styles.css?inline';
+import { TEST_COUNTRIES } from './testCountryData';
 
 const authMock = vi.hoisted(() => ({
   getToken: vi.fn<() => Promise<string | null>>(),
@@ -30,7 +31,7 @@ const products = {
 
 function renderApp(status: AuthSessionValue['status'] = window.location.pathname === '/account' ? 'authenticated' : 'anonymous') {
   const authSession: AuthSessionValue = { status, user: status === 'authenticated' ? { id: 'test-user', displayName: 'Trần Minh Quân', email: 'quanquan@example.test' } : null, getAccessToken: authMock.getToken, signIn: authMock.signIn, signOut: vi.fn() };
-  return render(<CountryProvider><LanguageProvider><AuthSessionProvider value={authSession}><BrowserRouter><App /></BrowserRouter></AuthSessionProvider></LanguageProvider></CountryProvider>);
+  return render(<CountryProvider initialCountries={TEST_COUNTRIES}><LanguageProvider><AuthSessionProvider value={authSession}><BrowserRouter><App /></BrowserRouter></AuthSessionProvider></LanguageProvider></CountryProvider>);
 }
 
 function renderAppAt(path: string, status?: AuthSessionValue['status']) {
@@ -40,7 +41,7 @@ function renderAppAt(path: string, status?: AuthSessionValue['status']) {
 
 function renderAppAtWithSession(path: string, session: AuthSessionValue) {
   window.history.pushState({}, '', path);
-  return render(<CountryProvider><LanguageProvider><AuthSessionProvider value={session}><BrowserRouter><App /></BrowserRouter></AuthSessionProvider></LanguageProvider></CountryProvider>);
+  return render(<CountryProvider initialCountries={TEST_COUNTRIES}><LanguageProvider><AuthSessionProvider value={session}><BrowserRouter><App /></BrowserRouter></AuthSessionProvider></LanguageProvider></CountryProvider>);
 }
 
 function setColorScheme(theme: 'light' | 'dark') {
@@ -138,7 +139,7 @@ describe('browser storage failures', () => {
 
     renderAppAt('/');
 
-    expect(screen.queryByRole('combobox', { name: 'Country' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Country: Vietnam' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Change language' })).toBeTruthy();
     expect(document.documentElement.lang).toBe('vi');
     expect(screen.getByRole('link', { name: 'Trang chủ' })).toBeTruthy();
@@ -153,7 +154,7 @@ describe('browser storage failures', () => {
     localStorage.setItem('giatot-language', 'en');
     renderAppAt('/');
 
-    expect(screen.queryByRole('combobox', { name: 'Country' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Country: Vietnam' })).toBeTruthy();
     expect(document.documentElement.lang).toBe('en');
     expect(screen.getByRole('button', { name: 'Change language' }).textContent).toContain('EN');
     fireEvent.click(screen.getByRole('button', { name: 'Change language' }));
@@ -171,7 +172,8 @@ describe('browser storage failures', () => {
     const actions = screen.getByRole('navigation', { name: 'Header actions' });
     const controls = Array.from(actions.children);
     expect(controls[0].textContent).toContain('Minh Anh');
-    expect(controls[1].className).toContain('header-actions-divider');
+    expect(controls[1].className).toContain('country-selection');
+    expect(controls[2].className).toContain('header-actions-divider');
     const languageControl = actions.querySelector('.header-language-control');
     expect(languageControl).toBeTruthy();
     expect(languageControl?.querySelector('button[aria-label="Change language"]')).toBeTruthy();
@@ -185,7 +187,7 @@ describe('browser storage failures', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Change language' }));
     expect(screen.getByRole('listbox', { name: 'Choose language' })).toBeTruthy();
     expect(screen.getByRole('option', { name: 'VI — Tiếng Việt' }).getAttribute('aria-selected')).toBe('true');
-    expect(screen.getByText('VN')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Country: Vietnam' })).toBeTruthy();
     expect(screen.getByText('EN')).toBeTruthy();
     expect(screen.getByText('ID')).toBeTruthy();
     fireEvent.click(screen.getByRole('option', { name: 'EN — English' }));
@@ -403,6 +405,28 @@ describe('fixed route themes', () => {
 });
 
 describe('Home API data', () => {
+  it('restores a saved active Country and refreshes home data when the shopper switches countries', async () => {
+    localStorage.setItem('compareshop.country', 'ID');
+    const requestedUrls: string[] = [];
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      requestedUrls.push(url);
+      if (url.includes('/categories?country=')) return response({ items: [] });
+      if (url.includes('/home/showcase?country=')) return response({ featured: [], interestedComputers: [] });
+      if (url.includes('/partners?country=')) return response([]);
+      return response({ items: [], page: 1, pageSize: 1, totalItems: 0, totalPages: 0 });
+    }));
+    renderAppAt('/');
+
+    const countryPicker = await screen.findByRole('button', { name: 'Country: Indonesia' });
+    await waitFor(() => expect(requestedUrls).toContain('https://api-compareshop-dev.giamha.online/api/v1/home/showcase?country=ID'));
+    fireEvent.click(countryPicker);
+    fireEvent.click(screen.getByRole('option', { name: 'Vietnam' }));
+    await waitFor(() => expect(requestedUrls).toContain('https://api-compareshop-dev.giamha.online/api/v1/home/showcase?country=VN'));
+    expect(localStorage.getItem('compareshop.country')).toBe('VN');
+    expect(document.documentElement.lang).toBe('vi');
+  });
+
   it('exchanges the Admin Home Showcase fragment before requests and stays noindex while the preview is pending', async () => {
     const draftProduct = { ...products.items[0], id: 77, slug: 'draft-phone', name: 'Draft Phone' };
     window.history.replaceState({}, '', '/#homeShowcasePreview=one-time-secret');
@@ -413,9 +437,9 @@ describe('Home API data', () => {
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       firstFetch ??= { url, hash: window.location.hash };
-      if (url.endsWith('/partners')) return response([]);
-      if (url.endsWith('/categories')) return response({ items: [] });
-      if (url.endsWith('/home/showcase/preview')) {
+      if (url.endsWith('/partners?country=VN')) return response([]);
+      if (url.endsWith('/categories?country=VN')) return response({ items: [] });
+      if (url.endsWith('/home/showcase/preview?country=VN')) {
         previewRequest = init;
         return previewResponse;
       }
@@ -432,7 +456,7 @@ describe('Home API data', () => {
     expect(previewRequest?.method).toBe('POST');
     expect(previewRequest?.cache).toBe('no-store');
     expect(previewRequest?.body).toBe(JSON.stringify({ token: 'one-time-secret' }));
-    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/home/showcase'))).toBe(false);
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/home/showcase?country=VN'))).toBe(false);
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes('one-time-secret'))).toBe(false);
 
     await act(async () => resolvePreview(await response({ featured: [draftProduct], interestedComputers: [] })));
@@ -444,9 +468,9 @@ describe('Home API data', () => {
     localStorage.setItem('giatot-language', 'en');
     vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
-      if (url.endsWith('/partners')) return response([{ name: 'CellphoneS', slug: 'cellphones', websiteUrl: null }]);
-      if (url.endsWith('/categories')) return response({ items: [{ ...categories.items[0], productCount: 1 }] });
-      if (url.endsWith('/home/showcase')) return response({ featured: products.items, interestedComputers: [] });
+      if (url.endsWith('/partners?country=VN')) return response([{ name: 'CellphoneS', slug: 'cellphones', websiteUrl: null }]);
+      if (url.endsWith('/categories?country=VN')) return response({ items: [{ ...categories.items[0], productCount: 1 }] });
+      if (url.endsWith('/home/showcase?country=VN')) return response({ featured: products.items, interestedComputers: [] });
       return response({ items: [], page: 1, pageSize: 1, totalItems: 1, totalPages: 1 });
     }));
     renderApp();
@@ -473,9 +497,9 @@ describe('Home API data', () => {
 
   it('shows English empty states when home collections contain no data', async () => {
     localStorage.setItem('giatot-language', 'en');
-    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => String(input).endsWith('/partners')
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => String(input).endsWith('/partners?country=VN')
       ? response([])
-      : String(input).endsWith('/categories') ? response({ items: [] })
+      : String(input).endsWith('/categories?country=VN') ? response({ items: [] })
         : response({ items: [], page: 1, pageSize: 10, totalItems: 0, totalPages: 0 })));
     renderApp();
 
@@ -488,9 +512,9 @@ describe('Home API data', () => {
   it('loads categories and products from the catalog endpoints and renders API fields', async () => {
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
-      if (url.endsWith('/partners')) return response([]);
-      if (url.endsWith('/categories')) return response(categories);
-      if (url.endsWith('/home/showcase')) return response({ featured: products.items, interestedComputers: [] });
+      if (url.endsWith('/partners?country=VN')) return response([]);
+      if (url.endsWith('/categories?country=VN')) return response(categories);
+      if (url.endsWith('/home/showcase?country=VN')) return response({ featured: products.items, interestedComputers: [] });
       return response({ items: [], page: 1, pageSize: 1, totalItems: 42, totalPages: 42 });
     });
     vi.stubGlobal('fetch', fetchMock);
@@ -506,17 +530,17 @@ describe('Home API data', () => {
     expect(document.querySelectorAll('.product-card .heart').length).toBeGreaterThan(0);
     expect(screen.queryByText('Apple')).toBeNull();
     expect(screen.queryByText(/★/)).toBeNull();
-    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/categories');
-    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/home/showcase');
-    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products?categoryId=1&page=1&pageSize=1');
+    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/categories?country=VN');
+    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/home/showcase?country=VN');
+    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products?categoryId=1&page=1&pageSize=1&country=VN');
   });
 
   it('renders API product images in both homepage featured surfaces', async () => {
     const withImage = { ...products.items[0], imageUrl: 'https://cdn.example/phone.jpg' };
     vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
-      if (url.endsWith('/categories')) return response(categories);
-      if (url.endsWith('/home/showcase')) return response({ featured: [withImage], interestedComputers: [withImage] });
+      if (url.endsWith('/categories?country=VN')) return response(categories);
+      if (url.endsWith('/home/showcase?country=VN')) return response({ featured: [withImage], interestedComputers: [withImage] });
       return response({ items: [], page: 1, pageSize: 1, totalItems: 0, totalPages: 0 });
     }));
     renderAppAt('/');
@@ -537,14 +561,14 @@ describe('Home API data', () => {
     }));
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
-      if (url.endsWith('/partners')) return response(Array.from({ length: 12 }, (_, index) => ({ name: `Partner ${index + 1}`, slug: `partner-${index + 1}`, websiteUrl: null })));
-      if (url.endsWith('/categories')) return response({ items: [
+      if (url.endsWith('/partners?country=VN')) return response(Array.from({ length: 12 }, (_, index) => ({ name: `Partner ${index + 1}`, slug: `partner-${index + 1}`, websiteUrl: null })));
+      if (url.endsWith('/categories?country=VN')) return response({ items: [
         { id: 1, slug: 'phones', name: 'Phones' },
         { id: 2, slug: 'audio', name: 'Audio' },
         { id: 3, slug: 'computers', name: 'Computers' },
         { id: 4, slug: 'home-goods', name: 'Home goods' },
       ] });
-      if (url.endsWith('/home/showcase')) return response({ featured: featuredItems, interestedComputers: [] });
+      if (url.endsWith('/home/showcase?country=VN')) return response({ featured: featuredItems, interestedComputers: [] });
       if (url.includes('categoryId=1')) return response({ ...products, items: [], totalItems: 0 });
       if (url.includes('categoryId=2')) return response({ ...products, items: [], totalItems: 7 });
       if (url.includes('categoryId=')) return response({ ...products, items: [], totalItems: 3 });
@@ -582,11 +606,11 @@ describe('Home API data', () => {
     }));
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
-      if (url.endsWith('/partners')) return response(Array.from({ length: 12 }, (_, index) => ({ name: `Partner ${index + 1}`, slug: `partner-${index + 1}`, websiteUrl: null })));
-      if (url.endsWith('/categories')) return response({ items: [
+      if (url.endsWith('/partners?country=VN')) return response(Array.from({ length: 12 }, (_, index) => ({ name: `Partner ${index + 1}`, slug: `partner-${index + 1}`, websiteUrl: null })));
+      if (url.endsWith('/categories?country=VN')) return response({ items: [
         { id: 1, slug: 'phones', name: 'Phones' }, { id: 2, slug: 'computers', name: 'Computers' },
       ] });
-      if (url.endsWith('/home/showcase')) return response({ featured: mixedCatalog, interestedComputers: computers });
+      if (url.endsWith('/home/showcase?country=VN')) return response({ featured: mixedCatalog, interestedComputers: computers });
       return response({ ...products, items: [], totalItems: 0 });
     });
     vi.stubGlobal('fetch', fetchMock);
@@ -600,7 +624,7 @@ describe('Home API data', () => {
     expect(Array.from(grids[1].querySelectorAll('.product-name')).map(node => node.textContent)).toEqual(
       Array.from({ length: 15 }, (_, index) => `Computer ${index + 1}`),
     );
-    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/home/showcase');
+    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/home/showcase?country=VN');
     expect(grids[0].querySelector('.product-card')?.querySelectorAll('.product-card-body > *')).toHaveLength(3);
     expect(grids[0].querySelector('.product-card')?.querySelector('.product-name')).toBeTruthy();
     expect(grids[0].querySelector('.product-card')?.querySelector('.price')).toBeTruthy();
@@ -612,9 +636,9 @@ describe('Home API data', () => {
   });
 
   it('shows empty states when both API collections are empty', async () => {
-    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => String(input).endsWith('/partners')
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => String(input).endsWith('/partners?country=VN')
       ? response([])
-      : String(input).endsWith('/categories') ? response({ items: [] })
+      : String(input).endsWith('/categories?country=VN') ? response({ items: [] })
         : response({ items: [], page: 1, pageSize: 10, totalItems: 0, totalPages: 0 })));
     renderApp();
 
@@ -629,14 +653,14 @@ describe('Home API data', () => {
     let categoryRequests = 0;
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
-      if (url.endsWith('/categories')) {
+      if (url.endsWith('/categories?country=VN')) {
         categoryRequests += 1;
         return categoryRequests === 1
           ? Promise.reject(new Error('offline'))
           : response(categories);
       }
-      if (url.endsWith('/home/showcase')) return response({ featured: products.items, interestedComputers: [] });
-      if (url.endsWith('/products?categoryId=1&page=1&pageSize=1')) {
+      if (url.endsWith('/home/showcase?country=VN')) return response({ featured: products.items, interestedComputers: [] });
+      if (url.endsWith('/products?categoryId=1&page=1&pageSize=1&country=VN')) {
         return response({ items: [], page: 1, pageSize: 1, totalItems: 42, totalPages: 42 });
       }
       return Promise.reject(new Error(`Unexpected request: ${url}`));
@@ -644,15 +668,15 @@ describe('Home API data', () => {
     vi.stubGlobal('fetch', fetchMock);
     renderApp();
 
-    const retry = await screen.findByRole('button', { name: 'Thử lại' });
-    expect(screen.getByRole('alert').textContent).toContain('Không thể tải dữ liệu trang chủ');
+    const retry = (await screen.findAllByRole('button', { name: 'Thử lại' }))[0];
+    expect(screen.getByRole('heading', { name: 'Không thể tải dữ liệu trang chủ' })).toBeTruthy();
     fireEvent.click(retry);
     expect((await screen.findAllByRole('link', { name: 'Phones' })).some(link => link.getAttribute('href') === '/category/phones')).toBe(true);
     expect(await screen.findByRole('link', { name: 'Sample Phone' })).toBeTruthy();
     const requestedUrls = fetchMock.mock.calls.map(([url]) => String(url));
-    expect(requestedUrls.filter(url => url.endsWith('/categories')).length).toBeGreaterThanOrEqual(2);
-    expect(requestedUrls).toContain('https://api-compareshop-dev.giamha.online/api/v1/home/showcase');
-    expect(requestedUrls).toContain('https://api-compareshop-dev.giamha.online/api/v1/products?categoryId=1&page=1&pageSize=1');
+    expect(requestedUrls.filter(url => url.endsWith('/categories?country=VN')).length).toBeGreaterThanOrEqual(2);
+    expect(requestedUrls).toContain('https://api-compareshop-dev.giamha.online/api/v1/home/showcase?country=VN');
+    expect(requestedUrls).toContain('https://api-compareshop-dev.giamha.online/api/v1/products?categoryId=1&page=1&pageSize=1&country=VN');
   });
 });
 
@@ -707,7 +731,7 @@ describe('English copy for route controls and accessible labels', () => {
   });
 
   it('renders the missing shop review-count fallback in English', async () => {
-    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => String(input).endsWith('/shops/sample-shop')
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => String(input).endsWith('/shops/sample-shop?country=VN')
       ? response({ id: 2, slug: 'sample-shop', name: 'Sample Shop', rating: null, reviewCount: null })
       : response({ items: [], page: 1, pageSize: 12, totalItems: 0, totalPages: 0 })));
     renderAppAt('/shops/sample-shop');
@@ -749,9 +773,9 @@ describe('localized shared header search placeholder', () => {
 it('renders the storefront and opens the saved products page', async () => {
   const fetchMock = vi.fn((input: RequestInfo | URL) => {
     const url = String(input);
-    if (url.endsWith('/partners')) return response([]);
-    if (url.endsWith('/categories')) return response(categories);
-    if (url.endsWith('/home/showcase')) return response({ featured: products.items, interestedComputers: [] });
+    if (url.endsWith('/partners?country=VN')) return response([]);
+    if (url.endsWith('/categories?country=VN')) return response(categories);
+    if (url.endsWith('/home/showcase?country=VN')) return response({ featured: products.items, interestedComputers: [] });
     if (url.endsWith('/wishlist')) return response({ items: [] });
     return response({ items: [], page: 1, pageSize: 1, totalItems: 42, totalPages: 42 });
   });
@@ -857,7 +881,7 @@ describe('Wishlist API data', () => {
 it('renders product-object suggestions without crashing the search route', async () => {
   const fetchMock = vi.fn((input: RequestInfo | URL) => {
     const url = String(input);
-    if (url.endsWith('/categories')) return response({ items: [] });
+    if (url.endsWith('/categories?country=VN')) return response({ items: [] });
     if (url.includes('/search/suggestions')) return response({ items: [{ id: 3, slug: 'sample-product-03', name: 'Sample Product 03' }, { id: 4, name: 42 }, null] });
     return response({ items: [], page: 1, pageSize: 12, totalItems: 0, totalPages: 0 });
   });
@@ -874,7 +898,7 @@ it('renders the catalog image in search results', async () => {
   const imageUrl = 'https://cdn.example/search-result.jpg';
   vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
     const url = String(input);
-    if (url.endsWith('/categories')) return response(categories);
+    if (url.endsWith('/categories?country=VN')) return response(categories);
     if (url.endsWith('/wishlist')) return response({ items: [] });
     if (url.includes('/products?')) return response({ ...products, items: [{ ...products.items[0], imageUrl }] });
     return response({ items: [] });
@@ -939,7 +963,7 @@ describe('Search and Category API data', () => {
     let wishlistItems: Array<{ productId: number; slug: string; name: string; createdAtUtc: string }> = [];
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
-      if (url.endsWith('/categories')) return response({ items: [{ id: 42, slug: 'phones', name: 'Phones' }] });
+      if (url.endsWith('/categories?country=VN')) return response({ items: [{ id: 42, slug: 'phones', name: 'Phones' }] });
       if (url.endsWith('/wishlist') && init?.method !== 'POST') return response({ items: wishlistItems });
       if (url.endsWith('/wishlist') && init?.method === 'POST') {
         const operation = (JSON.parse(String(init.body)) as { operation: string }).operation;
@@ -973,7 +997,7 @@ describe('Search and Category API data', () => {
     authMock.getToken.mockResolvedValue('access-token');
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
-      if (url.endsWith('/categories')) return response({ items: [{ id: 42, slug: 'phones', name: 'Phones' }] });
+      if (url.endsWith('/categories?country=VN')) return response({ items: [{ id: 42, slug: 'phones', name: 'Phones' }] });
       if (url.endsWith('/wishlist') && init?.method !== 'POST') return response({ items: [] });
       if (url.endsWith('/wishlist') && init?.method === 'POST') return Promise.reject(new Error('offline'));
       return response(catalogPage);
@@ -989,7 +1013,7 @@ describe('Search and Category API data', () => {
   it('starts sign-in when a signed-out user saves a product', async () => {
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
-      if (url.endsWith('/categories')) return response({ items: [{ id: 42, slug: 'phones', name: 'Phones' }] });
+      if (url.endsWith('/categories?country=VN')) return response({ items: [{ id: 42, slug: 'phones', name: 'Phones' }] });
       return response(catalogPage);
     });
     vi.stubGlobal('fetch', fetchMock);
@@ -1004,7 +1028,7 @@ describe('Search and Category API data', () => {
     authMock.getToken.mockResolvedValue(null);
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
-      if (url.endsWith('/categories')) return response({ items: [{ id: 42, slug: 'phones', name: 'Phones' }] });
+      if (url.endsWith('/categories?country=VN')) return response({ items: [{ id: 42, slug: 'phones', name: 'Phones' }] });
       return response(catalogPage);
     });
     vi.stubGlobal('fetch', fetchMock);
@@ -1024,7 +1048,7 @@ describe('Search and Category API data', () => {
     authMock.clear.mockResolvedValue();
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
-      if (url.endsWith('/categories')) return response({ items: [{ id: 42, slug: 'phones', name: 'Phones' }] });
+      if (url.endsWith('/categories?country=VN')) return response({ items: [{ id: 42, slug: 'phones', name: 'Phones' }] });
       if (url.endsWith('/wishlist') && init?.method !== 'POST') return response({ items: [] });
       if (url.endsWith('/wishlist') && init?.method === 'POST') return response(null);
       return response(catalogPage);
@@ -1048,7 +1072,7 @@ describe('Search and Category API data', () => {
     authMock.getToken.mockResolvedValueOnce('revoked-token').mockResolvedValue(null);
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
-      if (url.endsWith('/categories')) return response({ items: [{ id: 42, slug: 'phones', name: 'Phones' }] });
+      if (url.endsWith('/categories?country=VN')) return response({ items: [{ id: 42, slug: 'phones', name: 'Phones' }] });
       if (url.endsWith('/wishlist')) return Promise.resolve({ ok: false, status: 401 } as Response);
       return response(catalogPage);
     });
@@ -1067,7 +1091,7 @@ describe('Search and Category API data', () => {
     authMock.getToken.mockResolvedValueOnce('valid-token').mockRejectedValueOnce(new Error('session storage unavailable'));
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
-      if (url.endsWith('/categories')) return response({ items: [{ id: 42, slug: 'phones', name: 'Phones' }] });
+      if (url.endsWith('/categories?country=VN')) return response({ items: [{ id: 42, slug: 'phones', name: 'Phones' }] });
       if (url.endsWith('/wishlist') && init?.method !== 'POST') return response({ items: [] });
       return response(catalogPage);
     });
@@ -1086,15 +1110,15 @@ describe('Search and Category API data', () => {
   it('resolves a category slug to its numeric ID before requesting its products', async () => {
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
-      if (url.endsWith('/categories')) return response({ items: [{ id: 42, slug: 'phones', name: 'Phones' }] });
+      if (url.endsWith('/categories?country=VN')) return response({ items: [{ id: 42, slug: 'phones', name: 'Phones' }] });
       return response(catalogPage);
     });
     vi.stubGlobal('fetch', fetchMock);
     renderAppAt('/category/phones');
 
     expect(await screen.findByRole('link', { name: 'API Phone' })).toBeTruthy();
-    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/categories');
-    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products?page=1&pageSize=12&categoryId=42');
+    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/categories?country=VN');
+    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products?page=1&pageSize=12&categoryId=42&country=VN');
     expect(screen.getByText('Real Brand')).toBeTruthy();
     expect(screen.queryByText(/★/)).toBeNull();
   });
@@ -1102,34 +1126,34 @@ describe('Search and Category API data', () => {
   it('resolves a nested category after navigating from its parent without remounting', async () => {
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
-      if (url.endsWith('/categories')) return response({ items: [{ id: 1006, slug: 'electronics', name: 'Electronics' }] });
-      if (url.endsWith('/categories?parentId=1006')) return response({ items: [{ id: 2, slug: 'computers', name: 'Computers', parentId: 1006 }] });
-      if (url.endsWith('/categories?parentId=2')) return response({ items: [] });
+      if (url.endsWith('/categories?country=VN')) return response({ items: [{ id: 1006, slug: 'electronics', name: 'Electronics' }] });
+      if (url.endsWith('/categories?parentId=1006&country=VN')) return response({ items: [{ id: 2, slug: 'computers', name: 'Computers', parentId: 1006 }] });
+      if (url.endsWith('/categories?parentId=2&country=VN')) return response({ items: [] });
       return response(catalogPage);
     });
     vi.stubGlobal('fetch', fetchMock);
     renderAppAt('/category/electronics');
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products?page=1&pageSize=12&categoryId=1006'));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products?page=1&pageSize=12&categoryId=1006&country=VN'));
     act(() => {
       window.history.pushState({}, '', '/category/computers');
       window.dispatchEvent(new PopStateEvent('popstate'));
     });
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products?page=1&pageSize=12&categoryId=2'));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products?page=1&pageSize=12&categoryId=2&country=VN'));
     expect(screen.getByRole('heading', { name: 'Computers' })).toBeTruthy();
     expect(screen.queryByText('Không tìm thấy danh mục')).toBeNull();
   });
 
   it('searches by query and sends price filters and page to the catalog API', async () => {
-    const fetchMock = vi.fn((input: RequestInfo | URL) => String(input).endsWith('/categories') ? response({ items: [] }) : response(catalogPage));
+    const fetchMock = vi.fn((input: RequestInfo | URL) => String(input).endsWith('/categories?country=VN') ? response({ items: [] }) : response(catalogPage));
     vi.stubGlobal('fetch', fetchMock);
     renderAppAt('/search?q=phone');
 
     expect(await screen.findByRole('link', { name: 'API Phone' })).toBeTruthy();
-    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products?page=1&pageSize=12&search=phone');
+    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products?page=1&pageSize=12&search=phone&country=VN');
     fireEvent.click(screen.getByLabelText('Dưới 10 triệu'));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products?page=1&pageSize=12&search=phone&maxPrice=10000000'));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products?page=1&pageSize=12&search=phone&maxPrice=10000000&country=VN'));
   });
 
   it('keeps unknown category slugs empty without querying products', async () => {
@@ -1144,7 +1168,7 @@ describe('Search and Category API data', () => {
   it('shows retry after a catalog error and requests API suggestions from header search', async () => {
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
-      if (url.endsWith('/categories')) return response({ items: [] });
+      if (url.endsWith('/categories?country=VN')) return response({ items: [] });
       if (url.includes('/search/suggestions')) return response({ items: ['phone suggestion'] });
       return response({}, false);
     });
@@ -1152,9 +1176,9 @@ describe('Search and Category API data', () => {
     renderAppAt('/search');
     fireEvent.change(screen.getByRole('textbox', { name: 'Tìm sản phẩm, thương hiệu...' }), { target: { value: 'phone' } });
     expect(await screen.findByRole('option', { name: 'phone suggestion' })).toBeTruthy();
-    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/search/suggestions?q=phone&limit=5');
+    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/search/suggestions?q=phone&limit=5&country=VN');
     expect(await screen.findByRole('alert')).toBeTruthy();
-    fetchMock.mockImplementation((input: RequestInfo | URL) => String(input).endsWith('/categories') ? response({ items: [] }) : response(catalogPage));
+    fetchMock.mockImplementation((input: RequestInfo | URL) => String(input).endsWith('/categories?country=VN') ? response({ items: [] }) : response(catalogPage));
     fireEvent.click(screen.getByRole('button', { name: 'Thử lại' }));
     expect(await screen.findByRole('link', { name: 'API Phone' })).toBeTruthy();
   });
@@ -1174,8 +1198,8 @@ const detail = {
 function detailFetch({ productResponse = detail, offers = [{ id: 9, price: 1200000, url: null, updatedAt: '2026-10-19T08:00:00Z', shopId: 2, shopSlug: 'shop-two', shopName: 'Shop Two' }], related = [] }: { productResponse?: unknown; offers?: unknown[]; related?: unknown[] } = {}) {
   return vi.fn((input: RequestInfo | URL) => {
     const url = String(input);
-    if (url.endsWith('/products/sample-product-01')) return response(productResponse);
-    if (url.endsWith('/products/1/offers')) return response({ items: offers });
+    if (url.endsWith('/products/sample-product-01?country=VN')) return response(productResponse);
+    if (url.endsWith('/products/1/offers?country=VN')) return response({ items: offers });
     if (url.includes('/products?categoryId=7')) return response({ items: related });
     return response({}, false);
   });
@@ -1259,11 +1283,11 @@ describe('Product Detail API data', () => {
     const product = { id: 5, slug: 'sample-product-01', name: 'Sample Product 01', brand: 'Example', category: { id: 7, slug: 'phones', name: 'Phones' }, offerSummary: { minPrice: 1200000, maxPrice: 1500000, offerCount: 1 } };
     vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
-      if (url.endsWith('/categories')) return response({ items: [{ id: 7, slug: 'phones', name: 'Phones' }] });
+      if (url.endsWith('/categories?country=VN')) return response({ items: [{ id: 7, slug: 'phones', name: 'Phones' }] });
       if (url.includes('/products?categoryId=7')) return response({ items: [product], page: 1, pageSize: 10, totalItems: 1, totalPages: 1 });
-      if (url.endsWith('/home/showcase')) return response({ featured: [product], interestedComputers: [] });
-      if (url.endsWith('/products/sample-product-01')) return response(detail);
-      if (url.endsWith('/products/1/offers')) return response({ items: [] });
+      if (url.endsWith('/home/showcase?country=VN')) return response({ featured: [product], interestedComputers: [] });
+      if (url.endsWith('/products/sample-product-01?country=VN')) return response(detail);
+      if (url.endsWith('/products/1/offers?country=VN')) return response({ items: [] });
       return response({ items: [] });
     }));
 
@@ -1280,11 +1304,11 @@ describe('Product Detail API data', () => {
     const product = { id: 5, slug: 'sample-product-01', name: 'Sample Product 01', brand: 'Example', category: { id: 7, slug: 'phones', name: 'Phones' }, offerSummary: { minPrice: 1200000, maxPrice: 1500000, offerCount: 1 } };
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
-      if (url.endsWith('/categories')) return response({ items: [{ id: 7, slug: 'phones', name: 'Phones' }] });
+      if (url.endsWith('/categories?country=VN')) return response({ items: [{ id: 7, slug: 'phones', name: 'Phones' }] });
       if (url.includes('/products?categoryId=7')) return response({ items: [product], page: 1, pageSize: 10, totalItems: 1, totalPages: 1 });
-      if (url.endsWith('/home/showcase')) return response({ featured: [product], interestedComputers: [] });
-      if (url.endsWith('/products/sample-product-01')) return response(detail);
-      if (url.endsWith('/products/1/offers')) return response({ items: [] });
+      if (url.endsWith('/home/showcase?country=VN')) return response({ featured: [product], interestedComputers: [] });
+      if (url.endsWith('/products/sample-product-01?country=VN')) return response(detail);
+      if (url.endsWith('/products/1/offers?country=VN')) return response({ items: [] });
       return response({ items: [] });
     });
     vi.stubGlobal('fetch', fetchMock);
@@ -1305,10 +1329,10 @@ describe('Product Detail API data', () => {
     expect(screen.getByText('Shop Two')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Xem ngay ↗' }).getAttribute('href')).toBe('https://api-compareshop-dev.giamha.online/api/v1/go/9');
     expect(screen.getByText('Storage')).toBeTruthy();
-    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products/sample-product-01');
-    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products/1/offers');
+    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products/sample-product-01?country=VN');
+    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products/1/offers?country=VN');
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/price-history'))).toBe(false);
-    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products?categoryId=7&page=1&pageSize=5');
+    expect(fetchMock).toHaveBeenCalledWith('https://api-compareshop-dev.giamha.online/api/v1/products?categoryId=7&page=1&pageSize=5&country=VN');
     expect(screen.queryByText('Lịch sử giá 6 tháng')).toBeNull();
     expect(screen.getByText('Thông số sản phẩm')).toBeTruthy();
     expect(screen.getByText('Giá được cập nhật')).toBeTruthy();
@@ -1327,11 +1351,11 @@ describe('Product Detail API data', () => {
   it('keeps a loading state, reports request errors, and retries', async () => {
     let resolveDetail: ((value: Response) => void) | undefined;
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
-      if (String(input).endsWith('/products/sample-product-01') && !resolveDetail) {
+      if (String(input).endsWith('/products/sample-product-01?country=VN') && !resolveDetail) {
         return new Promise<Response>(resolve => { resolveDetail = resolve; });
       }
-      if (String(input).endsWith('/products/sample-product-01')) return response(detail);
-      if (String(input).endsWith('/products/1/offers')) return response({ items: [] });
+      if (String(input).endsWith('/products/sample-product-01?country=VN')) return response(detail);
+      if (String(input).endsWith('/products/1/offers?country=VN')) return response({ items: [] });
       return response({ items: [] });
     });
     vi.stubGlobal('fetch', fetchMock);
@@ -1357,13 +1381,13 @@ describe('Product Detail API data', () => {
     const otherProduct = { ...detail, id: 2, slug: 'other-product', name: 'Other Product' };
     vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
-      if (url.endsWith('/products/sample-product-01')) return new Promise<Response>(resolve => { resolveFirst = resolve; });
-      if (url.endsWith('/products/other-product')) return response(otherProduct);
-      if (url.endsWith('/products/2/offers')) return response({ items: [] });
+      if (url.endsWith('/products/sample-product-01?country=VN')) return new Promise<Response>(resolve => { resolveFirst = resolve; });
+      if (url.endsWith('/products/other-product?country=VN')) return response(otherProduct);
+      if (url.endsWith('/products/2/offers?country=VN')) return response({ items: [] });
       if (url.includes('/products?categoryId=7')) return response({ items: [] });
       return response({}, false);
     }));
-    render(<CountryProvider><LanguageProvider><MemoryRouter initialEntries={['/product/sample-product-01']}><Link to="/product/other-product">Open other product</Link><Routes><Route path="/product/:slug" element={<ProductDetailPage />} /></Routes></MemoryRouter></LanguageProvider></CountryProvider>);
+    render(<CountryProvider initialCountries={TEST_COUNTRIES}><LanguageProvider><MemoryRouter initialEntries={['/product/sample-product-01']}><Link to="/product/other-product">Open other product</Link><Routes><Route path="/product/:slug" element={<ProductDetailPage />} /></Routes></MemoryRouter></LanguageProvider></CountryProvider>);
 
     fireEvent.click(screen.getByRole('link', { name: 'Open other product' }));
     expect(await screen.findByRole('heading', { name: 'Other Product' })).toBeTruthy();

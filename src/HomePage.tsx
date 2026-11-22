@@ -5,6 +5,7 @@ import { useLanguage } from './i18n';
 import { SafeImage } from './components/SafeImage';
 import { ProductCardImage } from './components/ProductCardImage';
 import { WishlistHeart } from './wishlist/WishlistHeart';
+import { useCountry } from './country';
 
 const money = (value: number) => new Intl.NumberFormat('vi-VN', {
   style: 'currency',
@@ -79,6 +80,7 @@ function getPreviewToken(hash: string): string | null {
 
 export function HomePage({ partners, footer }: { partners: React.ReactNode; footer: React.ReactNode }) {
   const { t } = useLanguage();
+  const { country } = useCountry();
   const [categories, setCategories] = useState<HomeCategory[]>([]);
   const [products, setProducts] = useState<HomeProduct[]>([]);
   const [computerProducts, setComputerProducts] = useState<HomeProduct[]>([]);
@@ -86,6 +88,7 @@ export function HomePage({ partners, footer }: { partners: React.ReactNode; foot
   const [error, setError] = useState(false);
   const [previewMode, setPreviewMode] = useState(false);
   const previewToken = useRef<string | null>(null);
+  const catalogRequestId = useRef(0);
   const previewRobots = useRef<{ element: HTMLMetaElement; created: boolean; previousContent: string | null } | null>(null);
 
   const markPreviewNoindex = () => {
@@ -102,17 +105,23 @@ export function HomePage({ partners, footer }: { partners: React.ReactNode; foot
     previewRobots.current = { element: robots, created, previousContent };
   };
 
-  const load = () => {
+  const load = (selectedCountry = country) => {
+    const currentRequestId = ++catalogRequestId.current;
     setLoading(true);
     setError(false);
-    getHomeData(previewToken.current ?? undefined)
+    setCategories([]);
+    setProducts([]);
+    setComputerProducts([]);
+    getHomeData(previewToken.current ?? undefined, selectedCountry)
       .then(data => {
-        setCategories(data.categories);
-        setProducts(data.products);
-        setComputerProducts(data.computerProducts);
+        if (currentRequestId === catalogRequestId.current) {
+          setCategories(data.categories);
+          setProducts(data.products);
+          setComputerProducts(data.computerProducts);
+        }
       })
-      .catch(() => setError(true))
-      .finally(() => setLoading(false));
+      .catch(() => { if (currentRequestId === catalogRequestId.current) setError(true); })
+      .finally(() => { if (currentRequestId === catalogRequestId.current) setLoading(false); });
   };
 
   useLayoutEffect(() => {
@@ -125,8 +134,9 @@ export function HomePage({ partners, footer }: { partners: React.ReactNode; foot
   }, []);
 
   useEffect(() => {
-    load();
-  }, []);
+    load(country);
+    return () => { catalogRequestId.current += 1; };
+  }, [country]);
 
   useEffect(() => {
     if (!previewMode) return;
@@ -223,7 +233,7 @@ export function HomePage({ partners, footer }: { partners: React.ReactNode; foot
     {error && <div className="empty-state" role="alert">
       <h3>{t('homeLoadError')}</h3>
       <p>{t('tryAgain')}.</p>
-      <button className="button button-primary" onClick={load}>{t('tryAgain')}</button>
+      <button className="button button-primary" onClick={() => load()}>{t('tryAgain')}</button>
     </div>}
     {partners}
     {footer}

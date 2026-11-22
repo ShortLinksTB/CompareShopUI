@@ -6,6 +6,8 @@ import { AuthSessionProvider } from './auth/AuthSession';
 import { LanguageProvider } from './i18n';
 import { SearchPage } from './SearchPage';
 import { WishlistProvider } from './wishlist/WishlistContext';
+import { CountryProvider } from './country';
+import { TEST_COUNTRIES } from './testCountryData';
 
 const api = 'https://api-compareshop-dev.giamha.online/api/v1';
 const product = {
@@ -23,22 +25,22 @@ function response(body: unknown) {
 }
 
 function renderCategory(slug: string) {
-  return render(<MemoryRouter initialEntries={[`/category/${slug}`]}>
+  return render(<CountryProvider initialCountries={TEST_COUNTRIES}><MemoryRouter initialEntries={[`/category/${slug}`]}>
     <AuthSessionProvider value={{ status: 'anonymous', user: null, getAccessToken: async () => null, signIn: vi.fn(), signOut: vi.fn() }}>
       <LanguageProvider><WishlistProvider><Routes><Route path="/category/:slug" element={<SearchPage />} /></Routes></WishlistProvider></LanguageProvider>
     </AuthSessionProvider>
-  </MemoryRouter>);
+  </MemoryRouter></CountryProvider>);
 }
 
 function categoryApi(fetchMock: ReturnType<typeof vi.fn>) {
   fetchMock.mockImplementation((input: RequestInfo | URL) => {
     const url = String(input);
-    if (url === `${api}/categories`) return response({ items: [{ id: 1006, slug: 'electronics', name: 'Electronics', parentId: null }] });
-    if (url === `${api}/categories?parentId=1006`) return response({ items: [
+    if (url === `${api}/categories?country=VN`) return response({ items: [{ id: 1006, slug: 'electronics', name: 'Electronics', parentId: null }] });
+    if (url === `${api}/categories?parentId=1006&country=VN`) return response({ items: [
       { id: 2, slug: 'computers', name: 'Computers', parentId: 1006 },
       { id: 99, slug: 'unrelated', name: 'Unrelated' },
     ] });
-    if (url === `${api}/categories?parentId=2`) return response({ items: [] });
+    if (url === `${api}/categories?parentId=2&country=VN`) return response({ items: [] });
     if (url.startsWith(`${api}/products?`)) return response({ items: [product], page: 1, pageSize: 12, totalItems: 1, totalPages: 1 });
     throw new Error(`Unexpected request: ${url}`);
   });
@@ -57,7 +59,7 @@ describe('nested category routes', () => {
     expect(await screen.findByRole('link', { name: 'Sample Computer' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Computers' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Thêm vào yêu thích' })).toBeTruthy();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(`${api}/products?page=1&pageSize=12&categoryId=2`));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(`${api}/products?page=1&pageSize=12&categoryId=2&country=VN`));
   });
 
   it('keeps unknown category slugs in the not-found state without requesting unfiltered products', async () => {

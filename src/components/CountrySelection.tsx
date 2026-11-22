@@ -1,25 +1,69 @@
-import { ENABLED_COUNTRIES, useCountry } from '../country';
+import { useEffect, useRef, useState } from 'react';
+import { useCountry } from '../country';
 
 export function CountrySelection() {
-  const { country, suggestion, persistenceError, selectCountry, dismissSuggestion } = useCountry();
-  const suggestedCountry = ENABLED_COUNTRIES.find(option => option.code === suggestion);
+  const { country, countries, suggestion, persistenceError, selectCountry, dismissSuggestion } = useCountry();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const selectedCountry = countries.find(option => option.code === country);
+  const suggestedCountry = countries.find(option => option.code === suggestion);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setMenuOpen(false);
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMenuOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [menuOpen]);
 
   return (
-    <div className="country-selection">
-      <span className="country-flagdot" aria-hidden="true">{country}</span>
-      <label className="visually-hidden" htmlFor="country-selection">Country</label>
-      <select
-        id="country-selection"
-        className="country-switcher"
-        value={country}
-        onChange={event => selectCountry(event.target.value as typeof country)}
-        aria-label="Country"
+    <div className="country-selection" ref={rootRef}>
+      <button
+        ref={triggerRef}
+        className="country-trigger"
+        type="button"
+        aria-label={`Country: ${selectedCountry?.name ?? country}`}
+        aria-haspopup="listbox"
+        aria-expanded={menuOpen}
+        aria-controls="header-country-options"
+        onClick={() => setMenuOpen(open => !open)}
       >
-        {ENABLED_COUNTRIES.map(option => (
-          <option key={option.code} value={option.code}>{option.name}</option>
-        ))}
-      </select>
-      <svg className="country-chevron" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+        <svg className="country-pin" aria-hidden="true" viewBox="0 0 24 24">
+          <path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11Z" />
+          <circle cx="12" cy="10" r="2.5" />
+        </svg>
+        <b>{country}</b>
+        <svg className={`country-chevron${menuOpen ? ' is-open' : ''}`} aria-hidden="true" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" /></svg>
+      </button>
+      {menuOpen && (
+        <div className="country-menu" id="header-country-options" role="listbox" aria-label="Choose country">
+          {countries.map(option => (
+            <button
+              className={`country-option${country === option.code ? ' selected' : ''}`}
+              type="button"
+              role="option"
+              aria-selected={country === option.code}
+              key={option.code}
+              onClick={() => { selectCountry(option.code); setMenuOpen(false); }}
+            >
+              <span>{option.name}</span>
+              {country === option.code && <span className="country-check" aria-hidden="true">✓</span>}
+            </button>
+          ))}
+        </div>
+      )}
       {suggestedCountry && (
         <section className="country-suggestion" role="region" aria-labelledby="country-suggestion-title">
           <p id="country-suggestion-title">Use {suggestedCountry.name} as your country?</p>
